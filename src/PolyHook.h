@@ -7,7 +7,7 @@
 #define MODE_x64 (0)
 #define MODE_x86 (1)
 
-#include "capstone/include/capstone/capstone.h"
+#include "../capstone/include/capstone/capstone.h"
 #include <string>
 #include <functional>
 #include <vector>

@@ -1,5 +1,5 @@
 #include <iostream>
-#include "PolyHook.h"
+#include "src/PolyHook.h"
 #define CATCH_CONFIG_MAIN
 #include "Catch.hpp"
 

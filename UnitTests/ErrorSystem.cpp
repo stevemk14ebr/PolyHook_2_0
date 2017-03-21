@@ -1,7 +1,7 @@
 //
 // Created by steve on 3/19/17.
 //
-#include "../PolyHook.h"
+#include "../src/PolyHook.h"
 #include "../Catch.hpp"
 class TestDerived : public PLH::IHook
 {
