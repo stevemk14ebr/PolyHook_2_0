@@ -7,10 +7,10 @@
 #define MODE_x64 (0)
 #define MODE_x86 (1)
 
-#include "../capstone/include/capstone/capstone.h"
 #include <string>
-#include <functional>
-#include <vector>
+
+#include "ErrorSystem.hpp"
+#include "ADisassembler.hpp"
 
 namespace PLH
 {
@@ -27,57 +27,6 @@ namespace PLH
 		VEH,
 #endif
     };
-
-    class Message
-    {
-    public:
-        Message(std::string& msg)
-        {
-            m_Msg = msg;
-        }
-
-        std::string GetMessage() const
-        {
-            return m_Msg;
-        }
-    private:
-        std::string m_Msg;
-    };
-
-    template<typename T>
-    class EventDispatcher
-    {
-    public:
-        typedef std::function<T> Event;
-        void operator+=(const Event& event);
-        EventDispatcher<T> operator--(int);
-
-        template<typename... Args>
-        void Invoke(Args&& ...Params)
-        {
-            for (auto&& event : m_Events)
-            {
-                event(std::forward<Args>(Params)...);
-            }
-        }
-    private:
-        std::vector<Event> m_Events;
-    };
-
-    template<typename T>
-    void EventDispatcher<T>::operator+=(const Event& event)
-    {
-        m_Events.push_back(event);
-    }
-
-    template<typename T>
-    EventDispatcher<T> EventDispatcher<T>::operator--(int)
-    {
-        EventDispatcher<T> tmp(*this);
-        if(m_Events.size() > 0)
-            m_Events.pop_back();
-        return tmp;
-    }
 
     class IHook
     {
