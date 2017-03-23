@@ -3,7 +3,7 @@ project(PolyHook_2_0)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(SOURCE_FILES MainTests.cpp src/PolyHook.h Catch.hpp UnitTests/ErrorSystem.cpp src/IDisassembler.hpp)
+set(SOURCE_FILES MainTests.cpp src/PolyHook.h Catch.hpp UnitTests/ErrorSystem.cpp src/ADisassembler.hpp src/CapstoneDisassembler.hpp src/ErrorSystem.hpp UnitTests/Disassembler.cpp)
 
 set(CAPSTONE_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/capstone)
 find_library(CAPSTONE_LIB NAMES libcapstone PATHS ${CAPSTONE_LIB_PATH})
