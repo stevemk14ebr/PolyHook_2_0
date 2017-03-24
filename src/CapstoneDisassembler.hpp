@@ -5,6 +5,7 @@
 #ifndef POLYHOOK_2_0_CAPSTONEDISASSEMBLER_HPP
 #define POLYHOOK_2_0_CAPSTONEDISASSEMBLER_HPP
 
+#include <inttypes.h>
 #include "ADisassembler.hpp"
 #include "../capstone/include/capstone/capstone.h"
 
@@ -37,7 +38,7 @@ std::vector<PLH::Instruction> PLH::CapstoneDisassembler::Disassemble(uint64_t St
     size_t Size = End-Start;
     while(cs_disasm_iter(m_CapHandle,(const uint8_t**)(&Start),&Size,&Start,InsInfo))
     {
-        printf("%I64X [%d]: ", InsInfo->address, InsInfo->size);
+        printf("%" PRId64 "[%d]: ", InsInfo->address, InsInfo->size);
         for (uint_fast32_t j = 0; j < InsInfo->size; j++)
             printf("%02X ", InsInfo->bytes[j]);
         printf("%s %s\n", InsInfo->mnemonic, InsInfo->op_str);

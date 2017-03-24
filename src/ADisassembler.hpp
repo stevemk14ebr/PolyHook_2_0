@@ -18,7 +18,7 @@ namespace PLH {
     public:
         union Displacement {
             int64_t m_Relative; //ex: jmp [rip+0x123], would store 0x123 (relative jmp from rip)
-            int64_t m_Absolute; //ex: jmp 0x123, would store 0x123 (absolute jmp to 0x123)
+            uint64_t m_Absolute; //ex: jmp 0x123, would store 0x123 (absolute jmp to 0x123)
         };
 
         uint64_t m_Address;
@@ -69,7 +69,7 @@ namespace PLH {
         }
 
         std::string ToString() {
-            std::ostream output(nullptr); //no default constructor?
+            std::ostringstream output; //no default constructor?
             output << std::hex << std::setfill('0') << std::setw(2) << m_Address;
             output << " ";
             for (uint_fast32_t i = 0; i < m_Bytes.size(); i++)
@@ -77,9 +77,10 @@ namespace PLH {
 
             output << " ";
             output << GetFullName();
+            return output.str();
         }
 
-        auto Size() const {
+        size_t Size() const {
             return m_Bytes.size();
         }
     };
