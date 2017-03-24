@@ -23,20 +23,20 @@ namespace PLH
             cs_option(m_CapHandle, CS_OPT_DETAIL, CS_OPT_ON);
         }
 
-        virtual std::vector<Instruction> Disassemble(uint64_t Start, uint64_t End) override;
+        virtual std::vector<Instruction> Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End) override;
 
     private:
         csh m_CapHandle;
     };
 }
 
-std::vector<PLH::Instruction> PLH::CapstoneDisassembler::Disassemble(uint64_t Start, uint64_t End)
+std::vector<PLH::Instruction> PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End)
 {
     cs_insn* InsInfo = cs_malloc(m_CapHandle);
     std::vector<PLH::Instruction> InsVec;
-    
+
     size_t Size = End-Start;
-    while(cs_disasm_iter(m_CapHandle,(const uint8_t**)(&Start),&Size,&Start,InsInfo))
+    while(cs_disasm_iter(m_CapHandle,(const uint8_t**)(&Start),&Size,&FirstInstruction,InsInfo))
     {
         printf("%" PRId64 "[%d]: ", InsInfo->address, InsInfo->size);
         for (uint_fast32_t j = 0; j < InsInfo->size; j++)

@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "ErrorSystem.hpp"
+#include "TestErrorSystem.hpp"
 #include "ADisassembler.hpp"
 
 namespace PLH

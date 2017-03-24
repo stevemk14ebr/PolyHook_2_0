@@ -10,7 +10,7 @@
 #include <string>
 #include <iomanip>
 #include <iostream>
-#include "ErrorSystem.hpp"
+#include "TestErrorSystem.hpp"
 
 namespace PLH {
 
@@ -98,7 +98,12 @@ namespace PLH {
         }
         virtual ~ADisassembler() = default;
 
-        virtual std::vector<Instruction> Disassemble(uint64_t Start, uint64_t End) = 0;
+        /**
+         * @param FirstInstruction: The address of the first instruction
+         * @param Start: The address of the code buffer
+         * @param End: The address of the end of the code buffer
+         * **/
+        virtual std::vector<Instruction> Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End) = 0;
 
         typedef PLH::EventDispatcher<void(const PLH::Message&)> tErrorHandler;
         virtual tErrorHandler& OnError()
