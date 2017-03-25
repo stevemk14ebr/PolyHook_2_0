@@ -6,6 +6,7 @@
 #define POLYHOOK_2_0_IDISASSEMBLER_HPP
 
 #include <cstdint>
+#include <inttypes.h>
 #include <vector>
 #include <string>
 #include <iomanip>
@@ -13,76 +14,86 @@
 #include "TestErrorSystem.hpp"
 
 namespace PLH {
-
     class Instruction {
     public:
-        union Displacement {
-            int64_t m_Relative; //ex: jmp [rip+0x123], would store 0x123 (relative jmp from rip)
-            uint64_t m_Absolute; //ex: jmp 0x123, would store 0x123 (absolute jmp to 0x123)
+        union Displacement{
+            int64_t Relative;
+            uint64_t Absolute;
         };
 
-        uint64_t m_Address;
-        bool m_IsRelativeToIP;          //is relative to rip/eip
-        Displacement m_Displacement;
-        std::vector<uint8_t> m_Bytes;   //actual bytes of the instruction
-        std::string m_Mnemonic;         //jmp,call,ret,etc
-        std::string m_Operands;         //everything after the mnemonic
-
-        uint64_t GetDestination() const {
-            if (m_Displacement.m_Absolute == 0 || m_Displacement.m_Relative == 0)
-                return 0;
-
-            if (!m_IsRelativeToIP)
-                return m_Displacement.m_Absolute;
-
-            return m_Address + m_Displacement.m_Relative + m_Bytes.size();
+        Instruction(uint64_t Address,const Displacement& displacement,bool IsRelative,const std::vector<uint8_t>& Bytes,const std::string Mnemonic,const std::string OpStr)
+        {
+            Init(Address,displacement,IsRelative,Bytes,Mnemonic,OpStr);
         }
 
-        void SetNewDestination(const uint64_t Destination) {
-            if (m_IsRelativeToIP) {
-                if (m_Address < Destination)
-                    m_Displacement.m_Relative = 0 - (m_Address - Destination) - Size();
-                m_Displacement.m_Relative = Destination - (m_Address + Size());
-            } else {
-                m_Displacement.m_Absolute = Destination;
+        Instruction(uint64_t Address,const Displacement& displacement,bool IsRelative,uint8_t Bytes[], size_t ArrLen, const std::string Mnemonic,const std::string OpStr)
+        {
+            std::vector<uint8_t> Arr;
+            Arr.assign(Bytes,Bytes+ArrLen);
+            Init(Address,displacement,IsRelative,Arr,Mnemonic,OpStr);
+        }
+
+        int64_t GetDestination()
+        {
+            if(m_IsRelative)
+            {
+                return m_Address + m_Displacement.Relative + Size();
             }
-        }
-
-        std::string GetMnemonic() const {
-            return m_Mnemonic;
-        }
-
-        std::string GetFullName() const {
-            return m_Mnemonic + " " + m_Operands;
-        }
-
-        std::vector<uint8_t> GetBytes() const {
-            return m_Bytes;
-        }
-
-        bool IsIpRelative() const {
-            return m_IsRelativeToIP;
+            return m_Displacement.Absolute;
         }
 
         uint64_t GetAddress() const {
             return m_Address;
         }
 
-        std::string ToString() {
-            std::ostringstream output; //no default constructor?
-            output << std::hex << std::setfill('0') << std::setw(2) << m_Address;
-            output << " ";
-            for (uint_fast32_t i = 0; i < m_Bytes.size(); i++)
-                output << std::hex << std::setfill('0') << std::setw(2) << m_Bytes[i];
-
-            output << " ";
-            output << GetFullName();
-            return output.str();
+        Displacement GetDisplacement() const
+        {
+            return m_Displacement;
         }
 
-        size_t Size() const {
+        const std::vector<uint8_t>& GetBytes() const
+        {
+            return m_Bytes;
+        }
+
+        std::string GetMnemonic() const
+        {
+            return m_Mnemonic;
+        }
+
+        std::string GetFullName() const
+        {
+            return m_Mnemonic + " " + m_OpStr;
+        }
+
+        uint8_t GetByte(uint32_t index) const
+        {
+            if(index >= Size())
+                return 0;
+
+            return m_Bytes[index];
+        }
+
+        size_t Size() const
+        {
             return m_Bytes.size();
         }
+    private:
+        void Init(uint64_t Address,const Displacement& displacement,bool IsRelative,const std::vector<uint8_t>& Bytes,const std::string Mnemonic,const std::string OpStr)
+        {
+            m_Address = Address;
+            m_Displacement = displacement;
+            m_Bytes = Bytes;
+            m_Mnemonic = Mnemonic;
+            m_OpStr = OpStr;
+            m_IsRelative = IsRelative;
+        }
+        uint64_t m_Address;
+        Displacement m_Displacement;
+        bool m_IsRelative;
+        std::vector<uint8_t> m_Bytes;
+        std::string m_Mnemonic;
+        std::string m_OpStr;
     };
 
     class ADisassembler {
@@ -96,14 +107,15 @@ namespace PLH {
         {
             m_Mode = mode;
         }
+
         virtual ~ADisassembler() = default;
 
-        /**
+        /**Disassemble a code buffer and return a vector holding the asm instructions info
          * @param FirstInstruction: The address of the first instruction
          * @param Start: The address of the code buffer
          * @param End: The address of the end of the code buffer
          * **/
-        virtual std::vector<Instruction> Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End) = 0;
+        virtual std::vector<std::unique_ptr<PLH::Instruction>> Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End) = 0;
 
         typedef PLH::EventDispatcher<void(const PLH::Message&)> tErrorHandler;
         virtual tErrorHandler& OnError()

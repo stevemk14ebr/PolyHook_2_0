@@ -21,6 +21,18 @@ std::vector<uint8_t> x64ASM = {
 TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
 {
     PLH::CapstoneDisassembler disasm(PLH::ADisassembler::Mode::x64);
-    disasm.Disassemble(0x1800182B0,(uint64_t)&x64ASM.front(),(uint64_t)&x64ASM.front() + x64ASM.size());
+
+    auto Instructions =
+            disasm.Disassemble(0x1800182B0, (uint64_t)&x64ASM.front(),
+                               (uint64_t)&x64ASM.front() + x64ASM.size());
+
+    printf("%d\n",Instructions.size());
+    for(auto const& Inst : Instructions)
+    {
+        printf("%"PRId64"[%d]: ",Inst->GetAddress(),Inst->Size());
+        for(int i = 0; i< Inst->Size(); i++)
+            printf("%02X ",Inst->GetByte(i));
+        printf("%s\n",Inst->GetFullName().c_str());
+    }
 }
 
