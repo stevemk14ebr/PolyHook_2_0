@@ -97,7 +97,7 @@ void PLH::CapstoneDisassembler::WriteEncoding(const PLH::Instruction& instructio
 {
     size_t DispSize = instruction.Size() - instruction.GetDispOffset();
     PLH::Instruction::Displacement DispStruct = instruction.GetDisplacement();
-
+    int64_t disp = 0;
     memcpy((void*)(instruction.GetAddress() + instruction.GetDispOffset()),
            instruction.IsDispRelative() ? (void*)&DispStruct.Relative : (void*)&DispStruct.Absolute,
            DispSize);

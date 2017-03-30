@@ -16,7 +16,7 @@ std::vector<uint8_t> x64ASM = {
         0x83, 0xFA, 0x01,               //cmp edx, 1
         0x75, 0xE4,                     //jne  0x1800182B0 when @0x1800182CA (base + 0xE4(neg) + 0x2)
         0xE8, 0xCB, 0x57, 0x01, 0x00,    //call 0x18002DA9C when @0x1800182CC (base + 0x157CB + 0x5)
-        0xFF, 0x25, 0xCB, 0x57, 0x01, 0x00,    //jmp [0x1800182B0]
+        0xFF, 0x25, 0xCB, 0x57, 0x01, 0x00,    //jmp qword ptr [rip + 0x157cb] when @1800182d1FF
 };
 
 TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
@@ -35,12 +35,12 @@ TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
         REQUIRE(Instructions[8]->GetDestination() == 0x1800182b0);
         REQUIRE(Instructions[9]->GetDestination() == 0x18002da9c);
     }
-    
+
     SECTION("Check instruction re-encoding integrity")
     {
         printf("\n-------------------\n");
         Instructions[8]->SetRelativeDisplacement(0x00);
-        //disasm.WriteEncoding(*Instructions[8]);
+        disasm.WriteEncoding(*Instructions[8]);
     }
 
     for(auto const& Inst : Instructions)
