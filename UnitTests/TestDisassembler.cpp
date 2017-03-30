@@ -30,7 +30,7 @@ TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
     printf("Instruction Count: %d\n",Instructions.size());
     for(auto const& Inst : Instructions)
     {
-        printf("%"PRIx64"[%d]: ",Inst->GetAddress(),Inst->Size());
+        printf("Children[%d] %"PRIx64,Inst->GetChildren().size(),Inst->GetAddress());
         for(int i = 0; i< Inst->Size(); i++)
             printf("%02X ",Inst->GetByte(i));
         printf("%s\n",Inst->GetFullName().c_str());

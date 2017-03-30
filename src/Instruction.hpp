@@ -6,6 +6,8 @@
 #define POLYHOOK_2_0_INSTRUCTION_HPP
 #include <string>
 #include <vector>
+#include <memory>
+
 namespace PLH
 {
     class Instruction
@@ -86,17 +88,17 @@ namespace PLH
             return m_Bytes.size();
         }
 
-        void AddChild(Instruction* Child)
+        void AddChild(std::shared_ptr<Instruction>& Child)
         {
             m_Children.push_back(Child);
         }
 
-        const std::vector<Instruction*>& GetChildren() const
+        const std::vector<std::shared_ptr<Instruction>>& GetChildren() const
         {
             return m_Children;
         }
 
-        Instruction* GetChild(size_t index) const
+        std::shared_ptr<Instruction> GetChild(size_t index) const
         {
             if(index >= m_Children.size())
                 return nullptr;
@@ -116,7 +118,7 @@ namespace PLH
             m_IsRelative = false;
         }
     protected:
-        std::vector<Instruction *> m_Children;
+        std::vector<std::shared_ptr<Instruction>> m_Children;
     private:
         void Init(uint64_t Address,
                   const Displacement &displacement,

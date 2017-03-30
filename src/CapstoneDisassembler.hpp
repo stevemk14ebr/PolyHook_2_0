@@ -25,16 +25,16 @@ namespace PLH
             cs_option(m_CapHandle, CS_OPT_DETAIL, CS_OPT_ON);
         }
 
-        virtual std::vector<std::unique_ptr<PLH::Instruction>> Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End) override;
+        virtual std::vector<std::shared_ptr<PLH::Instruction>> Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End) override;
     private:
-        bool FindInstructionInVec(const std::vector<std::unique_ptr<PLH::Instruction>>& Haystack,const uint64_t NeedleAddress) const
+        int FindInstructionInVec(const std::vector<std::shared_ptr<PLH::Instruction>>& Haystack,const uint64_t NeedleAddress) const
         {
             for(int i =0; i < Haystack.size(); i++)
             {
                 if(Haystack.at(i)->GetAddress() == NeedleAddress)
-                    return true;
+                    return i;
             }
-            return false;
+            return -1;
         }
 
         x86_reg GetIpReg() const
@@ -62,10 +62,10 @@ namespace PLH
     };
 }
 
-std::vector<std::unique_ptr<PLH::Instruction>> PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End)
+std::vector<std::shared_ptr<PLH::Instruction>> PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End)
 {
     cs_insn* InsInfo = cs_malloc(m_CapHandle);
-    std::vector<std::unique_ptr<PLH::Instruction>> InsVec;
+    std::vector<std::shared_ptr<PLH::Instruction>> InsVec;
 
     size_t Size = End-Start;
     while(cs_disasm_iter(m_CapHandle,(const uint8_t**)(&Start),&Size,&FirstInstruction,InsInfo))
@@ -79,10 +79,11 @@ std::vector<std::unique_ptr<PLH::Instruction>> PLH::CapstoneDisassembler::Disass
         PLH::Instruction::Displacement displacement;
         displacement.Absolute = 0;
 
-        auto Inst = std::make_unique<PLH::Instruction>(InsInfo->address,displacement,false,InsInfo->bytes,InsInfo->size,InsInfo->mnemonic,InsInfo->op_str);
+        auto Inst = std::make_shared<PLH::Instruction>(InsInfo->address,displacement,false,InsInfo->bytes,InsInfo->size,InsInfo->mnemonic,InsInfo->op_str);
         ExtractDisplacement(Inst.get(),InsInfo);
-        if(FindInstructionInVec(InsVec,Inst->GetDestination()))
-            printf("Found Child \n");
+        int ParentIndex = FindInstructionInVec(InsVec,Inst->GetDestination());
+        if(ParentIndex != -1)
+            InsVec[ParentIndex]->AddChild(Inst);
 
         InsVec.push_back(std::move(Inst));
     }
