@@ -21,16 +21,18 @@ namespace PLH
 
         Instruction(uint64_t Address,
                     const Displacement &displacement,
-                    bool IsRelative,
+                    const uint8_t DisplacementOffset,
+                    const bool IsRelative,
                     const std::vector<uint8_t> &Bytes,
                     const std::string Mnemonic,
                     const std::string OpStr)
         {
-            Init(Address, displacement, IsRelative, Bytes, Mnemonic, OpStr);
+            Init(Address, displacement,DisplacementOffset, IsRelative, Bytes, Mnemonic, OpStr);
         }
 
         Instruction(uint64_t Address,
                     const Displacement &displacement,
+                    const uint8_t DisplacementOffset,
                     bool IsRelative,
                     uint8_t Bytes[],
                     size_t ArrLen,
@@ -39,7 +41,7 @@ namespace PLH
         {
             std::vector<uint8_t> Arr;
             Arr.assign(Bytes, Bytes + ArrLen);
-            Init(Address, displacement, IsRelative, Arr, Mnemonic, OpStr);
+            Init(Address, displacement,DisplacementOffset, IsRelative, Arr, Mnemonic, OpStr);
         }
 
         int64_t GetDestination() const
@@ -58,6 +60,21 @@ namespace PLH
         Displacement GetDisplacement() const
         {
             return m_Displacement;
+        }
+
+        void SetDispOffset(const uint8_t offset)
+        {
+            m_DispOffset = offset;
+        }
+
+        uint8_t GetDispOffset() const
+        {
+            return m_DispOffset;
+        }
+
+        bool IsDispRelative() const
+        {
+            return m_IsRelative;
         }
 
         const std::vector<uint8_t> &GetBytes() const
@@ -122,21 +139,24 @@ namespace PLH
     private:
         void Init(uint64_t Address,
                   const Displacement &displacement,
-                  bool IsRelative,
+                  const uint8_t DisplacementOffset,
+                  const bool IsRelative,
                   const std::vector<uint8_t> &Bytes,
                   const std::string Mnemonic,
                   const std::string OpStr)
         {
             m_Address = Address;
             m_Displacement = displacement;
+            m_DispOffset = DisplacementOffset;
+            m_IsRelative = IsRelative;
             m_Bytes = Bytes;
             m_Mnemonic = Mnemonic;
             m_OpStr = OpStr;
-            m_IsRelative = IsRelative;
         }
 
         uint64_t m_Address;
         Displacement m_Displacement;
+        uint8_t m_DispOffset;
         bool m_IsRelative;
         std::vector<uint8_t> m_Bytes;
         std::string m_Mnemonic;

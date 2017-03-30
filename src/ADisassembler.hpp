@@ -32,6 +32,7 @@ namespace PLH {
          * @param End: The address of the end of the code buffer
          * **/
         virtual std::vector<std::shared_ptr<PLH::Instruction>> Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End) = 0;
+        virtual void WriteEncoding(const PLH::Instruction& instruction) = 0;
 
         typedef PLH::EventDispatcher<void(const PLH::Message&)> tErrorHandler;
         virtual tErrorHandler& OnError()

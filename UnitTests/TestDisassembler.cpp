@@ -27,7 +27,22 @@ TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
             disasm.Disassemble(0x1800182B0, (uint64_t)&x64ASM.front(),
                                (uint64_t)&x64ASM.front() + x64ASM.size());
 
-    printf("Instruction Count: %d\n",Instructions.size());
+    SECTION("Check disassembler integrity")
+    {
+        REQUIRE(Instructions.size() == 11);
+
+        REQUIRE(Instructions[0]->GetChildren().size() == 1);
+        REQUIRE(Instructions[8]->GetDestination() == 0x1800182b0);
+        REQUIRE(Instructions[9]->GetDestination() == 0x18002da9c);
+    }
+    
+    SECTION("Check instruction re-encoding integrity")
+    {
+        printf("\n-------------------\n");
+        Instructions[8]->SetRelativeDisplacement(0x00);
+        //disasm.WriteEncoding(*Instructions[8]);
+    }
+
     for(auto const& Inst : Instructions)
     {
         printf("Children[%d] %"PRIx64,Inst->GetChildren().size(),Inst->GetAddress());

@@ -26,8 +26,9 @@ namespace PLH
         }
 
         virtual std::vector<std::shared_ptr<PLH::Instruction>> Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End) override;
+        virtual void WriteEncoding(const PLH::Instruction& instruction) override;
     private:
-        int FindInstructionInVec(const std::vector<std::shared_ptr<PLH::Instruction>>& Haystack,const uint64_t NeedleAddress) const
+        int GetParentIndex(const std::vector<std::shared_ptr<PLH::Instruction>> &Haystack, const uint64_t NeedleAddress) const
         {
             for(int i =0; i < Haystack.size(); i++)
             {
@@ -57,7 +58,7 @@ namespace PLH
         }
 
 
-        void ExtractDisplacement(Instruction* Inst,const cs_insn* CapInst);
+        void SetDisplacementFields(Instruction *Inst, const cs_insn *CapInst);
         csh m_CapHandle;
     };
 }
@@ -75,13 +76,14 @@ std::vector<std::shared_ptr<PLH::Instruction>> PLH::CapstoneDisassembler::Disass
 //            printf("%02X ", InsInfo->bytes[j]);
 //        printf("%s %s\n", InsInfo->mnemonic, InsInfo->op_str);
 
-        //Dummy value for now
+        //Set later by 'SetDisplacementFields'
         PLH::Instruction::Displacement displacement;
         displacement.Absolute = 0;
 
-        auto Inst = std::make_shared<PLH::Instruction>(InsInfo->address,displacement,false,InsInfo->bytes,InsInfo->size,InsInfo->mnemonic,InsInfo->op_str);
-        ExtractDisplacement(Inst.get(),InsInfo);
-        int ParentIndex = FindInstructionInVec(InsVec,Inst->GetDestination());
+        auto Inst = std::make_shared<PLH::Instruction>(InsInfo->address,displacement,0,false,InsInfo->bytes,InsInfo->size,InsInfo->mnemonic,InsInfo->op_str);
+        SetDisplacementFields(Inst.get(), InsInfo);
+
+        int ParentIndex = GetParentIndex(InsVec, Inst->GetDestination());
         if(ParentIndex != -1)
             InsVec[ParentIndex]->AddChild(Inst);
 
@@ -91,7 +93,17 @@ std::vector<std::shared_ptr<PLH::Instruction>> PLH::CapstoneDisassembler::Disass
     return InsVec;
 }
 
-void PLH::CapstoneDisassembler::ExtractDisplacement(Instruction *Inst, const cs_insn *CapInst)
+void PLH::CapstoneDisassembler::WriteEncoding(const PLH::Instruction& instruction)
+{
+    size_t DispSize = instruction.Size() - instruction.GetDispOffset();
+    PLH::Instruction::Displacement DispStruct = instruction.GetDisplacement();
+
+    memcpy((void*)(instruction.GetAddress() + instruction.GetDispOffset()),
+           instruction.IsDispRelative() ? (void*)&DispStruct.Relative : (void*)&DispStruct.Absolute,
+           DispSize);
+}
+
+void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction *Inst, const cs_insn *CapInst)
 {
     cs_x86 *x86 = &(CapInst->detail->x86);
 
@@ -118,6 +130,7 @@ void PLH::CapstoneDisassembler::ExtractDisplacement(Instruction *Inst, const cs_
             //printf("Displacement: %"PRIx64"\n",Displacement);
 
             Inst->SetRelativeDisplacement(Displacement);
+            Inst->SetDispOffset(Offset);
         }else if(op->type == X86_OP_IMM){
             //IMM types are like call 0xdeadbeef
             if (x86->op_count > 1) //exclude types like sub rsp,0x20
@@ -153,6 +166,7 @@ void PLH::CapstoneDisassembler::ExtractDisplacement(Instruction *Inst, const cs_
             uint64_t Destination = Base + displacement  + Inst->Size();
             //printf("%"PRIx64"\n",Destination);
             Inst->SetRelativeDisplacement(displacement);
+            Inst->SetDispOffset(Offset);
         }
     }
 }
