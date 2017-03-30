@@ -14,7 +14,7 @@ std::vector<uint8_t> x64ASM = {
         0x8B, 0xDA,                     //mov ebx, edx
         0x48, 0x8B, 0xF1,               //mov rsi, rcx
         0x83, 0xFA, 0x01,               //cmp edx, 1
-        0x75, 0x05,                     //jne  0x1800182D1 when @0x1800182CA (base + 0x5 + 0x2)
+        0x75, 0xE4,                     //jne  0x1800182D1 when @0x1800182CA (base + 0x5 + 0x2)
         0xE8, 0xCB, 0x57, 0x01, 0x00    //call 0x18002DA9C when @0x1800182CC (base + 0x157CB + 0x5)
 };
 
@@ -26,10 +26,10 @@ TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
             disasm.Disassemble(0x1800182B0, (uint64_t)&x64ASM.front(),
                                (uint64_t)&x64ASM.front() + x64ASM.size());
 
-    printf("%d\n",Instructions.size());
+    printf("Instruction Count: %d\n",Instructions.size());
     for(auto const& Inst : Instructions)
     {
-        printf("%"PRId64"[%d]: ",Inst->GetAddress(),Inst->Size());
+        printf("%"PRIx64"[%d]: ",Inst->GetAddress(),Inst->Size());
         for(int i = 0; i< Inst->Size(); i++)
             printf("%02X ",Inst->GetByte(i));
         printf("%s\n",Inst->GetFullName().c_str());

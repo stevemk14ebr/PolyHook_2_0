@@ -11,6 +11,7 @@
 #include <memory>
 
 namespace PLH {
+    //Abstract Disassembler
     class ADisassembler {
     public:
         enum class Mode {

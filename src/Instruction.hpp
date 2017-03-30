@@ -85,6 +85,36 @@ namespace PLH
         {
             return m_Bytes.size();
         }
+
+        void AddChild(Instruction* Child)
+        {
+            m_Children.push_back(Child);
+        }
+
+        const std::vector<Instruction*>& GetChildren() const
+        {
+            return m_Children;
+        }
+
+        Instruction* GetChild(size_t index) const
+        {
+            if(index >= m_Children.size())
+                return nullptr;
+
+            return m_Children[index];
+        }
+
+        void SetRelativeDisplacement(const int64_t displacement)
+        {
+            m_Displacement.Relative = displacement;
+            m_IsRelative = true;
+        }
+
+        void SetAbsoluteDisplacement(const uint64_t displacement)
+        {
+            m_Displacement.Absolute = displacement;
+            m_IsRelative = false;
+        }
     protected:
         std::vector<Instruction *> m_Children;
     private:
