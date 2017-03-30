@@ -114,7 +114,7 @@ void PLH::CapstoneDisassembler::ExtractDisplacement(Instruction *Inst, const cs_
             memset(&Displacement,0x00,sizeof(typeof(Displacement)));
             memcpy(&Displacement,&Inst->GetBytes()[Offset], Size);
 
-            printf("Displacement: %"PRIx64"\n",Displacement);
+            //printf("Displacement: %"PRIx64"\n",Displacement);
 
             Inst->SetRelativeDisplacement(Displacement);
         }else if(op->type == X86_OP_IMM){
@@ -143,14 +143,14 @@ void PLH::CapstoneDisassembler::ExtractDisplacement(Instruction *Inst, const cs_
             uint64_t mask = (1U << (Size*8-1));
             if(displacement & (1U << (Size*8-1)))
             {
-                /*sign extend, requires that bits above Size*8 are zero,
+                /* sign extend, requires that bits above Size*8 are zero,
                  * if not use x = x & ((1U << b) - 1) where x is a temp for displacement
                  * and b is Size*8*/
                 displacement = (displacement ^ mask) - mask;
             }
 
             uint64_t Destination = Base + displacement  + Inst->Size();
-            printf("%"PRIx64"\n",Destination);
+            //printf("%"PRIx64"\n",Destination);
             Inst->SetRelativeDisplacement(displacement);
         }
     }
