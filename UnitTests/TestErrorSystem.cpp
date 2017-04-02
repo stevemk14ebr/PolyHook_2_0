@@ -18,7 +18,7 @@ public:
 
     }
 
-    virtual PLH::HookType GetType() {
+    virtual PLH::HookType GetType(){
         return PLH::HookType::UNKNOWN;
     }
 
