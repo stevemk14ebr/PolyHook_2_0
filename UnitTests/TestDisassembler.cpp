@@ -22,9 +22,8 @@ std::vector<uint8_t> x64ASM = {
 TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
 {
     PLH::CapstoneDisassembler disasm(PLH::ADisassembler::Mode::x64);
-
     auto Instructions =
-            disasm.Disassemble(0x1800182B0, (uint64_t)&x64ASM.front(),
+            disasm.Disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
                                (uint64_t)&x64ASM.front() + x64ASM.size());
 
     //TO-DO: Break this section in further sub-sections
@@ -32,20 +31,22 @@ TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
     {
         REQUIRE(Instructions.size() == 11);
         const uint8_t CorrectSizes[] = {5,5,1,4,3,2,3,3,2,5,6};
-        const uint64_t CorrectAddresses[] = {0x1800182B0, 0x1800182b5, 0x1800182ba, 0x1800182bb,
-                                       0x1800182bf, 0x1800182c2, 0x1800182c4, 0x1800182c7,
-                                       0x1800182ca, 0x1800182cc, 0x1800182d1};
 
         const char* CorrectMnemonic[] = {"mov","mov","push","sub","mov","mov","mov","cmp","jne","call","jmp" };
         const bool CorrectChildCount[] = {1,0,0,0,0,0,0,0,0,0,0};
         const std::vector<std::shared_ptr<PLH::Instruction>> CorrectChildren[] = {{Instructions[8]}}; //array of vectors
+
+        uint64_t PrevInstAddress = (uint64_t)&x64ASM.front();
+        size_t PrevInstSize = 0;
         for(int i = 0; i < Instructions.size();i++)
         {
             INFO("Index: " << i);
             REQUIRE(Instructions[i]->Size() == CorrectSizes[i]);
 
             INFO("Index: " << i);
-            REQUIRE(Instructions[i]->GetAddress() == CorrectAddresses[i]);
+            REQUIRE(Instructions[i]->GetAddress() == (PrevInstAddress + PrevInstSize));
+            PrevInstAddress = Instructions[i]->GetAddress();
+            PrevInstSize = Instructions[i]->Size();
 
             INFO("Index: " << i << " Correct Mnemonic:" << CorrectMnemonic[i] << " Mnemonic:"<<Instructions[i]->GetMnemonic());
             REQUIRE(Instructions[i]->GetMnemonic().compare(CorrectMnemonic[i]) == 0);
@@ -64,21 +65,21 @@ TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
         }
     }
 
-    /*TO-DO: fix this section to work, currently write-encoding assumes that
-     * the instruction is actually allocate at the address of location we told capstone.
-     * In our case however, the actual array of assembly instructions is at a different
-     * memory location than where the addresses are encoded for, so we get a sigsev if we try
-     * to write to that location*/
     SECTION("Check instruction re-encoding integrity")
     {
         printf("\n-------------------\n");
+
         Instructions[8]->SetRelativeDisplacement(0x00);
-        //disasm.WriteEncoding(*Instructions[8]);
+        disasm.WriteEncoding(*Instructions[8]);
+
+        Instructions =
+                disasm.Disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
+                                   (uint64_t)&x64ASM.front() + x64ASM.size());
     }
 
     for(auto const& Inst : Instructions)
     {
-        printf("Children[%d] %"PRIx64" ",Inst->GetChildren().size(),Inst->GetAddress());
+        printf("Children[%d] [%"PRIx64"] ",Inst->GetChildren().size(),Inst->GetAddress());
         for(int i = 0; i< Inst->Size(); i++)
             printf("%02X ",Inst->GetByte(i));
         printf("%s\n",Inst->GetFullName().c_str());
