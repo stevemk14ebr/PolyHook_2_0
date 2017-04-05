@@ -57,8 +57,8 @@ namespace PLH
             return false;
         }
 
-
-        void SetDisplacementFields(Instruction *Inst, const cs_insn *CapInst);
+        void SetDisplacementFields(Instruction *Inst, const cs_insn *CapInst) const;
+        void CopyAndSExtendDisp(PLH::Instruction *Inst, const uint8_t Offset, const uint8_t Size) const;
         csh m_CapHandle;
     };
 }
@@ -84,6 +84,7 @@ std::vector<std::shared_ptr<PLH::Instruction>> PLH::CapstoneDisassembler::Disass
         SetDisplacementFields(Inst.get(), InsInfo);
 
         int ParentIndex = GetParentIndex(InsVec, Inst->GetDestination());
+        printf("%"PRIx64"\n",Inst->GetDestination());
         if(ParentIndex != -1)
             InsVec[ParentIndex]->AddChild(Inst);
 
@@ -97,14 +98,13 @@ void PLH::CapstoneDisassembler::WriteEncoding(const PLH::Instruction& instructio
 {
     size_t DispSize = instruction.Size() - instruction.GetDispOffset();
     PLH::Instruction::Displacement DispStruct = instruction.GetDisplacement();
-    int64_t disp = 0;
-    //instruction.IsDispRelative() ? (void*)&DispStruct.Relative : (void*)&DispStruct.Absolute
+
     memcpy((void*)(instruction.GetAddress() + instruction.GetDispOffset()),
-           &disp,
+           instruction.IsDispRelative() ? (void*)&DispStruct.Relative : (void*)&DispStruct.Absolute,
            DispSize);
 }
 
-void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction *Inst, const cs_insn *CapInst)
+void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction *Inst, const cs_insn *CapInst) const
 {
     cs_x86 *x86 = &(CapInst->detail->x86);
 
@@ -122,53 +122,43 @@ void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction *Inst, const c
 
             const uint8_t Offset = x86->encoding.disp_offset;
             const uint8_t Size = x86->encoding.disp_size;
-
-            //Read the raw bytes starting at array + offset to an end of array + offset + size
-            int64_t Displacement;
-            memset(&Displacement,0x00,sizeof(typeof(Displacement)));
-            memcpy(&Displacement,&Inst->GetBytes()[Offset], Size);
-
-            //printf("Displacement: %"PRIx64"\n",Displacement);
-
-            Inst->SetRelativeDisplacement(Displacement);
-            Inst->SetDispOffset(Offset);
+            CopyAndSExtendDisp(Inst, Offset, Size);
         }else if(op->type == X86_OP_IMM){
             //IMM types are like call 0xdeadbeef
             if (x86->op_count > 1) //exclude types like sub rsp,0x20
                 continue;
 
-            int64_t Base = 0;
-            if(HasGroup(CapInst,x86_insn_group::X86_GRP_JUMP) ||
-               HasGroup(CapInst,x86_insn_group::X86_GRP_CALL))
-            {
-                Base = Inst->GetAddress();
-            } else
+            if(!HasGroup(CapInst,x86_insn_group::X86_GRP_JUMP) &&
+               !HasGroup(CapInst,x86_insn_group::X86_GRP_CALL))
                 continue;
 
             const uint8_t Offset = x86->encoding.imm_offset;
             const uint8_t Size = x86->encoding.imm_size;
-
-            int64_t displacement = 0; //this is required for the bit shift below to always work
-            memcpy(&displacement,&Inst->GetBytes()[Offset], Size);
-
-            /* 1 << (Size*8-1) dynamically calculates the position of the sign bit (furthest left) (our byte mask)
-             * the Size*8 gives us the size in bits, i do -1 because zero based.
-             * Then & that with the value, the result will be positive if sign bit is set (negative displacement)
-             * and 0 when sign bit not set (positive displacement)*/
-            uint64_t mask = (1U << (Size*8-1));
-            if(displacement & (1U << (Size*8-1)))
-            {
-                /* sign extend, requires that bits above Size*8 are zero,
-                 * if not use x = x & ((1U << b) - 1) where x is a temp for displacement
-                 * and b is Size*8*/
-                displacement = (displacement ^ mask) - mask;
-            }
-
-            uint64_t Destination = Base + displacement  + Inst->Size();
-            //printf("%"PRIx64"\n",Destination);
-            Inst->SetRelativeDisplacement(displacement);
-            Inst->SetDispOffset(Offset);
+            CopyAndSExtendDisp(Inst,Offset,Size);
         }
     }
+}
+
+void PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction *Inst, const uint8_t Offset, const uint8_t Size) const
+{
+    /* Sign extension necessary because we are storing numbers (possibly) smaller than uint64_t that may be negative.
+     * 1 << (Size*8-1) dynamically calculates the position of the sign bit (furthest left) (our byte mask)
+     * the Size*8 gives us the size in bits, i do -1 because zero based. Then left shift to set that bit to one.
+     * Then & that with the value, the result will be positive if sign bit is set (negative displacement)
+     * and 0 when sign bit not set (positive displacement)*/
+    uint64_t displacement = 0;
+    memcpy(&displacement,&Inst->GetBytes()[Offset], Size);
+
+    uint64_t mask = (1U << (Size*8-1));
+    if(displacement & (1U << (Size*8-1)))
+    {
+        /* sign extend if negative, requires that bits above Size*8 are zero,
+         * if bits are not zero use x = x & ((1U << b) - 1) where x is a temp for displacement
+         * and b is Size*8*/
+        displacement = (displacement ^ mask) - mask;
+    }
+    //uint64_t Destination = Base + displacement  + Inst->Size();
+    Inst->SetRelativeDisplacement(displacement);
+    Inst->SetDispOffset(Offset);
 }
 #endif //POLYHOOK_2_0_CAPSTONEDISASSEMBLER_HPP
