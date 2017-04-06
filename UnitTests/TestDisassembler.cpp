@@ -72,6 +72,11 @@ TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
         Instructions[8]->SetRelativeDisplacement(0x00);
         disasm.WriteEncoding(*Instructions[8]);
 
+        Instructions[9]->SetRelativeDisplacement(0x00);
+        disasm.WriteEncoding(*Instructions[9]);
+
+        REQUIRE(Instructions[8]->GetDestination() == Instructions[8]->GetAddress() + Instructions[8]->Size());
+        REQUIRE(Instructions[9]->GetDestination() == Instructions[9]->GetAddress() + Instructions[9]->Size());
         Instructions =
                 disasm.Disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
                                    (uint64_t)&x64ASM.front() + x64ASM.size());

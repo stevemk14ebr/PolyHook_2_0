@@ -18,7 +18,7 @@ namespace PLH
     public:
         CapstoneDisassembler(ADisassembler::Mode mode) : ADisassembler(mode)
         {
-            cs_mode capmode = mode == ADisassembler::Mode::x64 ? CS_MODE_64 : CS_MODE_32;
+            cs_mode capmode = (mode == ADisassembler::Mode::x64 ? CS_MODE_64 : CS_MODE_32);
             if (cs_open(CS_ARCH_X86, capmode, &m_CapHandle) != CS_ERR_OK)
                 m_ErrorCallback.Invoke(PLH::Message("Capstone Init Failed"));
 
@@ -84,7 +84,6 @@ std::vector<std::shared_ptr<PLH::Instruction>> PLH::CapstoneDisassembler::Disass
         SetDisplacementFields(Inst.get(), InsInfo);
 
         int ParentIndex = GetParentIndex(InsVec, Inst->GetDestination());
-        printf("%"PRIx64"\n",Inst->GetDestination());
         if(ParentIndex != -1)
             InsVec[ParentIndex]->AddChild(Inst);
 
