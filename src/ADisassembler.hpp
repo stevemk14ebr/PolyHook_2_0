@@ -6,7 +6,7 @@
 #define POLYHOOK_2_0_IDISASSEMBLER_HPP
 
 #include <vector>
-#include "TestErrorSystem.hpp"
+#include "ErrorSystem.hpp"
 #include "Instruction.hpp"
 #include <memory>
 

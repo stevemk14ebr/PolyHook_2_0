@@ -4,7 +4,7 @@
 
 #ifndef POLYHOOK_2_0_IHOOK_HPP
 #define POLYHOOK_2_0_IHOOK_HPP
-#include "TestErrorSystem.hpp"
+#include "ErrorSystem.hpp"
 #include "ADisassembler.hpp"
 namespace PLH{
     enum class HookType
@@ -21,7 +21,7 @@ namespace PLH{
 #endif
     };
 
-    class IHook
+    class IHook : public PLH::Errant
     {
     public:
         IHook() = default;
@@ -34,15 +34,6 @@ namespace PLH{
         virtual bool Hook() = 0;
         virtual void UnHook() = 0;
         virtual HookType GetType() = 0;
-
-        typedef PLH::EventDispatcher<void(const PLH::Message&)> tErrorHandler;
-
-        virtual tErrorHandler& OnError()
-        {
-            return m_ErrorCallback;
-        }
-    protected:
-        tErrorHandler m_ErrorCallback;
     };
 }
 #endif //POLYHOOK_2_0_IHOOK_HPP

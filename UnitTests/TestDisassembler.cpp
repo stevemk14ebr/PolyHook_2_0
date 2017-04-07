@@ -84,7 +84,7 @@ TEST_CASE("Test Capstone Disassembler","[ADisassembler],[CapstoneDisassembler]")
 
     for(auto const& Inst : Instructions)
     {
-        printf("Children[%d] [%"PRIx64"] ",Inst->GetChildren().size(),Inst->GetAddress());
+        printf("Children[%ld] [%"PRIx64"] ",Inst->GetChildren().size(),Inst->GetAddress());
         for(int i = 0; i< Inst->Size(); i++)
             printf("%02X ",Inst->GetByte(i));
         printf("%s\n",Inst->GetFullName().c_str());

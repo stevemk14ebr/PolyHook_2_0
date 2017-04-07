@@ -54,5 +54,19 @@ namespace PLH {
             m_Events.pop_back();
         return tmp;
     }
+
+    //Should be implemented when a process can be "errant" or "may throw errors"
+    class Errant
+    {
+    public:
+        typedef PLH::EventDispatcher<void(const PLH::Message&)> tErrorHandler;
+
+        virtual tErrorHandler& OnError()
+        {
+            return m_ErrorCallback;
+        }
+    protected:
+        tErrorHandler m_ErrorCallback;
+    };
 }
 #endif //POLYHOOK_2_0_ERRORSYSTEM_HPP

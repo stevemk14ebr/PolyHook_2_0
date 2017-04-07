@@ -14,6 +14,7 @@ public:
     virtual bool Hook() {
 
     }
+
     virtual void UnHook(){
 
     }
@@ -55,4 +56,3 @@ TEST_CASE("Tests Message interface of IHook","[Message, EventDispatcher, IHook::
         REQUIRE(GotEvent == false);
     }
 }
-
