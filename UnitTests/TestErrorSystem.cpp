@@ -22,10 +22,6 @@ public:
     virtual PLH::HookType GetType(){
         return PLH::HookType::UNKNOWN;
     }
-
-    void AddError(std::string Msg){
-        this->m_ErrorCallback.Invoke(Msg);
-    }
 };
 
 bool GotEvent = false;
@@ -43,7 +39,7 @@ TEST_CASE("Tests Message interface of IHook","[Message, EventDispatcher, IHook::
     {
         REQUIRE(GotEvent == false);
         Derived->OnError() += fOnError;
-        Derived->AddError("Testing 123, 1.2.3");
+        Derived->SendError("Testing 123, 1.2.3");
         REQUIRE(GotEvent == true);
     }
 
@@ -52,7 +48,7 @@ TEST_CASE("Tests Message interface of IHook","[Message, EventDispatcher, IHook::
         Derived->OnError()--;
         GotEvent = false;
         REQUIRE(GotEvent == false);
-        Derived->AddError("Testing 123, 1.2.3");
+        Derived->SendError("Testing 123, 1.2.3");
         REQUIRE(GotEvent == false);
     }
 }

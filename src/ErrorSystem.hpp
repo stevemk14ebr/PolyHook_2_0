@@ -65,7 +65,13 @@ namespace PLH {
         {
             return m_ErrorCallback;
         }
+
+        virtual void SendError(std::string Msg)
+        {
+            m_ErrorCallback.Invoke(Msg);
+        }
     protected:
+
         tErrorHandler m_ErrorCallback;
     };
 }
