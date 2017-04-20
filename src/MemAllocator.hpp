@@ -8,71 +8,12 @@
 #include <memory>
 #include "ErrorSystem.hpp"
 #include "Misc.hpp"
-#include <inttypes.h>
+#include "Enums.hpp"
+#include "MemoryBlock.hpp"
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
 namespace PLH
 {
-    //unsafe enum by design to allow binary OR
-    enum ProtFlag : std::uint8_t
-    {
-        UNSET = 0, //the value meaning no protection is set
-        X = 1 << 1,
-        R = 1 << 2,
-        W = 1 << 3,
-        S = 1 << 4,
-        P = 1 << 5,
-        NONE = 1 << 6 //The flag meaning PROT_UNSET
-    };
-
-    bool operator&(ProtFlag lhs, ProtFlag rhs)
-    {
-        return static_cast<std::uint8_t>(lhs) &
-               static_cast<std::uint8_t>(rhs);
-    }
-
-    ProtFlag operator|(ProtFlag lhs, ProtFlag rhs)
-    {
-        return static_cast<ProtFlag >(
-                static_cast<std::uint8_t>(lhs) |
-               static_cast<std::uint8_t>(rhs));
-    }
-
-    std::string ProtFlagToString(PLH::ProtFlag flags)
-    {
-        std::string s = "";
-        if(flags == PLH::ProtFlag::UNSET) {
-            s += "UNSET";
-            return s;
-        }
-
-        if (flags & PLH::ProtFlag::X)
-            s += "x";
-        else
-            s += "-";
-
-        if (flags & PLH::ProtFlag::R)
-            s += "r";
-        else
-            s += "-";
-
-        if (flags & PLH::ProtFlag::W)
-            s += "w";
-        else
-            s += "-";
-
-        if (flags & PLH::ProtFlag::NONE)
-            s += "n";
-        else
-            s += "-";
-
-        if(flags & PLH::ProtFlag::P)
-            s += " private";
-        else if(flags & PLH::ProtFlag::S)
-            s += " shared";
-        return s;
-    }
-
     template<typename PlatformImp>
     class MemAllocator : private PlatformImp, public virtual PLH::Errant
     {
@@ -92,6 +33,16 @@ namespace PLH
         int TranslateProtection(ProtFlag flags)
         {
             return PlatformImp::TranslateProtection(flags);
+        }
+
+        std::vector<PLH::MemoryBlock> GetAllocatedVABlocks()
+        {
+            return PlatformImp::GetAllocatedVABlocks();
+        }
+
+        std::vector<PLH::MemoryBlock> GetFreeVABlocks()
+        {
+            return PlatformImp::GetFreeVABlocks();
         }
     protected:
         bool VerifyMemInRange(uint64_t MinAddress, uint64_t MaxAddress, uint64_t Needle);

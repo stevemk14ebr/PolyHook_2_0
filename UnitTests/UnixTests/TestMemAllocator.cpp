@@ -11,7 +11,7 @@ void PlaceHolderFunction()
 
 TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocatorUnix]")
 {
-    printf("%ld\n",getpid( ));
+    std::cout << std::dec << "Process ID: " << getpid();
     PLH::MemAllocatorU allocator;
     PLH::ProtFlag R = PLH::ProtFlag::R;
     PLH::ProtFlag W = PLH::ProtFlag::W;
@@ -26,11 +26,13 @@ TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocat
     REQUIRE(allocator.TranslateProtection(X | W | R | N) == (PROT_EXEC | PROT_WRITE | PROT_READ | PROT_NONE));
 
     uint64_t fnAddress = (uint64_t)&PlaceHolderFunction;
-    std::cout << std::hex << fnAddress << std::endl;
+    std::cout << "fnAddress: " << std::hex << fnAddress << std::endl;
 
-    while(1)
+    int PageSize = getpagesize();
+    std::cout << std::dec << "PageSize: " << PageSize << std::endl;
+    for(PLH::MemoryBlock page : allocator.GetFreeVABlocks())
     {
-        usleep(2 * 1000);
+        std::cout << std::hex << page.GetStart() << " " << page.GetEnd() << std::dec << " pages:" << page.CountPagesInBlock(PageSize) << std::endl;
     }
 }
 
