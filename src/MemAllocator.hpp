@@ -8,6 +8,7 @@
 #include <memory>
 #include "ErrorSystem.hpp"
 #include "Misc.hpp"
+#include <inttypes.h>
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
 namespace PLH
@@ -15,10 +16,13 @@ namespace PLH
     //unsafe enum by design to allow binary OR
     enum ProtFlag : std::uint8_t
     {
-        X = 1 << 0,
-        R = 1 << 1,
-        W = 1 << 2,
-        NONE = 1<< 3
+        UNSET = 0, //the value meaning no protection is set
+        X = 1 << 1,
+        R = 1 << 2,
+        W = 1 << 3,
+        S = 1 << 4,
+        P = 1 << 5,
+        NONE = 1 << 6 //The flag meaning PROT_UNSET
     };
 
     bool operator&(ProtFlag lhs, ProtFlag rhs)
@@ -34,17 +38,53 @@ namespace PLH
                static_cast<std::uint8_t>(rhs));
     }
 
+    std::string ProtFlagToString(PLH::ProtFlag flags)
+    {
+        std::string s = "";
+        if(flags == PLH::ProtFlag::UNSET) {
+            s += "UNSET";
+            return s;
+        }
+
+        if (flags & PLH::ProtFlag::X)
+            s += "x";
+        else
+            s += "-";
+
+        if (flags & PLH::ProtFlag::R)
+            s += "r";
+        else
+            s += "-";
+
+        if (flags & PLH::ProtFlag::W)
+            s += "w";
+        else
+            s += "-";
+
+        if (flags & PLH::ProtFlag::NONE)
+            s += "n";
+        else
+            s += "-";
+
+        if(flags & PLH::ProtFlag::P)
+            s += " private";
+        else if(flags & PLH::ProtFlag::S)
+            s += " shared";
+        return s;
+    }
+
     template<typename PlatformImp>
-    class MemAllocator : private PlatformImp, public PLH::Errant
+    class MemAllocator : private PlatformImp, public virtual PLH::Errant
     {
     public:
         uint8_t *AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
         {
             uint8_t* Cave = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
-            if (VerifyMemInRange(MinAddress, MaxAddress, (uint64_t) Cave)) {
+            if (Cave == nullptr || VerifyMemInRange(MinAddress, MaxAddress, (uint64_t) Cave)) {
                 m_Caves.emplace_back(Cave);
             } else {
-                this->SendError("Failed to allocate memory in range");
+                SendError("Failed to allocate memory in range");
+                return nullptr;
             }
             return Cave;
         }

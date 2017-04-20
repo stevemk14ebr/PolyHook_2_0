@@ -4,8 +4,14 @@
 #include "../../Catch.hpp"
 #include "../../src/MemAllocator.hpp"
 
+void PlaceHolderFunction()
+{
+    printf("Not useful, ignore me totally");
+}
+
 TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocatorUnix]")
 {
+    printf("%ld\n",getpid( ));
     PLH::MemAllocatorU allocator;
     PLH::ProtFlag R = PLH::ProtFlag::R;
     PLH::ProtFlag W = PLH::ProtFlag::W;
@@ -18,4 +24,14 @@ TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocat
     REQUIRE(allocator.TranslateProtection(N) == PROT_NONE);
 
     REQUIRE(allocator.TranslateProtection(X | W | R | N) == (PROT_EXEC | PROT_WRITE | PROT_READ | PROT_NONE));
+
+    uint64_t fnAddress = (uint64_t)&PlaceHolderFunction;
+    std::cout << std::hex << fnAddress << std::endl;
+
+    while(1)
+    {
+        usleep(2 * 1000);
+    }
 }
+
+
