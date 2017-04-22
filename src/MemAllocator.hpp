@@ -21,12 +21,6 @@ namespace PLH
         uint8_t *AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
         {
             uint8_t* Cave = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
-            if (Cave == nullptr || VerifyMemInRange(MinAddress, MaxAddress, (uint64_t) Cave)) {
-                m_Caves.emplace_back(Cave);
-            } else {
-                SendError("Failed to allocate memory in range");
-                return nullptr;
-            }
             return Cave;
         }
 

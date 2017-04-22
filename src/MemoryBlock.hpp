@@ -17,6 +17,7 @@ namespace PLH
         uint64_t GetEnd();
         PLH::ProtFlag GetProtection();
         size_t CountPagesInBlock(size_t PageSize);
+        std::string ToString();
     private:
         uint64_t m_Start;
         uint64_t m_End;
@@ -48,6 +49,13 @@ namespace PLH
     size_t MemoryBlock::CountPagesInBlock(size_t PageSize)
     {
         return (m_End - m_Start) / PageSize;
+    }
+
+    std::string MemoryBlock::ToString()
+    {
+        std::stringstream ss;
+        ss << std::hex << "Start:" << m_Start << " End:" << m_End << " Prot:" << PLH::ProtFlagToString(m_Protection);
+        return ss.str();
     }
 }
 #endif //POLYHOOK_2_0_MEMORYPAGE_HPP

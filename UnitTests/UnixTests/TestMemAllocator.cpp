@@ -26,14 +26,15 @@ TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocat
     REQUIRE(allocator.TranslateProtection(X | W | R | N) == (PROT_EXEC | PROT_WRITE | PROT_READ | PROT_NONE));
 
     uint64_t fnAddress = (uint64_t)&PlaceHolderFunction;
-    std::cout << "fnAddress: " << std::hex << fnAddress << std::endl;
+    uint64_t MinAddress = fnAddress - 0x80000000;
+    uint64_t MaxAddress = fnAddress + 0x80000000;
+    std::cout << "fnAddress: " << std::hex << fnAddress << " Min:" << MinAddress << "-" << MaxAddress << std::endl;
 
     int PageSize = getpagesize();
     std::cout << std::dec << "PageSize: " << PageSize << std::endl;
-    for(PLH::MemoryBlock page : allocator.GetFreeVABlocks())
-    {
-        std::cout << std::hex << page.GetStart() << " " << page.GetEnd() << std::dec << " pages:" << page.CountPagesInBlock(PageSize) << std::endl;
-    }
+
+    uint8_t* Buffer = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R));
+    std::cout << std::hex << "Allocated At: " << (uint64_t )&Buffer<< std::endl;
 }
 
 

@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
+#include <string.h>
 #include "../MemoryBlock.hpp"
 
 namespace PLH
@@ -44,14 +45,31 @@ namespace PLH
         return NativeFlag;
     }
 
+    //[MinAddress, MaxAddress]
     uint8_t* PLH::MemAllocatorUnix::AllocateMemory(uint64_t MinAddress,
                                                    uint64_t MaxAddress,
                                                    size_t Size,
                                                    PLH::ProtFlag Protections)
     {
         int Flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED; //TO-DO make use of MAP_32Bit for x64?
+        std::vector<PLH::MemoryBlock> FreeBlocks = GetFreeVABlocks();
 
-
+        std::cout << std::hex << MinAddress << " " << MaxAddress << std::endl;
+        int PageSize = getpagesize();
+        for(PLH::MemoryBlock FreeBlock : FreeBlocks)
+        {
+            std::cout <<  FreeBlock.ToString() << std::endl;
+            //The block is in the acceptable range for allocation
+            if(FreeBlock.GetStart() >= MinAddress && FreeBlock.GetEnd() + Size < MaxAddress)
+            {
+                std::cout << "Found Normal Block" << std::endl;
+            }else if(FreeBlock.GetEnd() >= MinAddress + Size && FreeBlock.GetStart() < MinAddress){
+                std::cout << "Found Edge Min Range Block" << std::endl;
+            }else if(FreeBlock.GetStart() + Size < MaxAddress && FreeBlock.GetEnd() > MaxAddress){
+                std::cout << "Found Edge Max Range Block" << std::endl;
+            }
+        }
+        std::cout << "No Block Found" << std::endl;
         return nullptr;
     }
 
