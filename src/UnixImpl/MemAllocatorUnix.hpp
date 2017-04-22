@@ -45,7 +45,7 @@ namespace PLH
         return NativeFlag;
     }
 
-    //[MinAddress, MaxAddress]
+    //[MinAddress, MaxAddress)
     uint8_t* PLH::MemAllocatorUnix::AllocateMemory(uint64_t MinAddress,
                                                    uint64_t MaxAddress,
                                                    size_t Size,
