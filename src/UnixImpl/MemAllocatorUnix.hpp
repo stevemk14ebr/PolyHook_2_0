@@ -62,7 +62,9 @@ namespace PLH
             {
                 /*This is the normal case where the entire block is within our range. We now can walk
                  * the memory pages normally until we have a successful allocation*/
-                for(uint64_t Cur = FreeBlock.GetAlignedFirstPage(PageSize); Cur != NULL; Cur = FreeBlock.GetAlignedNextPage(Cur,PageSize,PageSize))
+                for(uint64_t Cur = FreeBlock.GetAlignedFirstPage(PageSize);
+                    Cur != NULL;
+                    Cur = FreeBlock.GetAlignedNextPage(Cur,PageSize,PageSize))
                 {
                     void* Buffer = mmap((void*)Cur,Size,TranslateProtection(Protections),Flags,0,0);
                     if(Buffer != MAP_FAILED) {
