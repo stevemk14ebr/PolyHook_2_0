@@ -54,18 +54,28 @@ namespace PLH
         int Flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED; //TO-DO make use of MAP_32Bit for x64?
         std::vector<PLH::MemoryBlock> FreeBlocks = GetFreeVABlocks();
 
-        std::cout << std::hex << MinAddress << " " << MaxAddress << std::endl;
         int PageSize = getpagesize();
         for(PLH::MemoryBlock FreeBlock : FreeBlocks)
         {
-            std::cout <<  FreeBlock.ToString() << std::endl;
-            //The block is in the acceptable range for allocation
+            //Check acceptable ranges of block size within our Min-Max params
             if(FreeBlock.GetStart() >= MinAddress && FreeBlock.GetEnd() + Size < MaxAddress)
             {
-                std::cout << "Found Normal Block" << std::endl;
+                /*This is the normal case where the entire block is within our range. We now can walk
+                 * the memory pages normally until we have a successful allocation*/
+                for(uint64_t Cur = FreeBlock.GetAlignedFirstPage(PageSize); Cur != NULL; Cur = FreeBlock.GetAlignedNextPage(Cur,PageSize,PageSize))
+                {
+                    void* Buffer = mmap((void*)Cur,Size,TranslateProtection(Protections),Flags,0,0);
+                    if(Buffer != MAP_FAILED) {
+                        return (uint8_t *) Buffer;
+                    }
+                }
             }else if(FreeBlock.GetEnd() >= MinAddress + Size && FreeBlock.GetStart() < MinAddress){
+                /*This is the case where our blocks upper range overlaps the minimum range of our range, but the
+                * majority of the lower range of the block is not in our range*/
                 std::cout << "Found Edge Min Range Block" << std::endl;
             }else if(FreeBlock.GetStart() + Size < MaxAddress && FreeBlock.GetEnd() > MaxAddress){
+                /*This is the case where our blocks lower range overlaps the maximum of our range, but the
+                 * majority of the blocks upper range is not in our range*/
                 std::cout << "Found Edge Max Range Block" << std::endl;
             }
         }

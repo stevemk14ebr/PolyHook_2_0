@@ -21,7 +21,9 @@ namespace PLH
         uint8_t *AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
         {
             uint8_t* Cave = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
-            return Cave;
+            if(VerifyMemInRange(MinAddress,MaxAddress,(uint64_t)Cave))
+                return Cave;
+            return nullptr;
         }
 
         int TranslateProtection(ProtFlag flags)

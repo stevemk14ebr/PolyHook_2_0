@@ -28,13 +28,16 @@ TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocat
     uint64_t fnAddress = (uint64_t)&PlaceHolderFunction;
     uint64_t MinAddress = fnAddress - 0x80000000;
     uint64_t MaxAddress = fnAddress + 0x80000000;
+
+
     std::cout << "fnAddress: " << std::hex << fnAddress << " Min:" << MinAddress << "-" << MaxAddress << std::endl;
 
     int PageSize = getpagesize();
     std::cout << std::dec << "PageSize: " << PageSize << std::endl;
 
     uint8_t* Buffer = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R));
-    std::cout << std::hex << "Allocated At: " << (uint64_t )&Buffer<< std::endl;
+    REQUIRE(Buffer != nullptr);
+    std::cout << std::hex << "Allocated At: " << (uint64_t )Buffer<< std::endl;
 }
 
 

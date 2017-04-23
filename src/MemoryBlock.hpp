@@ -5,6 +5,7 @@
 #ifndef POLYHOOK_2_0_MEMORYPAGE_HPP
 #define POLYHOOK_2_0_MEMORYPAGE_HPP
 
+#include "Misc.hpp"
 #include "Enums.hpp"
 namespace PLH
 {
@@ -18,6 +19,9 @@ namespace PLH
         PLH::ProtFlag GetProtection();
         size_t CountPagesInBlock(size_t PageSize);
         std::string ToString();
+
+        uint64_t GetAlignedFirstPage(size_t Alignment);
+        uint64_t GetAlignedNextPage(uint64_t CurPageStart,size_t PageSize,size_t Alignment);
     private:
         uint64_t m_Start;
         uint64_t m_End;
@@ -49,6 +53,22 @@ namespace PLH
     size_t MemoryBlock::CountPagesInBlock(size_t PageSize)
     {
         return (m_End - m_Start) / PageSize;
+    }
+
+    uint64_t MemoryBlock::GetAlignedFirstPage(size_t Alignment)
+    {
+        return (uint64_t)PLH::AlignUpwards((uint8_t*)m_Start,Alignment);
+    }
+
+    uint64_t MemoryBlock::GetAlignedNextPage(uint64_t CurPageStart, size_t PageSize, size_t Alignment)
+    {
+        /* Next page is curpage + pagesize, verify it follows alignment, if the entire 'next'
+         * page doesn't fit in our MemoryBlock then return null, otherwise the page*/
+        uint64_t Next = CurPageStart + PageSize;
+        assert(Next % Alignment == 0);
+        if(Next + PageSize > m_End)
+            return NULL;
+        return Next;
     }
 
     std::string MemoryBlock::ToString()
