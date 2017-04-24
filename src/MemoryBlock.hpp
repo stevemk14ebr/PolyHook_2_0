@@ -20,9 +20,12 @@ namespace PLH
         size_t CountPagesInBlock(size_t PageSize);
         std::string ToString();
 
-        uint64_t GetAlignedFirstPage(size_t Alignment);
-        uint64_t GetAlignedNextPage(uint64_t CurPageStart,size_t PageSize,size_t Alignment);
+        uint64_t GetAlignedFirstPage(size_t Alignment, size_t PageSize);
+        uint64_t GetAlignedNextPage(uint64_t CurPageStart,size_t Alignment,size_t PageSize);
+        uint64_t GetAlignedPageNearestUp(uint64_t Address, size_t Alignment, size_t PageSize);
+        uint64_t GetAlignedPageNearestDown(uint64_t Address, size_t Alignment, size_t PageSize);
     private:
+        bool InRange(uint64_t Address, size_t Size);
         uint64_t m_Start;
         uint64_t m_End;
         PLH::ProtFlag m_Protection;
@@ -55,20 +58,57 @@ namespace PLH
         return (m_End - m_Start) / PageSize;
     }
 
-    uint64_t MemoryBlock::GetAlignedFirstPage(size_t Alignment)
+    //[Start, End)
+    bool MemoryBlock::InRange(uint64_t Address,size_t Size)
     {
-        return (uint64_t)PLH::AlignUpwards((uint8_t*)m_Start,Alignment);
+        if(Address < m_Start || (Address + Size) >= m_End)
+            return false;
+        return true;
     }
 
-    uint64_t MemoryBlock::GetAlignedNextPage(uint64_t CurPageStart, size_t PageSize, size_t Alignment)
+    uint64_t MemoryBlock::GetAlignedFirstPage(size_t Alignment,size_t PageSize)
+    {
+        return GetAlignedPageNearestDown(m_Start,Alignment,PageSize);
+    }
+
+    //[Start, End)
+    uint64_t MemoryBlock::GetAlignedNextPage(uint64_t CurPageStart, size_t Alignment,size_t PageSize)
     {
         /* Next page is curpage + pagesize, verify it follows alignment, if the entire 'next'
          * page doesn't fit in our MemoryBlock then return null, otherwise the page*/
         uint64_t Next = CurPageStart + PageSize;
         assert(Next % Alignment == 0);
-        if(Next + PageSize > m_End)
+        if(!InRange(Next,PageSize))
             return NULL;
         return Next;
+    }
+
+    //[Start, End)
+    uint64_t MemoryBlock::GetAlignedPageNearestDown(uint64_t Address, size_t Alignment, size_t PageSize)
+    {
+        uint64_t NearestDown = (uint64_t)PLH::AlignDownwards((uint8_t*)Address,Alignment);
+        while(!InRange(NearestDown,PageSize)) //loop required since address could be = m_Start
+        {
+            NearestDown += PageSize;
+            if(NearestDown >= m_End)
+                return NULL;
+        }
+        assert(NearestDown % Alignment == 0);
+        return NearestDown;
+    }
+
+    //[Start, End)
+    uint64_t MemoryBlock::GetAlignedPageNearestUp(uint64_t Address, size_t Alignment, size_t PageSize)
+    {
+        uint64_t NearestUp = (uint64_t)PLH::AlignUpwards((uint8_t*)Address,Alignment);
+        while(!InRange(NearestUp,PageSize)) //loop required for case address = m_End
+        {
+            NearestUp -= PageSize;
+            if(NearestUp < m_Start)
+                return NULL;
+        }
+        assert(NearestUp % Alignment == 0);
+        return NearestUp;
     }
 
     std::string MemoryBlock::ToString()

@@ -23,6 +23,8 @@ namespace PLH
                                         size_t Size, PLH::ProtFlag Protections);
 
     protected:
+        uint8_t* AllocateImp(uint64_t Address, size_t Size, int MapFlags, PLH::ProtFlag Protections);
+
         std::vector<PLH::MemoryBlock> GetAllocatedVABlocks();
         std::vector<PLH::MemoryBlock> GetFreeVABlocks();
     };
@@ -45,6 +47,12 @@ namespace PLH
         return NativeFlag;
     }
 
+    uint8_t* PLH::MemAllocatorUnix::AllocateImp(uint64_t Address, size_t Size, int MapFlags, PLH::ProtFlag Protections)
+    {
+        uint8_t * Buffer = (uint8_t*)mmap((void*)Address,Size,TranslateProtection(Protections),MapFlags,0,0);
+        return Buffer == MAP_FAILED ? nullptr : Buffer;
+    }
+
     //[MinAddress, MaxAddress)
     uint8_t* PLH::MemAllocatorUnix::AllocateMemory(uint64_t MinAddress,
                                                    uint64_t MaxAddress,
@@ -55,6 +63,7 @@ namespace PLH
         std::vector<PLH::MemoryBlock> FreeBlocks = GetFreeVABlocks();
 
         int PageSize = getpagesize();
+        int Alignment = PageSize;
         for(PLH::MemoryBlock FreeBlock : FreeBlocks)
         {
             //Check acceptable ranges of block size within our Min-Max params
@@ -62,23 +71,36 @@ namespace PLH
             {
                 /*This is the normal case where the entire block is within our range. We now can walk
                  * the memory pages normally until we have a successful allocation*/
-                for(uint64_t Cur = FreeBlock.GetAlignedFirstPage(PageSize);
+                for(uint64_t Cur = FreeBlock.GetAlignedFirstPage(Alignment,PageSize);
                     Cur != NULL;
-                    Cur = FreeBlock.GetAlignedNextPage(Cur,PageSize,PageSize))
+                    Cur = FreeBlock.GetAlignedNextPage(Cur,Alignment,PageSize))
                 {
-                    void* Buffer = mmap((void*)Cur,Size,TranslateProtection(Protections),Flags,0,0);
-                    if(Buffer != MAP_FAILED) {
-                        return (uint8_t *) Buffer;
-                    }
+                    uint8_t* Buffer = AllocateImp(Cur,Size,Flags,Protections);
+                    if(Buffer != nullptr)
+                        return Buffer;
                 }
             }else if(FreeBlock.GetEnd() >= MinAddress + Size && FreeBlock.GetStart() < MinAddress){
                 /*This is the case where our blocks upper range overlaps the minimum range of our range, but the
                 * majority of the lower range of the block is not in our range*/
-                std::cout << "Found Edge Min Range Block" << std::endl;
+                for(uint64_t Cur = FreeBlock.GetAlignedPageNearestUp(MinAddress,Alignment,PageSize);
+                    Cur != NULL && (Cur + Size) <= MaxAddress;
+                    Cur = FreeBlock.GetAlignedNextPage(Cur,Alignment,PageSize))
+                {
+                    uint8_t* Buffer = AllocateImp(Cur,Size,Flags,Protections);
+                    if(Buffer != nullptr)
+                        return Buffer;
+                }
             }else if(FreeBlock.GetStart() + Size < MaxAddress && FreeBlock.GetEnd() > MaxAddress){
                 /*This is the case where our blocks lower range overlaps the maximum of our range, but the
                  * majority of the blocks upper range is not in our range*/
-                std::cout << "Found Edge Max Range Block" << std::endl;
+                for(uint64_t Cur = FreeBlock.GetAlignedPageNearestDown(FreeBlock.GetStart(),Alignment,PageSize);
+                    Cur != NULL && (Cur + Size) < MaxAddress && Cur >= MinAddress;
+                    Cur = FreeBlock.GetAlignedNextPage(Cur,Alignment,PageSize))
+                {
+                    uint8_t* Buffer = AllocateImp(Cur,Size,Flags,Protections);
+                    if(Buffer != nullptr)
+                        return Buffer;
+                }
             }
         }
         std::cout << "No Block Found" << std::endl;
