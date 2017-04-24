@@ -37,9 +37,9 @@ TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocat
     int PageSize = getpagesize();
     std::cout << std::dec << "PageSize: " << PageSize << std::endl;
 
-    uint8_t* Buffer = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R));
+    std::shared_ptr<uint8_t> Buffer = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R));
     REQUIRE(Buffer != nullptr);
-    std::cout << std::hex << "Allocated At: " << (uint64_t )Buffer<< std::endl;
+    std::cout << std::hex << "Allocated At: " << (uint64_t)Buffer.get()<< std::endl;
 }
 
 

@@ -10,6 +10,7 @@
 #include "Misc.hpp"
 #include "Enums.hpp"
 #include "MemoryBlock.hpp"
+#include <iostream>
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
 namespace PLH
@@ -18,12 +19,19 @@ namespace PLH
     class MemAllocator : private PlatformImp, public virtual PLH::Errant
     {
     public:
-        uint8_t *AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
+        std::shared_ptr<uint8_t> AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
         {
-            uint8_t* Cave = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
-            if(VerifyMemInRange(MinAddress,MaxAddress,(uint64_t)Cave))
+            uint8_t* Tmp = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
+            if(Tmp != nullptr && VerifyMemInRange(MinAddress,MaxAddress,(uint64_t)Tmp))
+            {
+                //Custom deleter
+                std::shared_ptr<uint8_t> Cave(Tmp,[=](uint8_t* Buffer){
+                    Dellocate(Buffer, Size);
+                });
+                m_Caves.push_back(Cave);
                 return Cave;
-            return nullptr;
+            }
+            return std::shared_ptr<uint8_t>();
         }
 
         int TranslateProtection(ProtFlag flags)
@@ -41,19 +49,20 @@ namespace PLH
             return PlatformImp::GetFreeVABlocks();
         }
     protected:
-        bool VerifyMemInRange(uint64_t MinAddress, uint64_t MaxAddress, uint64_t Needle);
+        void Dellocate(uint8_t *Buffer, size_t Length)
+        {
+            return PlatformImp::Dellocate(Buffer,Length);
+        }
 
-        std::vector<std::unique_ptr<uint8_t>> m_Caves;
+        //[MinAddress, MaxAddress)
+        bool VerifyMemInRange(uint64_t MinAddress, uint64_t MaxAddress, uint64_t Needle)
+        {
+            if (Needle >= MinAddress && Needle < MaxAddress)
+                return true;
+            return false;
+        }
+        std::vector<std::shared_ptr<uint8_t>> m_Caves;
     };
-
-    //[MinAddress, MaxAddress)
-    template <typename PlatformImp>
-    bool MemAllocator<PlatformImp>::VerifyMemInRange(uint64_t MinAddress, uint64_t MaxAddress, uint64_t Needle)
-    {
-        if (Needle >= MinAddress && Needle < MaxAddress)
-            return true;
-        return false;
-    }
 }
 
 //Implementation instantiations

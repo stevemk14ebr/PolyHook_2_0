@@ -62,10 +62,12 @@ namespace PLH
 
     uint64_t MemoryBlock::GetAlignedNextPage(uint64_t CurPageStart, size_t PageSize, size_t Alignment)
     {
+        assert(PageSize > 0);
         /* Next page is curpage + pagesize, verify it follows alignment, if the entire 'next'
          * page doesn't fit in our MemoryBlock then return null, otherwise the page*/
         uint64_t Next = CurPageStart + PageSize;
         assert(Next % Alignment == 0);
+        assert(Next + PageSize > Next && "Check for wrap-around");
         if(Next + PageSize > m_End)
             return NULL;
         return Next;
