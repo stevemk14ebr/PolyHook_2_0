@@ -75,6 +75,7 @@ namespace PLH
                 /*This is the case where our blocks upper range overlaps the minimum range of our range, but the
                 * majority of the lower range of the block is not in our range*/
                 std::cout << "Found Edge Min Range Block" << std::endl;
+
             }else if(FreeBlock.GetStart() + Size < MaxAddress && FreeBlock.GetEnd() > MaxAddress){
                 /*This is the case where our blocks lower range overlaps the maximum of our range, but the
                  * majority of the blocks upper range is not in our range*/

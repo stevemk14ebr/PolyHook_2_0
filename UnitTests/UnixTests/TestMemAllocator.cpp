@@ -3,6 +3,7 @@
 //
 #include "../../Catch.hpp"
 #include "../../src/MemAllocator.hpp"
+#include <limits>
 
 void PlaceHolderFunction()
 {
@@ -26,8 +27,9 @@ TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocat
     REQUIRE(allocator.TranslateProtection(X | W | R | N) == (PROT_EXEC | PROT_WRITE | PROT_READ | PROT_NONE));
 
     uint64_t fnAddress = (uint64_t)&PlaceHolderFunction;
-    uint64_t MinAddress = fnAddress - 0x80000000;
-    uint64_t MaxAddress = fnAddress + 0x80000000;
+    uint64_t MinAddress = fnAddress < 0x80000000 ? 0 : fnAddress - 0x80000000;  //Use 0 if would underflow
+    uint64_t MaxAddress = fnAddress > std::numeric_limits<uint64_t>::max() - 0x80000000 ? //use max if would overflow
+                          std::numeric_limits<uint64_t>::max() : fnAddress + 0x80000000;
 
 
     std::cout << "fnAddress: " << std::hex << fnAddress << " Min:" << MinAddress << "-" << MaxAddress << std::endl;
