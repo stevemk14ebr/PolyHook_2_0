@@ -21,7 +21,7 @@ namespace PLH
 
         uint8_t* AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress,
                                         size_t Size, PLH::ProtFlag Protections);
-
+        void Dellocate(uint8_t* Buffer, size_t Length);
     protected:
         uint8_t* AllocateImp(uint64_t Address, size_t Size, int MapFlags, PLH::ProtFlag Protections);
 
@@ -59,6 +59,7 @@ namespace PLH
                                                    size_t Size,
                                                    PLH::ProtFlag Protections)
     {
+        assert(Size > 0);
         int Flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED; //TO-DO make use of MAP_32Bit for x64?
         std::vector<PLH::MemoryBlock> FreeBlocks = GetFreeVABlocks();
 
@@ -69,6 +70,7 @@ namespace PLH
             //Check acceptable ranges of block size within our Min-Max params
             if(FreeBlock.GetStart() >= MinAddress && FreeBlock.GetEnd() + Size < MaxAddress)
             {
+                assert(FreeBlock.GetEnd() + Size > FreeBlock.GetEnd() && "Check for wrap-around");
                 /*This is the normal case where the entire block is within our range. We now can walk
                  * the memory pages normally until we have a successful allocation*/
                 for(uint64_t Cur = FreeBlock.GetAlignedFirstPage(Alignment,PageSize);
@@ -80,6 +82,7 @@ namespace PLH
                         return Buffer;
                 }
             }else if(FreeBlock.GetEnd() >= MinAddress + Size && FreeBlock.GetStart() < MinAddress){
+                assert(MinAddress + Size > MinAddress && "Check for wrap-around");
                 /*This is the case where our blocks upper range overlaps the minimum range of our range, but the
                 * majority of the lower range of the block is not in our range*/
                 for(uint64_t Cur = FreeBlock.GetAlignedPageNearestUp(MinAddress,Alignment,PageSize);
@@ -90,7 +93,10 @@ namespace PLH
                     if(Buffer != nullptr)
                         return Buffer;
                 }
+                std::cout << "Found Edge Min Range Block" << std::endl;
+
             }else if(FreeBlock.GetStart() + Size < MaxAddress && FreeBlock.GetEnd() > MaxAddress){
+                assert(FreeBlock.GetStart() + Size > FreeBlock.GetStart() && "Check for wrap-around");
                 /*This is the case where our blocks lower range overlaps the maximum of our range, but the
                  * majority of the blocks upper range is not in our range*/
                 for(uint64_t Cur = FreeBlock.GetAlignedPageNearestDown(FreeBlock.GetStart(),Alignment,PageSize);
@@ -105,6 +111,10 @@ namespace PLH
         }
         std::cout << "No Block Found" << std::endl;
         return nullptr;
+    }
+
+    void MemAllocatorUnix::Dellocate(uint8_t *Buffer, size_t Length) {
+        munmap(Buffer,Length);
     }
 
     /*Parse linux maps file, these are regions of memory already allocated. If a
@@ -151,7 +161,8 @@ namespace PLH
         std::vector<PLH::MemoryBlock> AllocatedPages = GetAllocatedVABlocks();
         for(auto prev = AllocatedPages.begin(), cur = AllocatedPages.begin() + 1; cur < AllocatedPages.end(); prev = cur, std::advance(cur,1))
         {
-            FreePages.push_back(PLH::MemoryBlock(prev->GetEnd(),cur->GetStart(),PLH::ProtFlag::UNSET));
+            if(prev->GetEnd() - cur->GetStart() > 0)
+                FreePages.push_back(PLH::MemoryBlock(prev->GetEnd(),cur->GetStart(),PLH::ProtFlag::UNSET));
         }
         return FreePages;
     }
