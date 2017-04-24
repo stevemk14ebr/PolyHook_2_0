@@ -93,8 +93,6 @@ namespace PLH
                     if(Buffer != nullptr)
                         return Buffer;
                 }
-                std::cout << "Found Edge Min Range Block" << std::endl;
-
             }else if(FreeBlock.GetStart() + Size < MaxAddress && FreeBlock.GetEnd() > MaxAddress){
                 assert(FreeBlock.GetStart() + Size > FreeBlock.GetStart() && "Check for wrap-around");
                 /*This is the case where our blocks lower range overlaps the maximum of our range, but the
