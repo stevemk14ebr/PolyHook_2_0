@@ -14,7 +14,7 @@
 
 namespace PLH
 {
-    class MemAllocatorUnix : public virtual PLH::Errant
+    class MemAllocatorUnixImp : public virtual PLH::Errant
     {
     public:
         int TranslateProtection(PLH::ProtFlag flags);
@@ -29,9 +29,8 @@ namespace PLH
         std::vector<PLH::MemoryBlock> GetFreeVABlocks();
     };
 
-    int PLH::MemAllocatorUnix::TranslateProtection(PLH::ProtFlag flags)
+    int PLH::MemAllocatorUnixImp::TranslateProtection(PLH::ProtFlag flags)
     {
-
         int NativeFlag = 0;
         if (flags & PLH::ProtFlag::X)
             NativeFlag |= PROT_EXEC;
@@ -47,14 +46,16 @@ namespace PLH
         return NativeFlag;
     }
 
-    uint8_t* PLH::MemAllocatorUnix::AllocateImp(uint64_t Address, size_t Size, int MapFlags, PLH::ProtFlag Protections)
+    uint8_t* PLH::MemAllocatorUnixImp::AllocateImp(uint64_t Address, size_t Size, int MapFlags, PLH::ProtFlag Protections)
     {
+        /*On Unix virtual address granularity is 4KB. When using MAP_FIXED flag allocation must be page aligned, so
+         * */
         uint8_t * Buffer = (uint8_t*)mmap((void*)Address,Size,TranslateProtection(Protections),MapFlags,0,0);
         return Buffer == MAP_FAILED ? nullptr : Buffer;
     }
 
     //[MinAddress, MaxAddress)
-    uint8_t* PLH::MemAllocatorUnix::AllocateMemory(uint64_t MinAddress,
+    uint8_t* PLH::MemAllocatorUnixImp::AllocateMemory(uint64_t MinAddress,
                                                    uint64_t MaxAddress,
                                                    size_t Size,
                                                    PLH::ProtFlag Protections)
@@ -111,14 +112,14 @@ namespace PLH
         return nullptr;
     }
 
-    void MemAllocatorUnix::Dellocate(uint8_t *Buffer, size_t Length) {
+    void MemAllocatorUnixImp::Dellocate(uint8_t *Buffer, size_t Length) {
         munmap(Buffer,Length);
     }
 
     /*Parse linux maps file, these are regions of memory already allocated. If a
      * region is allocated the protection of that region is returned. If it is not
      * allocated then the value UNSET is returned*/
-    std::vector<PLH::MemoryBlock> PLH::MemAllocatorUnix::GetAllocatedVABlocks(){
+    std::vector<PLH::MemoryBlock> PLH::MemAllocatorUnixImp::GetAllocatedVABlocks(){
         std::vector<PLH::MemoryBlock> allocatedPages;
 
         char szMapPath[256] = {0};
@@ -153,7 +154,7 @@ namespace PLH
         return allocatedPages;
     }
 
-    std::vector<PLH::MemoryBlock> PLH::MemAllocatorUnix::GetFreeVABlocks()
+    std::vector<PLH::MemoryBlock> PLH::MemAllocatorUnixImp::GetFreeVABlocks()
     {
         std::vector<PLH::MemoryBlock> FreePages;
         std::vector<PLH::MemoryBlock> AllocatedPages = GetAllocatedVABlocks();

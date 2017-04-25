@@ -5,8 +5,8 @@
 #ifndef POLYHOOK_2_0_MEMORYPAGE_HPP
 #define POLYHOOK_2_0_MEMORYPAGE_HPP
 
-#include "Misc.hpp"
-#include "Enums.hpp"
+#include "../Misc.hpp"
+#include "../Enums.hpp"
 namespace PLH
 {
     //Not necessarily a memory page, just a range of virtual memory
@@ -17,7 +17,6 @@ namespace PLH
         uint64_t GetStart();
         uint64_t GetEnd();
         PLH::ProtFlag GetProtection();
-        size_t CountPagesInBlock(size_t PageSize);
         std::string ToString();
 
         uint64_t GetAlignedFirstPage(size_t Alignment, size_t PageSize);
@@ -53,15 +52,10 @@ namespace PLH
         return m_Protection;
     }
 
-    size_t MemoryBlock::CountPagesInBlock(size_t PageSize)
-    {
-        return (m_End - m_Start) / PageSize;
-    }
-
     //[Start, End)
     bool MemoryBlock::InRange(uint64_t Address,size_t Size)
     {
-        if(Address < m_Start || (Address + Size) >= m_End)
+        if(Address < m_Start || (Address + Size) > m_End)
             return false;
         return true;
     }

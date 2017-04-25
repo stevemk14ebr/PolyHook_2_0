@@ -6,9 +6,9 @@
 #define POLYHOOK_2_0_MEMALLOCATOR_HPP
 #include <vector>
 #include <memory>
-#include "ErrorSystem.hpp"
-#include "Misc.hpp"
-#include "Enums.hpp"
+#include "../ErrorSystem.hpp"
+#include "../Misc.hpp"
+#include "../Enums.hpp"
 #include "MemoryBlock.hpp"
 #include <iostream>
 
@@ -16,7 +16,7 @@
 namespace PLH
 {
     template<typename PlatformImp>
-    class MemAllocator : private PlatformImp, public virtual PLH::Errant
+    class AMemAllocator : private PlatformImp, public virtual PLH::Errant
     {
     public:
         std::shared_ptr<uint8_t> AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
@@ -66,9 +66,9 @@ namespace PLH
 }
 
 //Implementation instantiations
-#include "UnixImpl/MemAllocatorUnix.hpp"
+#include "UnixImpl/MemAllocatorUnixImp.hpp"
 namespace PLH{
-    using MemAllocatorU = PLH::MemAllocator<PLH::MemAllocatorUnix>;
+    using MemAllocatorUnix = PLH::AMemAllocator<PLH::MemAllocatorUnixImp>;
 }
 #endif //POLYHOOK_2_0_MEMALLOCATOR_HPP
 

@@ -2,7 +2,7 @@
 // Created by steve on 4/7/17.
 //
 #include "../../Catch.hpp"
-#include "../../src/MemAllocator.hpp"
+#include "../../src/MemoryAllocation/AMemAllocator.hpp"
 #include <limits>
 
 void PlaceHolderFunction()
@@ -10,10 +10,10 @@ void PlaceHolderFunction()
     printf("Not useful, ignore me totally");
 }
 
-TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocatorUnix]")
+TEST_CASE("Tests memory allocator for Unix platform","[AMemAllocator],[MemAllocatorUnixImp]")
 {
     std::cout << std::dec << "Process ID: " << getpid();
-    PLH::MemAllocatorU allocator;
+    PLH::MemAllocatorUnix allocator;
     PLH::ProtFlag R = PLH::ProtFlag::R;
     PLH::ProtFlag W = PLH::ProtFlag::W;
     PLH::ProtFlag X = PLH::ProtFlag::X;
@@ -30,7 +30,6 @@ TEST_CASE("Tests memory allocator for Unix platform","[MemAllocator],[MemAllocat
     uint64_t MinAddress = fnAddress < 0x80000000 ? 0 : fnAddress - 0x80000000;  //Use 0 if would underflow
     uint64_t MaxAddress = fnAddress > std::numeric_limits<uint64_t>::max() - 0x80000000 ? //use max if would overflow
                           std::numeric_limits<uint64_t>::max() : fnAddress + 0x80000000;
-
 
     std::cout << "fnAddress: " << std::hex << fnAddress << " Acceptable Range:" << MinAddress << "-" << MaxAddress << std::endl;
 
