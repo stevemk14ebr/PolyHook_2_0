@@ -2,7 +2,7 @@
 // Created by steve on 4/7/17.
 //
 #include "../../Catch.hpp"
-#include "../../src/MemoryAllocation/AMemAllocator.hpp"
+#include "../../src/MemoryAllocation/ARangeMemAllocator.hpp"
 #include <limits>
 
 void PlaceHolderFunction()
@@ -10,7 +10,7 @@ void PlaceHolderFunction()
     printf("Not useful, ignore me totally");
 }
 
-TEST_CASE("Tests memory allocator for Unix platform","[AMemAllocator],[MemAllocatorUnixImp]")
+TEST_CASE("Tests memory allocator for Unix platform","[ARangeMemAllocator],[RangeMemAllocatorUnixImp]")
 {
     std::cout << std::dec << "Process ID: " << getpid();
     PLH::MemAllocatorUnix allocator;

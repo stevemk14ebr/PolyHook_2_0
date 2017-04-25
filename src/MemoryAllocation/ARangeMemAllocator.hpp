@@ -16,7 +16,7 @@
 namespace PLH
 {
     template<typename PlatformImp>
-    class AMemAllocator : private PlatformImp, public virtual PLH::Errant
+    class ARangeMemAllocator : private PlatformImp, public virtual PLH::Errant
     {
     public:
         std::shared_ptr<uint8_t> AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
@@ -26,7 +26,7 @@ namespace PLH
             {
                 //Custom deleter
                 std::shared_ptr<uint8_t> Cave(Tmp,[=](uint8_t* Buffer){
-                    Dellocate(Buffer, Size);
+                    Deallocate(Buffer, Size);
                 });
                 m_Caves.push_back(Cave);
                 return Cave;
@@ -48,10 +48,15 @@ namespace PLH
         {
             return PlatformImp::GetFreeVABlocks();
         }
-    protected:
-        void Dellocate(uint8_t *Buffer, size_t Length)
+
+        std::vector<std::shared_ptr<uint8_t>> GetAllocatedCaves()
         {
-            return PlatformImp::Dellocate(Buffer,Length);
+            return m_Caves;
+        }
+    protected:
+        void Deallocate(uint8_t *Buffer, size_t Length)
+        {
+            return PlatformImp::Deallocate(Buffer,Length);
         }
 
         //[MinAddress, MaxAddress)
@@ -66,9 +71,9 @@ namespace PLH
 }
 
 //Implementation instantiations
-#include "UnixImpl/MemAllocatorUnixImp.hpp"
+#include "UnixImpl/RangeMemAllocatorUnixImp.hpp"
 namespace PLH{
-    using MemAllocatorUnix = PLH::AMemAllocator<PLH::MemAllocatorUnixImp>;
+    using MemAllocatorUnix = PLH::ARangeMemAllocator<PLH::RangeMemAllocatorUnixImp>;
 }
 #endif //POLYHOOK_2_0_MEMALLOCATOR_HPP
 
