@@ -7,6 +7,7 @@
 
 #include "../Misc.hpp"
 #include "../Enums.hpp"
+#include <sstream>
 namespace PLH
 {
     //Not necessarily a memory page, just a range of virtual memory

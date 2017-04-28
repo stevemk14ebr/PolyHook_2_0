@@ -5,6 +5,7 @@
 #ifndef POLYHOOK_2_0_MEMORYALLOCATOR_HPP
 #define POLYHOOK_2_0_MEMORYALLOCATOR_HPP
 #include <memory>
+#include <type_traits>
 #include "ARangeMemAllocator.hpp"
 
 #define ALLOCATOR_TRAITS(T)                \
@@ -21,12 +22,12 @@ typedef std::ptrdiff_t    difference_type; \
 namespace PLH
 {
     template<class T>
-    class RangeMemoryAllocatorPolicy : std::allocator_traits<T>
+    class RangeMemoryAllocatorPolicy
     {
     public:
         ALLOCATOR_TRAITS(T)
 
-        RangeMemoryAllocatorPolicy(uint64_t Min, uint64_t Max, PLH::ARangeMemAllocator AllocImp) : std::allocator_traits<T>()
+        RangeMemoryAllocatorPolicy(uint64_t Min, uint64_t Max, PLH::ARangeMemAllocator& AllocImp) : std::allocator_traits<T>()
         {
             m_Min = Min;
             m_Max = Max;
@@ -35,9 +36,15 @@ namespace PLH
 
         pointer allocate(size_type count, const_pointer = 0)
         {
-
+            std::size_t AllocationSize = count*sizeof(value_type);
+            std::size_t NeededAlignment = std::alignment_of<value_type>::value;
+            std::vector<std::shared_ptr<uint8_t>> CandidateRegions = m_AllocImp.GetAllocatedCaves();
+            for(const auto& Region : CandidateRegions)
+            {
+                if(Region.)
+            }
         }
-        
+
         void deallocate(pointer ptr, size_type n)
         {
 

@@ -13,8 +13,7 @@
 #include <iostream>
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
-namespace PLH
-{
+namespace PLH{
     template<typename PlatformImp>
     class ARangeMemAllocator : private PlatformImp, public virtual PLH::Errant
     {
@@ -34,12 +33,12 @@ namespace PLH
             return std::shared_ptr<uint8_t>();
         }
 
-        int TranslateProtection(ProtFlag flags)
+        int TranslateProtection(const ProtFlag flags) const
         {
             return PlatformImp::TranslateProtection(flags);
         }
 
-        std::vector<PLH::MemoryBlock> GetAllocatedVABlocks()
+        std::vector<PLH::MemoryBlock> GetAllocatedVABlocks() const
         {
             return PlatformImp::GetAllocatedVABlocks();
         }
