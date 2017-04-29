@@ -21,6 +21,7 @@ namespace PLH{
     public:
         AllocatedMemoryBlock AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
         {
+            //TO-DO: Add call to Verify Mem in range
             AllocatedMemoryBlock Block = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
             if(Block.GetParentBlock() != nullptr)
                 return Block;
@@ -46,7 +47,7 @@ namespace PLH{
             return PlatformImp::GetFreeVABlocks();
         }
 
-        std::vector<std::shared_ptr<uint8_t>> GetAllocatedCaves()
+        std::vector<PLH::AllocatedMemoryBlock> GetAllocatedCaves()
         {
             return m_Caves;
         }
@@ -58,7 +59,7 @@ namespace PLH{
                 return true;
             return false;
         }
-        std::vector<AllocatedMemoryBlock> m_Caves;
+        std::vector<PLH::AllocatedMemoryBlock> m_Caves;
     };
 }
 

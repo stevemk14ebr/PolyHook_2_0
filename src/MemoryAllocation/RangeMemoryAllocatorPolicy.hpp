@@ -38,7 +38,7 @@ namespace PLH
         {
             std::size_t AllocationSize = count*sizeof(value_type);
             std::size_t NeededAlignment = std::alignment_of<value_type>::value;
-            std::vector<std::shared_ptr<uint8_t>> CandidateRegions = m_AllocImp.GetAllocatedCaves();
+            std::vector<PLH::AllocatedMemoryBlock> CandidateRegions = m_AllocImp.GetAllocatedCaves();
             for(const auto& Region : CandidateRegions)
             {
 
