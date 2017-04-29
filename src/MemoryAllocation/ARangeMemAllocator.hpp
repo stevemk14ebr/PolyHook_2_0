@@ -10,6 +10,7 @@
 #include "../Misc.hpp"
 #include "../Enums.hpp"
 #include "MemoryBlock.hpp"
+#include "AllocatedMemoryBlock.hpp"
 #include <iostream>
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
@@ -18,19 +19,16 @@ namespace PLH{
     class ARangeMemAllocator : private PlatformImp, public virtual PLH::Errant
     {
     public:
-        std::shared_ptr<uint8_t> AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
+        AllocatedMemoryBlock AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
         {
-            uint8_t* Tmp = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
-            if(Tmp != nullptr && VerifyMemInRange(MinAddress,MaxAddress,(uint64_t)Tmp))
-            {
-                //Custom deleter
-                std::shared_ptr<uint8_t> Cave(Tmp,[=](uint8_t* Buffer){
-                    Deallocate(Buffer, Size);
-                });
-                m_Caves.push_back(Cave);
-                return Cave;
+            AllocatedMemoryBlock Block = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
+            if(Block.GetParentBlock() != nullptr)
+                return Block;
+            else{
+                //TO-DO: Handle this case properly
+                this->SendError("Failed To Allocate Memory");
+                throw "ERRORS";
             }
-            return std::shared_ptr<uint8_t>();
         }
 
         int TranslateProtection(const ProtFlag flags) const
@@ -53,11 +51,6 @@ namespace PLH{
             return m_Caves;
         }
     protected:
-        void Deallocate(uint8_t *Buffer, size_t Length)
-        {
-            return PlatformImp::Deallocate(Buffer,Length);
-        }
-
         //[MinAddress, MaxAddress)
         bool VerifyMemInRange(uint64_t MinAddress, uint64_t MaxAddress, uint64_t Needle)
         {
@@ -65,7 +58,7 @@ namespace PLH{
                 return true;
             return false;
         }
-        std::vector<std::shared_ptr<uint8_t>> m_Caves;
+        std::vector<AllocatedMemoryBlock> m_Caves;
     };
 }
 

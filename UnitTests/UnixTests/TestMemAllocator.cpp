@@ -36,7 +36,7 @@ TEST_CASE("Tests memory allocator for Unix platform","[ARangeMemAllocator],[Rang
     int PageSize = getpagesize();
     std::cout << std::dec << "PageSize: " << PageSize << std::endl;
 
-    std::shared_ptr<uint8_t> Buffer = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R));
+    std::shared_ptr<uint8_t> Buffer = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R)).GetParentBlock();
     REQUIRE(Buffer != nullptr);
     std::cout << std::hex << "Allocated At: " << (uint64_t )Buffer.get()<< std::endl;
 

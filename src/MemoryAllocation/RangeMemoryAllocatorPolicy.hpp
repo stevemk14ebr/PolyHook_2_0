@@ -41,7 +41,7 @@ namespace PLH
             std::vector<std::shared_ptr<uint8_t>> CandidateRegions = m_AllocImp.GetAllocatedCaves();
             for(const auto& Region : CandidateRegions)
             {
-                if(Region.)
+
             }
         }
 

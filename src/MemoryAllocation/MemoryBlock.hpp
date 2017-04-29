@@ -14,60 +14,70 @@ namespace PLH
     class MemoryBlock
     {
     public:
-        MemoryBlock(uint64_t Start, uint64_t End, PLH::ProtFlag Prot);
-        uint64_t GetStart();
-        uint64_t GetEnd();
-        PLH::ProtFlag GetProtection();
-        std::string ToString();
+        MemoryBlock(const uint64_t Start,const uint64_t End,const PLH::ProtFlag Prot);
+        MemoryBlock();
+        uint64_t GetStart() const;
+        uint64_t GetEnd() const;
+        PLH::ProtFlag GetProtection() const;
+        std::string ToString() const;
 
-        uint64_t GetAlignedFirstPage(size_t Alignment, size_t PageSize);
-        uint64_t GetAlignedNextPage(uint64_t CurPageStart,size_t Alignment,size_t PageSize);
-        uint64_t GetAlignedPageNearestUp(uint64_t Address, size_t Alignment, size_t PageSize);
-        uint64_t GetAlignedPageNearestDown(uint64_t Address, size_t Alignment, size_t PageSize);
+        uint64_t GetAlignedFirstPage(const size_t Alignment,const size_t PageSize) const;
+        uint64_t GetAlignedNextPage(const uint64_t CurPageStart,const size_t Alignment,const size_t PageSize) const;
+        uint64_t GetAlignedPageNearestUp(const uint64_t Address,const size_t Alignment,const size_t PageSize) const;
+        uint64_t GetAlignedPageNearestDown(const uint64_t Address,const size_t Alignment,const size_t PageSize) const;
+
+        bool ContainsBlock(const PLH::MemoryBlock& other);
     private:
-        bool InRange(uint64_t Address, size_t Size);
+        bool InRange(const uint64_t Address,const size_t Size) const;
         uint64_t m_Start;
         uint64_t m_End;
         PLH::ProtFlag m_Protection;
     };
 
-    MemoryBlock::MemoryBlock(uint64_t Start, uint64_t End, PLH::ProtFlag Prot)
+    MemoryBlock::MemoryBlock(const uint64_t Start,const uint64_t End,const PLH::ProtFlag Prot)
     {
         m_Start = Start;
         m_End = End;
         m_Protection = Prot;
     }
 
-    uint64_t MemoryBlock::GetStart()
+    MemoryBlock::MemoryBlock()
+    {
+        m_Start = 0;
+        m_End = 0;
+        m_Protection = PLH::ProtFlag::UNSET;
+    }
+
+    uint64_t MemoryBlock::GetStart() const
     {
         return m_Start;
     }
 
-    uint64_t MemoryBlock::GetEnd()
+    uint64_t MemoryBlock::GetEnd() const
     {
         return m_End;
     }
 
-    PLH::ProtFlag MemoryBlock::GetProtection()
+    PLH::ProtFlag MemoryBlock::GetProtection() const
     {
         return m_Protection;
     }
 
-    //[Start, End)
-    bool MemoryBlock::InRange(uint64_t Address,size_t Size)
+    //[Start, End]
+    bool MemoryBlock::InRange(const uint64_t Address,const size_t Size) const
     {
         if(Address < m_Start || (Address + Size) > m_End)
             return false;
         return true;
     }
 
-    uint64_t MemoryBlock::GetAlignedFirstPage(size_t Alignment,size_t PageSize)
+    uint64_t MemoryBlock::GetAlignedFirstPage(const size_t Alignment,const size_t PageSize) const
     {
         return GetAlignedPageNearestDown(m_Start,Alignment,PageSize);
     }
 
     //[Start, End)
-    uint64_t MemoryBlock::GetAlignedNextPage(uint64_t CurPageStart, size_t Alignment,size_t PageSize)
+    uint64_t MemoryBlock::GetAlignedNextPage(const uint64_t CurPageStart,const size_t Alignment,const size_t PageSize) const
     {
         assert(PageSize > 0);
         /* Next page is curpage + pagesize, verify it follows alignment, if the entire 'next'
@@ -81,7 +91,7 @@ namespace PLH
     }
 
     //[Start, End)
-    uint64_t MemoryBlock::GetAlignedPageNearestDown(uint64_t Address, size_t Alignment, size_t PageSize)
+    uint64_t MemoryBlock::GetAlignedPageNearestDown(const uint64_t Address,const size_t Alignment,const size_t PageSize) const
     {
         uint64_t NearestDown = (uint64_t)PLH::AlignDownwards((uint8_t*)Address,Alignment);
         while(!InRange(NearestDown,PageSize)) //loop required since address could be = m_Start
@@ -95,7 +105,7 @@ namespace PLH
     }
 
     //[Start, End)
-    uint64_t MemoryBlock::GetAlignedPageNearestUp(uint64_t Address, size_t Alignment, size_t PageSize)
+    uint64_t MemoryBlock::GetAlignedPageNearestUp(const uint64_t Address,const size_t Alignment,const size_t PageSize) const
     {
         uint64_t NearestUp = (uint64_t)PLH::AlignUpwards((uint8_t*)Address,Alignment);
         while(!InRange(NearestUp,PageSize)) //loop required for case address = m_End
@@ -108,7 +118,13 @@ namespace PLH
         return NearestUp;
     }
 
-    std::string MemoryBlock::ToString()
+    //[Start,End]
+    bool MemoryBlock::ContainsBlock(const PLH::MemoryBlock &other)
+    {
+        return other.GetStart() >= m_Start && other.GetEnd() <= m_End;
+    }
+
+    std::string MemoryBlock::ToString() const
     {
         std::stringstream ss;
         ss << std::hex << "Start:" << m_Start << " End:" << m_End << " Prot:" << PLH::ProtFlagToString(m_Protection);
