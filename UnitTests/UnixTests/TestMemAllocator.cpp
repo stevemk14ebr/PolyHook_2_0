@@ -3,7 +3,7 @@
 //
 #include "../../Catch.hpp"
 #include "../../src/MemoryAllocation/ARangeMemAllocator.hpp"
-#include <limits>
+#include <inttypes.h>
 
 void PlaceHolderFunction()
 {
@@ -36,16 +36,19 @@ TEST_CASE("Tests memory allocator for Unix platform","[ARangeMemAllocator],[Rang
     int PageSize = getpagesize();
     std::cout << std::dec << "PageSize: " << PageSize << std::endl;
 
-    std::shared_ptr<uint8_t> Buffer = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R)).GetParentBlock();
+    PLH::AllocatedMemoryBlock AllocBlock = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R));
+    std::shared_ptr<uint8_t> Buffer = AllocBlock.GetParentBlock();
     REQUIRE(Buffer != nullptr);
     std::cout << std::hex << "Allocated At: " << (uint64_t )Buffer.get()<< std::endl;
 
     //Compute some statistics about how far away allocation was
-    uint64_t AllocDelta = std::abs((uint64_t)Buffer.get() - fnAddress);
+    std::intmax_t AllocDelta = imaxabs((std::intmax_t) Buffer.get() - fnAddress);
     double DeltaInGB = AllocDelta / 1000000000.0; //How far was our trampoline allocated from the target, in GB
     double DeltaPercentage = DeltaInGB / .5 * 100.0; //Allowed range is +-2GB, see in percentage how close to tolerance we were
     std::cout << "Delta:[" << DeltaInGB << " GB] Percent Tolerance Used[" << DeltaPercentage << " % out of 2GB]" << std::endl;
     REQUIRE(DeltaInGB <= 2);
+
+    allocator.DeallocateMemory(AllocBlock);
 }
 
 

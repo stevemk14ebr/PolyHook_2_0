@@ -27,10 +27,8 @@ namespace PLH
     public:
         ALLOCATOR_TRAITS(T)
 
-        RangeMemoryAllocatorPolicy(uint64_t Min, uint64_t Max, PLH::ARangeMemAllocator& AllocImp) : std::allocator_traits<T>()
+        RangeMemoryAllocatorPolicy(PLH::ARangeMemAllocator& AllocImp) : std::allocator_traits<T>()
         {
-            m_Min = Min;
-            m_Max = Max;
             m_AllocImp = AllocImp;
         }
 
@@ -55,8 +53,6 @@ namespace PLH
 
         }
     private:
-        uint64_t m_Min;
-        uint64_t m_Max;
         PLH::ARangeMemAllocator m_AllocImp;
     };
 }

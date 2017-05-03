@@ -27,6 +27,8 @@ namespace PLH
         uint64_t GetAlignedPageNearestDown(const uint64_t Address,const size_t Alignment,const size_t PageSize) const;
 
         bool ContainsBlock(const PLH::MemoryBlock& other);
+        bool operator ==(const PLH::MemoryBlock& other);
+        bool operator !=(const PLH::MemoryBlock& other);
     private:
         bool InRange(const uint64_t Address,const size_t Size) const;
         uint64_t m_Start;
@@ -129,6 +131,15 @@ namespace PLH
         std::stringstream ss;
         ss << std::hex << "Start:" << m_Start << " End:" << m_End << " Prot:" << PLH::ProtFlagToString(m_Protection);
         return ss.str();
+    }
+
+    bool MemoryBlock::operator==(const PLH::MemoryBlock &other) {
+        return m_Start == other.m_Start &&
+                m_End == other.m_End;
+    }
+
+    bool MemoryBlock::operator!=(const PLH::MemoryBlock &other) {
+        return !(*this == other);
     }
 }
 #endif //POLYHOOK_2_0_MEMORYPAGE_HPP

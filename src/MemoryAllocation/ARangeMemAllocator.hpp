@@ -12,6 +12,7 @@
 #include "MemoryBlock.hpp"
 #include "AllocatedMemoryBlock.hpp"
 #include <iostream>
+#include <algorithm>
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
 namespace PLH{
@@ -23,13 +24,20 @@ namespace PLH{
         {
             //TO-DO: Add call to Verify Mem in range
             AllocatedMemoryBlock Block = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
-            if(Block.GetParentBlock() != nullptr)
+            if(Block.GetParentBlock() != nullptr) {
+                m_Caves.push_back(Block);
                 return Block;
-            else{
+            }else{
                 //TO-DO: Handle this case properly
                 this->SendError("Failed To Allocate Memory");
                 throw "ERRORS";
             }
+        }
+
+        void DeallocateMemory(const AllocatedMemoryBlock& Block)
+        {
+           m_Caves.erase(std::remove(m_Caves.begin(),m_Caves.end(),
+                         Block), m_Caves.end());
         }
 
         int TranslateProtection(const ProtFlag flags) const
