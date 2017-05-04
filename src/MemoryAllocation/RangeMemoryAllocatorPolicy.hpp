@@ -42,10 +42,15 @@ namespace PLH
             std::size_t AllocationSize = count*sizeof(value_type);
             std::size_t NeededAlignment = std::alignment_of<value_type>::value;
             std::vector<PLH::AllocatedMemoryBlock> AllocatedBlocks = m_AllocImp.GetAllocatedCaves();
-
+            if(auto ParentBlock = FindSplittableBlock(AllocatedBlocks,AllocationSize))
+            {
+                //TO-DO: Split the block
+            }else{
+                //TO-DO: Fail appropriately
+            }
         }
 
-        PLH::AllocatedMemoryBlock FindSplittableBlock(const std::vector<PLH::AllocatedMemoryBlock>& AllocatedBlocks,
+        PLH::Optional<PLH::AllocatedMemoryBlock> FindSplittableBlock(const std::vector<PLH::AllocatedMemoryBlock>& AllocatedBlocks,
                                                       std::size_t RequiredSpace)
         {
             for(const auto& Block : AllocatedBlocks)
@@ -62,8 +67,10 @@ namespace PLH
                     BlockUsed += ChildBlock.GetSize();
                 }
 
-                //TO-DO finish this to return a block if Used + RequiredSpace < BlockSize
+                if(BlockUsed + RequiredSpace < BlockSize)
+                    return PLH::Optional<PLH::AllocatedMemoryBlock>(Block);
             }
+            return PLH::Optional<PLH::AllocatedMemoryBlock>();
         }
 
         void deallocate(pointer ptr, size_type n)

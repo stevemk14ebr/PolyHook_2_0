@@ -23,6 +23,15 @@ namespace PLH
         }
     };
 
+    class ValueNotSetException : public std::logic_error
+    {
+    public:
+        ValueNotSetException() : std::logic_error("Value not set in optional object")
+        {
+
+        }
+    };
+
     //http://stackoverflow.com/questions/4840410/how-to-align-a-pointer-in-c
     static inline uint8_t* AlignUpwards(uint8_t *stack, uintptr_t align)
     {
@@ -46,5 +55,38 @@ namespace PLH
         assert(addr <= (uintptr_t)stack);
         return (uint8_t *)addr;
     }
+
+    //TO-DO: replace with c++17 optional when appropriately supported
+    template<typename T>
+    class Optional
+    {
+    public:
+        Optional(const T& val)
+        {
+            m_HasVal = true;
+            m_Val = val;
+        }
+
+        Optional()
+        {
+            m_HasVal = false;
+        }
+
+        T get() const
+        {
+            if(m_HasVal)
+                return m_Val;
+            throw ValueNotSetException();
+        }
+
+        operator bool()
+        {
+            return m_HasVal;
+        }
+    private:
+        bool m_HasVal;
+        T m_Val;
+    };
+
 }
 #endif //POLYHOOK_2_0_MISC_HPP
