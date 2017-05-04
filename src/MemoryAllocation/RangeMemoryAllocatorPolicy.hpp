@@ -5,6 +5,7 @@
 #ifndef POLYHOOK_2_0_MEMORYALLOCATOR_HPP
 #define POLYHOOK_2_0_MEMORYALLOCATOR_HPP
 #include <memory>
+#include <map>
 #include <type_traits>
 #include "ARangeMemAllocator.hpp"
 
@@ -21,6 +22,10 @@ typedef std::ptrdiff_t    difference_type; \
 //http://jrruethe.github.io/blog/2015/11/22/allocators/
 namespace PLH
 {
+    /* ****************************************************************************************************
+    *  This class handles actually splitting AllocatedMemoryBlocks into smaller AllocatedMemoryBlocks. It
+    *  deals with the mapping of larger "Parent" blocks to all of the parent's "Children" blocks via a map.
+    ******************************************************************************************************/
     template<class T>
     class RangeMemoryAllocatorPolicy
     {
@@ -36,10 +41,28 @@ namespace PLH
         {
             std::size_t AllocationSize = count*sizeof(value_type);
             std::size_t NeededAlignment = std::alignment_of<value_type>::value;
-            std::vector<PLH::AllocatedMemoryBlock> CandidateRegions = m_AllocImp.GetAllocatedCaves();
-            for(const auto& Region : CandidateRegions)
-            {
+            std::vector<PLH::AllocatedMemoryBlock> AllocatedBlocks = m_AllocImp.GetAllocatedCaves();
 
+        }
+
+        PLH::AllocatedMemoryBlock FindSplittableBlock(const std::vector<PLH::AllocatedMemoryBlock>& AllocatedBlocks,
+                                                      std::size_t RequiredSpace)
+        {
+            for(const auto& Block : AllocatedBlocks)
+            {
+                uint64_t BlockSize = Block.GetSize();
+                uint64_t BlockUsed = 0;
+                auto it = m_SplitBlockMap.find(Block);
+                if(it == m_SplitBlockMap.end())
+                    continue;
+
+                std::vector<PLH::AllocatedMemoryBlock> Children = it->second;
+                for(const auto& ChildBlock : Children)
+                {
+                    BlockUsed += ChildBlock.GetSize();
+                }
+
+                //TO-DO finish this to return a block if Used + RequiredSpace < BlockSize
             }
         }
 
@@ -54,6 +77,7 @@ namespace PLH
         }
     private:
         PLH::ARangeMemAllocator m_AllocImp;
+        std::map<PLH::AllocatedMemoryBlock, std::vector<PLH::AllocatedMemoryBlock>> m_SplitBlockMap;
     };
 }
 #endif //POLYHOOK_2_0_MEMORYALLOCATOR_HPP

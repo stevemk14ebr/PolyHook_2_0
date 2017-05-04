@@ -12,7 +12,8 @@ namespace PLH
      * sub-region inside that parent region.
      *
      * Each allocated region contains a shared_ptr to it's parent region. This is because shared_ptrs are ref counted.
-     * By storing a reference to the parent we make sure our region (which is a sub-region of the parent) is still valid.
+     * By storing a reference to the parent we make sure our region (which is a sub-region of the parent) is still valid by at
+     * least haveing a reference of one at all times.
      * Only once all AllocatedMemoryBlock objects are destroyed is the parent region freed by the shared_ptr's deleter
      */
     class AllocatedMemoryBlock
@@ -42,6 +43,11 @@ namespace PLH
             return m_ParentBlock;
         }
 
+        uint64_t GetSize() const
+        {
+            return m_OurDesc.GetSize();
+        }
+
         bool ContainsBlock(const PLH::MemoryBlock& other);
         bool ContainsBlock(const PLH::AllocatedMemoryBlock& other);
 
@@ -49,6 +55,7 @@ namespace PLH
         bool operator!=(const AllocatedMemoryBlock& other);
         std::string ToString();
     private:
+        //TO-DO: Determine if ParentBlockDesc is necessary info to store
         std::shared_ptr<uint8_t> m_ParentBlock;
         PLH::MemoryBlock m_ParentBlockDesc;
         PLH::MemoryBlock m_OurDesc;

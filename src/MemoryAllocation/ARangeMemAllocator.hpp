@@ -16,6 +16,12 @@
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
 namespace PLH{
+    /* *****************************************************************************************************
+     * This class is a generic (abstract-ish hence 'A') wrapper around the platform specific
+     * implementation of allocating blocks of memory within specific ranges of virtual memory.
+     * It is given minimum and maximum ranges of memory that are acceptable to allocate within
+     * and then stores the blocks of memory that are allocated for use later.
+     * ******************************************************************************************************/
     template<typename PlatformImp>
     class ARangeMemAllocator : private PlatformImp, public virtual PLH::Errant
     {
@@ -25,7 +31,7 @@ namespace PLH{
             //TO-DO: Add call to Verify Mem in range
             AllocatedMemoryBlock Block = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
             if(Block.GetParentBlock() != nullptr) {
-                m_Caves.push_back(Block);
+                m_AllocatedBlocks.push_back(Block);
                 return Block;
             }else{
                 //TO-DO: Handle this case properly
@@ -36,8 +42,8 @@ namespace PLH{
 
         void DeallocateMemory(const AllocatedMemoryBlock& Block)
         {
-           m_Caves.erase(std::remove(m_Caves.begin(),m_Caves.end(),
-                         Block), m_Caves.end());
+           m_AllocatedBlocks.erase(std::remove(m_AllocatedBlocks.begin(),m_AllocatedBlocks.end(),
+                         Block), m_AllocatedBlocks.end());
         }
 
         int TranslateProtection(const ProtFlag flags) const
@@ -45,19 +51,20 @@ namespace PLH{
             return PlatformImp::TranslateProtection(flags);
         }
 
+        //MemoryBlock because it's not an allocated region 'we' control
         std::vector<PLH::MemoryBlock> GetAllocatedVABlocks() const
         {
             return PlatformImp::GetAllocatedVABlocks();
         }
 
-        std::vector<PLH::MemoryBlock> GetFreeVABlocks()
+        std::vector<PLH::MemoryBlock> GetFreeVABlocks() const
         {
             return PlatformImp::GetFreeVABlocks();
         }
 
-        std::vector<PLH::AllocatedMemoryBlock> GetAllocatedCaves()
+        std::vector<PLH::AllocatedMemoryBlock> GetAllocatedBlocks()
         {
-            return m_Caves;
+            return m_AllocatedBlocks;
         }
     protected:
         //[MinAddress, MaxAddress)
@@ -67,7 +74,7 @@ namespace PLH{
                 return true;
             return false;
         }
-        std::vector<PLH::AllocatedMemoryBlock> m_Caves;
+        std::vector<PLH::AllocatedMemoryBlock> m_AllocatedBlocks;
     };
 }
 

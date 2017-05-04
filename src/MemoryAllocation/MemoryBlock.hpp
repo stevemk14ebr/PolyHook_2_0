@@ -10,7 +10,12 @@
 #include <sstream>
 namespace PLH
 {
-    //Not necessarily a memory page, just a range of virtual memory
+    /* ******************************************************************************************
+     * This class represent a region of virtual memory. This region doesn't need to be allocated,
+     * it simply handles the idea of a range of memory and the protection of that region. This
+     * region is not restricted to a size of a single page, it can be any arbitrary length. It
+     * also gives helper methods for alignment should it need to be aligned to page boundaries
+     * *****************************************************************************************/
     class MemoryBlock
     {
     public:
@@ -18,6 +23,7 @@ namespace PLH
         MemoryBlock();
         uint64_t GetStart() const;
         uint64_t GetEnd() const;
+        uint64_t GetSize() const;
         PLH::ProtFlag GetProtection() const;
         std::string ToString() const;
 
@@ -58,6 +64,11 @@ namespace PLH
     uint64_t MemoryBlock::GetEnd() const
     {
         return m_End;
+    }
+
+    uint64_t MemoryBlock::GetSize() const
+    {
+        return m_End - m_Start;
     }
 
     PLH::ProtFlag MemoryBlock::GetProtection() const
