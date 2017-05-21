@@ -32,6 +32,15 @@ namespace PLH
         }
     };
 
+    class AllocationFailure : public std::logic_error
+    {
+    public:
+        AllocationFailure() : std::logic_error("Unable to allocate memory within range")
+        {
+
+        }
+    };
+
     //http://stackoverflow.com/questions/4840410/how-to-align-a-pointer-in-c
     static inline uint8_t* AlignUpwards(uint8_t *stack, uintptr_t align)
     {

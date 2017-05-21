@@ -15,15 +15,15 @@
 
 namespace PLH
 {
-    /* ****************************************************************************************************************
-     * This is the unix implementation for the ARangeMemoryAllocator class. It reads the maps file of the current
-     * process to find currently allocated chunks of VirtualMemory. It then scans the returned list of blocks to find
-     * gaps that can be allocated into. Only gaps that are within the range of min and max are valid candidates. It
-     * properly handles cases where the valid min and max range overlap with potentially valid allocation blocks. Once
-     * it finds a valid block it mmap's this region, wraps the pointer in a shared_ptr with a custom deleter, and wraps
-     * that into an AllocatedMemoryBlock
-     * ***************************************************************************************************************/
-    class RangeMemAllocatorUnixImp : public virtual PLH::Errant
+    /******************************************************************************************************************
+     ** This is the unix implementation for the ARangeMemoryAllocator class. It reads the maps file of the current
+     ** process to find currently allocated chunks of VirtualMemory. It then scans the returned list of blocks to find
+     ** gaps that can be allocated into. Only gaps that are within the range of min and max are valid candidates. It
+     ** properly handles cases where the valid min and max range overlap with potentially valid allocation blocks. Once
+     ** it finds a valid block it mmap's this region, wraps the pointer in a shared_ptr with a custom deleter, and wraps
+     ** that into an AllocatedMemoryBlock
+     *****************************************************************************************************************/
+    class RangeMemAllocatorUnixImp
     {
     public:
         int TranslateProtection(const PLH::ProtFlag flags) const;
@@ -55,15 +55,15 @@ namespace PLH
         return NativeFlag;
     }
 
+    /*******************************************************************************************************
+    ** On Unix virtual address granularity is 4KB. When using MAP_FIXED flag allocation must be page aligned,
+    ** so it is best to call with a size of 4KB to not waste memory.
+    *******************************************************************************************************/
     PLH::AllocatedMemoryBlock PLH::RangeMemAllocatorUnixImp::AllocateImp(const uint64_t Address,const size_t Size,
                                                                          const int MapFlags,const PLH::ProtFlag Protections) const
     {
-        /* *****************************************************************************************************
-         * On Unix virtual address granularity is 4KB. When using MAP_FIXED flag allocation must be page aligned,
-         * so it is best to call with a size of 4KB to not waste memory.
-         * *****************************************************************************************************/
         assert(Size > 0 && "Size must be >0");
-        uint8_t * Buffer = (uint8_t*)mmap((void*)Address,Size,TranslateProtection(Protections),MapFlags,0,0);
+        uint8_t* Buffer = (uint8_t*)mmap((void*)Address,Size,TranslateProtection(Protections),MapFlags,0,0);
         if(Buffer != MAP_FAILED && Buffer != nullptr)
         {
             //Custom deleter

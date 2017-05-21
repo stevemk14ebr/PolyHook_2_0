@@ -13,7 +13,7 @@ namespace PLH
      *
      * Each allocated region contains a shared_ptr to it's parent region. This is because shared_ptrs are ref counted.
      * By storing a reference to the parent we make sure our region (which is a sub-region of the parent) is still valid by at
-     * least haveing a reference of one at all times.
+     * least having a reference count of one at all times to the parent.
      * Only once all AllocatedMemoryBlock objects are destroyed is the parent region freed by the shared_ptr's deleter
      */
     class AllocatedMemoryBlock
@@ -48,11 +48,17 @@ namespace PLH
             return m_OurDesc.GetSize();
         }
 
-        bool ContainsBlock(const PLH::MemoryBlock& other);
-        bool ContainsBlock(const PLH::AllocatedMemoryBlock& other);
+        PLH::MemoryBlock GetDescription() const
+        {
+            return m_OurDesc;
+        }
 
-        bool operator==(const AllocatedMemoryBlock& other);
-        bool operator!=(const AllocatedMemoryBlock& other);
+        bool ContainsBlock(const PLH::MemoryBlock& other) const;
+        bool ContainsBlock(const PLH::AllocatedMemoryBlock& other) const;
+
+        bool operator==(const AllocatedMemoryBlock& other) const;
+        bool operator!=(const AllocatedMemoryBlock& other) const;
+        bool operator<(const AllocatedMemoryBlock& other) const;
         std::string ToString();
     private:
         //TO-DO: Determine if ParentBlockDesc is necessary info to store
@@ -61,21 +67,24 @@ namespace PLH
         PLH::MemoryBlock m_OurDesc;
     };
 
-    bool AllocatedMemoryBlock::operator==(const AllocatedMemoryBlock &other) {
-        return (m_ParentBlock.get() == other.m_ParentBlock.get()) &&
-                m_ParentBlockDesc == other.m_ParentBlockDesc &&
-                m_OurDesc == other.m_OurDesc;
+    bool AllocatedMemoryBlock::operator==(const AllocatedMemoryBlock &other) const {
+        return (m_ParentBlock.get() == other.m_ParentBlock.get() &&
+                this->GetDescription() == other.m_OurDesc);
     }
 
-    bool AllocatedMemoryBlock::operator!=(const AllocatedMemoryBlock &other) {
+    bool AllocatedMemoryBlock::operator!=(const PLH::AllocatedMemoryBlock &other) const {
         return !(*this == other);
     }
 
-    bool AllocatedMemoryBlock::ContainsBlock(const PLH::MemoryBlock &other) {
+    bool AllocatedMemoryBlock::operator<(const PLH::AllocatedMemoryBlock &other) const {
+        return this->GetDescription().GetEnd() < other.GetDescription().GetStart();
+    }
+
+    bool AllocatedMemoryBlock::ContainsBlock(const PLH::MemoryBlock &other) const {
         return m_OurDesc.ContainsBlock(other);
     }
 
-    bool AllocatedMemoryBlock::ContainsBlock(const PLH::AllocatedMemoryBlock &other) {
+    bool AllocatedMemoryBlock::ContainsBlock(const PLH::AllocatedMemoryBlock &other) const {
         return m_OurDesc.ContainsBlock(other.m_OurDesc);
     }
 }

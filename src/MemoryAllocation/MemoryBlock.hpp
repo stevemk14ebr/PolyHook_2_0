@@ -32,7 +32,7 @@ namespace PLH
         uint64_t GetAlignedPageNearestUp(const uint64_t Address,const size_t Alignment,const size_t PageSize) const;
         uint64_t GetAlignedPageNearestDown(const uint64_t Address,const size_t Alignment,const size_t PageSize) const;
 
-        bool ContainsBlock(const PLH::MemoryBlock& other);
+        bool ContainsBlock(const PLH::MemoryBlock& other) const;
         bool operator ==(const PLH::MemoryBlock& other);
         bool operator !=(const PLH::MemoryBlock& other);
     private:
@@ -132,7 +132,7 @@ namespace PLH
     }
 
     //[Start,End]
-    bool MemoryBlock::ContainsBlock(const PLH::MemoryBlock &other)
+    bool MemoryBlock::ContainsBlock(const PLH::MemoryBlock &other) const
     {
         return other.GetStart() >= m_Start && other.GetEnd() <= m_End;
     }

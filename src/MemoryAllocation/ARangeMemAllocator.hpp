@@ -16,17 +16,17 @@
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
 namespace PLH{
-    /* *****************************************************************************************************
-     * This class is a generic (abstract-ish hence 'A') wrapper around the platform specific
-     * implementation of allocating blocks of memory within specific ranges of virtual memory.
-     * It is given minimum and maximum ranges of memory that are acceptable to allocate within
-     * and then stores the blocks of memory that are allocated for use later.
-     * ******************************************************************************************************/
+    /*******************************************************************************************************
+     ** This class is a generic (abstract-ish hence 'A') wrapper around the platform specific
+     ** implementation of allocating blocks of memory within specific ranges of virtual memory.
+     ** It is given minimum and maximum ranges of memory that are acceptable to allocate within
+     ** and then stores the blocks of memory that are allocated for use later.
+     ********************************************************************************************************/
     template<typename PlatformImp>
-    class ARangeMemAllocator : private PlatformImp, public virtual PLH::Errant
+    class ARangeMemAllocator : private PlatformImp
     {
     public:
-        AllocatedMemoryBlock AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
+        PLH::AllocatedMemoryBlock AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
         {
             //TO-DO: Add call to Verify Mem in range
             AllocatedMemoryBlock Block = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
@@ -35,8 +35,7 @@ namespace PLH{
                 return Block;
             }else{
                 //TO-DO: Handle this case properly
-                this->SendError("Failed To Allocate Memory");
-                throw "ERRORS";
+                throw PLH::AllocationFailure();
             }
         }
 
@@ -51,7 +50,7 @@ namespace PLH{
             return PlatformImp::TranslateProtection(flags);
         }
 
-        //MemoryBlock because it's not an allocated region 'we' control
+        //MemoryBlock because it's not an allocated region 'we' allocated
         std::vector<PLH::MemoryBlock> GetAllocatedVABlocks() const
         {
             return PlatformImp::GetAllocatedVABlocks();

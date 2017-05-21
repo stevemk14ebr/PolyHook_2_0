@@ -2,7 +2,7 @@
 // Created by steve on 4/7/17.
 //
 #include "../../Catch.hpp"
-#include "../../src/MemoryAllocation/ARangeMemAllocator.hpp"
+#include "../../src/MemoryAllocation/RangeMemorySTLAllocator.h"
 #include <inttypes.h>
 
 void PlaceHolderFunction()
@@ -49,6 +49,11 @@ TEST_CASE("Tests memory allocator for Unix platform","[ARangeMemAllocator],[Rang
     REQUIRE(DeltaInGB <= 2);
 
     allocator.DeallocateMemory(AllocBlock);
+
+    std::vector<int,PLH::Allocator<int,PLH::MemAllocatorUnix>> alloc_vec(PLH::Allocator<int,PLH::MemAllocatorUnix>(MinAddress,MaxAddress));
+    alloc_vec.push_back(1);
+    alloc_vec.push_back(2);
+    std::cout << alloc_vec[0] << alloc_vec[1] << std::endl;
 }
 
 
