@@ -52,8 +52,11 @@ TEST_CASE("Tests memory allocator for Unix platform","[ARangeMemAllocator],[Rang
     allocator.DeallocateMemory(AllocBlock.get());
 
     std::vector<int,PLH::Allocator<int,PLH::MemAllocatorUnix>> alloc_vec(PLH::Allocator<int,PLH::MemAllocatorUnix>(MinAddress,MaxAddress));
-    alloc_vec.push_back(1);
-    alloc_vec.push_back(2);
+    alloc_vec.reserve(1024); //1024 * 4 = 4096 = pagesize
+    for(int i = 0; i < 1024; i++)
+    {
+        alloc_vec.push_back(i);
+    }
     std::cout << alloc_vec[0] << alloc_vec[1] << std::endl;
 }
 
