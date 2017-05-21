@@ -12,7 +12,7 @@
 #include <string.h>
 #include "../MemoryBlock.hpp"
 #include "../AllocatedMemoryBlock.hpp"
-
+#include "../../../boost/optional.hpp"
 namespace PLH
 {
     /******************************************************************************************************************
@@ -27,11 +27,15 @@ namespace PLH
     {
     public:
         int TranslateProtection(const PLH::ProtFlag flags) const;
-        PLH::AllocatedMemoryBlock AllocateMemory(const uint64_t MinAddress,const uint64_t MaxAddress,
+
+        boost::optional<PLH::AllocatedMemoryBlock>
+        AllocateMemory(const uint64_t MinAddress,const uint64_t MaxAddress,
                             const size_t Size,const PLH::ProtFlag Protections) const;
     protected:
         void Deallocate(uint8_t* Buffer,const size_t Length) const;
-        PLH::AllocatedMemoryBlock AllocateImp(const uint64_t Address,const size_t Size,const int MapFlags,
+        
+        boost::optional<PLH::AllocatedMemoryBlock>
+        AllocateImp(const uint64_t AddressOfPage,const size_t Size,const int MapFlags,
                          const PLH::ProtFlag Protections) const;
 
         std::vector<PLH::MemoryBlock> GetAllocatedVABlocks() const;
@@ -59,11 +63,13 @@ namespace PLH
     ** On Unix virtual address granularity is 4KB. When using MAP_FIXED flag allocation must be page aligned,
     ** so it is best to call with a size of 4KB to not waste memory.
     *******************************************************************************************************/
-    PLH::AllocatedMemoryBlock PLH::RangeMemAllocatorUnixImp::AllocateImp(const uint64_t Address,const size_t Size,
-                                                                         const int MapFlags,const PLH::ProtFlag Protections) const
+    boost::optional<PLH::AllocatedMemoryBlock>
+    PLH::RangeMemAllocatorUnixImp::AllocateImp(const uint64_t AddressOfPage, const size_t Size,
+                                               const int MapFlags,const PLH::ProtFlag Protections) const
     {
+        boost::optional<PLH::AllocatedMemoryBlock> AllocatedBlock;
         assert(Size > 0 && "Size must be >0");
-        uint8_t* Buffer = (uint8_t*)mmap((void*)Address,Size,TranslateProtection(Protections),MapFlags,0,0);
+        uint8_t* Buffer = (uint8_t*)mmap((void*)AddressOfPage,Size,TranslateProtection(Protections),MapFlags,0,0);
         if(Buffer != MAP_FAILED && Buffer != nullptr)
         {
             //Custom deleter
@@ -71,18 +77,20 @@ namespace PLH
                 Deallocate(ptr, Size);
             });
 
-            PLH::MemoryBlock BufferDesc(Address, Address+Size,Protections);
-            return PLH::AllocatedMemoryBlock(BufferDesc, BufferSp, BufferDesc);
+            PLH::MemoryBlock BufferDesc(AddressOfPage, AddressOfPage+Size,Protections);
+            AllocatedBlock = PLH::AllocatedMemoryBlock(BufferDesc, BufferSp, BufferDesc);
         }
-        return PLH::AllocatedMemoryBlock();
+        return AllocatedBlock;
     }
 
     //[MinAddress, MaxAddress)
-    PLH::AllocatedMemoryBlock PLH::RangeMemAllocatorUnixImp::AllocateMemory(const uint64_t MinAddress,
+    boost::optional<PLH::AllocatedMemoryBlock>
+    PLH::RangeMemAllocatorUnixImp::AllocateMemory(const uint64_t MinAddress,
                                                        const uint64_t MaxAddress,
                                                        const size_t Size,
                                                        const PLH::ProtFlag Protections) const
     {
+        boost::optional<PLH::AllocatedMemoryBlock> AllocatedBlock;
         int Flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED; //TO-DO make use of MAP_32Bit for x64?
         std::vector<PLH::MemoryBlock> FreeBlocks = GetFreeVABlocks();
 
@@ -100,9 +108,8 @@ namespace PLH
                     Cur != NULL;
                     Cur = FreeBlock.GetAlignedNextPage(Cur,Alignment,PageSize))
                 {
-                    PLH::AllocatedMemoryBlock Block = AllocateImp(Cur,Size,Flags,Protections);
-                    if(Block.GetParentBlock() != nullptr)
-                        return Block;
+                    if(AllocatedBlock = AllocateImp(Cur,Size,Flags,Protections))
+                        return AllocatedBlock;
                 }
             }else if(FreeBlock.GetEnd() >= MinAddress + Size && FreeBlock.GetStart() < MinAddress){
                 assert(MinAddress + Size > MinAddress && "Check for wrap-around");
@@ -112,9 +119,8 @@ namespace PLH
                     Cur != NULL && (Cur + Size) <= MaxAddress;
                     Cur = FreeBlock.GetAlignedNextPage(Cur,Alignment,PageSize))
                 {
-                    PLH::AllocatedMemoryBlock Block = AllocateImp(Cur,Size,Flags,Protections);
-                    if(Block.GetParentBlock() != nullptr)
-                        return Block;
+                    if(AllocatedBlock = AllocateImp(Cur,Size,Flags,Protections))
+                        return AllocatedBlock;
                 }
             }else if(FreeBlock.GetStart() + Size < MaxAddress && FreeBlock.GetEnd() > MaxAddress){
                 assert(FreeBlock.GetStart() + Size > FreeBlock.GetStart() && "Check for wrap-around");
@@ -124,13 +130,12 @@ namespace PLH
                     Cur != NULL && (Cur + Size) < MaxAddress && Cur >= MinAddress;
                     Cur = FreeBlock.GetAlignedNextPage(Cur,Alignment,PageSize))
                 {
-                    PLH::AllocatedMemoryBlock Block = AllocateImp(Cur,Size,Flags,Protections);
-                    if(Block.GetParentBlock() != nullptr)
-                        return Block;
+                    if(AllocatedBlock = AllocateImp(Cur,Size,Flags,Protections))
+                        return AllocatedBlock;
                 }
             }
         }
-        return PLH::AllocatedMemoryBlock();
+        return AllocatedBlock;
     }
 
     void RangeMemAllocatorUnixImp::Deallocate(uint8_t *Buffer,const size_t Length) const

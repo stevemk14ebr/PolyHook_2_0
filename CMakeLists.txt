@@ -12,6 +12,7 @@ set(CAPSTONE_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/capstone)
 find_library(CAPSTONE_LIB NAMES libcapstone.a PATHS ${CAPSTONE_LIB_PATH})
 
 add_executable(PolyHook_2_0 ${SOURCE_FILES})
+include_directories(.)
 
 #Link the capstone lib
 target_link_libraries(${PROJECT_NAME} ${CAPSTONE_LIB})

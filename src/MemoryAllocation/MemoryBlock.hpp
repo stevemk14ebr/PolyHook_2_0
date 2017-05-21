@@ -33,8 +33,8 @@ namespace PLH
         uint64_t GetAlignedPageNearestDown(const uint64_t Address,const size_t Alignment,const size_t PageSize) const;
 
         bool ContainsBlock(const PLH::MemoryBlock& other) const;
-        bool operator ==(const PLH::MemoryBlock& other);
-        bool operator !=(const PLH::MemoryBlock& other);
+        bool operator ==(const PLH::MemoryBlock& other) const;
+        bool operator !=(const PLH::MemoryBlock& other) const;
     private:
         bool InRange(const uint64_t Address,const size_t Size) const;
         uint64_t m_Start;
@@ -144,12 +144,12 @@ namespace PLH
         return ss.str();
     }
 
-    bool MemoryBlock::operator==(const PLH::MemoryBlock &other) {
+    bool MemoryBlock::operator==(const PLH::MemoryBlock &other) const {
         return m_Start == other.m_Start &&
                 m_End == other.m_End;
     }
 
-    bool MemoryBlock::operator!=(const PLH::MemoryBlock &other) {
+    bool MemoryBlock::operator!=(const PLH::MemoryBlock &other) const {
         return !(*this == other);
     }
 }

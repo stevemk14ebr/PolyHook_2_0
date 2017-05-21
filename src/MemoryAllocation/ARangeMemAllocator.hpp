@@ -13,6 +13,7 @@
 #include "AllocatedMemoryBlock.hpp"
 #include <iostream>
 #include <algorithm>
+#include <boost/optional.hpp>
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
 namespace PLH{
@@ -26,17 +27,18 @@ namespace PLH{
     class ARangeMemAllocator : private PlatformImp
     {
     public:
-        PLH::AllocatedMemoryBlock AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
+        boost::optional<PLH::AllocatedMemoryBlock>
+        AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections)
         {
             //TO-DO: Add call to Verify Mem in range
-            AllocatedMemoryBlock Block = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
-            if(Block.GetParentBlock() != nullptr) {
-                m_AllocatedBlocks.push_back(Block);
-                return Block;
-            }else{
-                //TO-DO: Handle this case properly
-                throw PLH::AllocationFailure();
+            auto Block = PlatformImp::AllocateMemory(MinAddress,MaxAddress, Size, Protections);
+            if(Block &&
+                    VerifyMemInRange(MinAddress,MaxAddress, Block.get().GetDescription().GetStart()) &&
+                    VerifyMemInRange(MinAddress,MaxAddress, Block.get().GetDescription().GetEnd()))
+            {
+                m_AllocatedBlocks.push_back(Block.get());
             }
+            return Block;
         }
 
         void DeallocateMemory(const AllocatedMemoryBlock& Block)
@@ -67,7 +69,7 @@ namespace PLH{
         }
     protected:
         //[MinAddress, MaxAddress)
-        bool VerifyMemInRange(uint64_t MinAddress, uint64_t MaxAddress, uint64_t Needle)
+        bool VerifyMemInRange(uint64_t MinAddress, uint64_t MaxAddress, uint64_t Needle) const
         {
             if (Needle >= MinAddress && Needle < MaxAddress)
                 return true;

@@ -48,56 +48,99 @@ namespace PLH
             std::size_t NeededAlignment = std::alignment_of<value_type>::value;
             std::vector<PLH::AllocatedMemoryBlock> AllocatedBlocks;
 
+            /* Loop avoids overhead/complication of recursion
+             * First attempt: possible no blocks are allocated yet, or cur block is full
+             * Second attempt: allocate a new block
+             * Third attempt: if condition should now succeed*/
             int Attempts = 0;
             do {
                 //First try to find a big enough parent block to split
                 AllocatedBlocks =  m_AllocImp.GetAllocatedBlocks();
-                if (PLH::AllocatedMemoryBlock* NewChild = FindAndSplitBlock(AllocatedBlocks, AllocationSize)) {
-                    return (pointer)NewChild->GetDescription().GetStart();
+                if (auto NewChild = FindAndSplitBlock(AllocatedBlocks, AllocationSize)) {
+                    return (pointer)NewChild.get()->GetDescription().GetStart();
                 } else {
                     //Allocate a new memory page "parent" block and add it to the map, give it no children yet
-                    m_SplitBlockMap.insert(std::make_pair(
-                            m_AllocImp.AllocateMemory(m_AllowedRegion.GetStart(), m_AllowedRegion.GetEnd(), getpagesize(),
-                                              PLH::ProtFlag::R | PLH::ProtFlag::W),
-                            std::vector<PLH::AllocatedMemoryBlock>()));
+                    auto NewParent = m_AllocImp.AllocateMemory(m_AllowedRegion.GetStart(), m_AllowedRegion.GetEnd(),
+                                                               getpagesize(),
+                                                               PLH::ProtFlag::R | PLH::ProtFlag::W);
+                    if(NewParent) {
+                        m_SplitBlockMap.insert(std::make_pair(NewParent.get(),
+                                std::vector<PLH::AllocatedMemoryBlock>()));
+                    }
                 }
-            }while(++Attempts < 2);
+            }while(Attempts++ < 3);
             return nullptr;
         }
 
-        PLH::AllocatedMemoryBlock* FindAndSplitBlock(std::vector<PLH::AllocatedMemoryBlock> &AllocatedBlocks,
+        boost::optional<PLH::AllocatedMemoryBlock*> FindAndSplitBlock(std::vector<PLH::AllocatedMemoryBlock> &AllocatedBlocks,
                                                      std::size_t RequiredSpace)
         {
+            boost::optional<PLH::AllocatedMemoryBlock*> AllocatedBlock;
             for(int i = 0; i < AllocatedBlocks.size(); i++)
             {
-                PLH::AllocatedMemoryBlock* Block = &AllocatedBlocks[i];
-                assert(Block != nullptr);
+                PLH::AllocatedMemoryBlock* CurBlock = &AllocatedBlocks[i];
+                assert(CurBlock != nullptr);
 
-                uint64_t BlockSize = Block->GetSize();
-                uint64_t BlockUsed = 0;
-                auto it = m_SplitBlockMap.find(*Block);
+                //Find the children associated with parent block
+                uint64_t BlockSize = CurBlock->GetSize();
+                auto it = m_SplitBlockMap.find(*CurBlock);
                 if(it == m_SplitBlockMap.end())
                     continue;
 
-                //Calculate how much space children of parent already use
+                //Search for existing gaps in children we can use
                 std::vector<PLH::AllocatedMemoryBlock> Children = it->second;
-                for(const auto& ChildBlock : Children)
+                boost::optional<PLH::MemoryBlock> NewChildDesc;
+                for(auto prev = Children.begin(), cur = Children.begin() + 1; cur < Children.end(); prev = cur, std::advance(cur,1))
                 {
-                    BlockUsed += ChildBlock.GetSize();
+                    //gap too small
+                    if(prev->GetDescription().GetEnd() - cur->GetDescription().GetStart() < RequiredSpace)
+                        continue;
+
+                    //make sure region is aligned for T
+                    PLH::MemoryBlock CandidateRegion(prev->GetDescription().GetEnd(), cur->GetDescription().GetStart(), CurBlock->GetDescription().GetProtection());
+                    if(CandidateRegion.GetStart() % std::alignment_of<T>::value == 0) {
+                        //Is properly aligned and region is big enough
+                        NewChildDesc == CandidateRegion;
+                        break;
+                    }else{
+                        //region wasn't aligned, so do so, now we have to check it's still big enough
+                        uint64_t AlignedCandidateStart = CandidateRegion.GetStart() + (CandidateRegion.GetStart() % std::alignment_of<T>::value);
+                        if(CandidateRegion.GetEnd() - AlignedCandidateStart < RequiredSpace)
+                            continue;
+
+                        //region now aligned and is big enough
+                        NewChildDesc = PLH::MemoryBlock(AlignedCandidateStart, CandidateRegion.GetEnd(), CurBlock->GetDescription().GetProtection());
+                        break;
+                    }
                 }
 
-                //if there is no room left in the parent block for us
-                if(BlockUsed + RequiredSpace > BlockSize)
+                //no usable gap found in children, add one at end
+                if(!NewChildDesc)
+                {
+                    uint64_t Start;
+                    if(Children.size() > 0)
+                        Start = Children.back().GetDescription().GetEnd();
+                    else
+                        Start = CurBlock->GetDescription().GetStart();
+
+                    Start += Start % std::alignment_of<T>::value;
+                    uint64_t End = Start + RequiredSpace;
+                    if(End - Start < RequiredSpace)
+                        continue;
+
+                    NewChildDesc = PLH::MemoryBlock(Start,End,CurBlock->GetDescription().GetProtection());
+                }
+                //double check all the math above
+                if(!IsInRange(NewChildDesc.get().GetStart()) || !IsInRange(NewChildDesc.get().GetEnd()))
                     continue;
 
-                PLH::MemoryBlock NewChildDesc((uint64_t)(Block->GetParentBlock().get() + BlockUsed),
-                                              (uint64_t )(Block->GetParentBlock().get() + BlockUsed + RequiredSpace),
-                                                Block->GetDescription().GetProtection());
-                PLH::AllocatedMemoryBlock NewChildBlock(Block->GetDescription(), Block->GetParentBlock(),NewChildDesc);
+                PLH::AllocatedMemoryBlock NewChildBlock(CurBlock->GetDescription(), CurBlock->GetParentBlock(),NewChildDesc.get());
+
                 it->second.push_back(NewChildBlock);
-                return &it->second.back();
+                AllocatedBlock = &it->second.back();
+                return AllocatedBlock;
             }
-            return nullptr;
+            return AllocatedBlock;
         }
 
         void deallocate(pointer ptr, size_type n)
@@ -132,6 +175,11 @@ namespace PLH
         }
         size_type max_size(void) const {return max_allocations<T>::value;}
     private:
+        //[Start,End)
+        bool IsInRange(uint64_t Address)
+        {
+            return Address >= m_AllowedRegion.GetStart() && Address < m_AllowedRegion.GetEnd();
+        }
         PLH::ARangeMemAllocator<Platform> m_AllocImp;
         PLH::MemoryBlock m_AllowedRegion;
         std::map<PLH::AllocatedMemoryBlock, std::vector<PLH::AllocatedMemoryBlock>> m_SplitBlockMap;

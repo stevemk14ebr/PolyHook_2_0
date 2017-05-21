@@ -36,8 +36,9 @@ TEST_CASE("Tests memory allocator for Unix platform","[ARangeMemAllocator],[Rang
     int PageSize = getpagesize();
     std::cout << std::dec << "PageSize: " << PageSize << std::endl;
 
-    PLH::AllocatedMemoryBlock AllocBlock = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R));
-    std::shared_ptr<uint8_t> Buffer = AllocBlock.GetParentBlock();
+    auto AllocBlock = allocator.AllocateMemory(MinAddress,MaxAddress, 200, (X | W | R));
+    REQUIRE(AllocBlock);
+    std::shared_ptr<uint8_t> Buffer = AllocBlock.get().GetParentBlock();
     REQUIRE(Buffer != nullptr);
     std::cout << std::hex << "Allocated At: " << (uint64_t )Buffer.get()<< std::endl;
 
@@ -48,7 +49,7 @@ TEST_CASE("Tests memory allocator for Unix platform","[ARangeMemAllocator],[Rang
     std::cout << "Delta:[" << DeltaInGB << " GB] Percent Tolerance Used[" << DeltaPercentage << " % out of 2GB]" << std::endl;
     REQUIRE(DeltaInGB <= 2);
 
-    allocator.DeallocateMemory(AllocBlock);
+    allocator.DeallocateMemory(AllocBlock.get());
 
     std::vector<int,PLH::Allocator<int,PLH::MemAllocatorUnix>> alloc_vec(PLH::Allocator<int,PLH::MemAllocatorUnix>(MinAddress,MaxAddress));
     alloc_vec.push_back(1);
