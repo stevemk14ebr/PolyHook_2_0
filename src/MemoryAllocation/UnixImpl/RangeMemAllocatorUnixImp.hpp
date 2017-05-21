@@ -74,11 +74,12 @@ namespace PLH
         {
             //Custom deleter
             std::shared_ptr<uint8_t> BufferSp(Buffer,[=](uint8_t* ptr){
+                std::cout << "Destroyed" << std::endl;
                 Deallocate(ptr, Size);
             });
 
             PLH::MemoryBlock BufferDesc(AddressOfPage, AddressOfPage+Size,Protections);
-            AllocatedBlock = PLH::AllocatedMemoryBlock(BufferDesc, BufferSp, BufferDesc);
+            AllocatedBlock = PLH::AllocatedMemoryBlock(BufferSp, BufferDesc);
         }
         return AllocatedBlock;
     }
@@ -94,8 +95,8 @@ namespace PLH
         int Flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED; //TO-DO make use of MAP_32Bit for x64?
         std::vector<PLH::MemoryBlock> FreeBlocks = GetFreeVABlocks();
 
-        int PageSize = getpagesize();
-        int Alignment = PageSize;
+        size_t PageSize = (size_t)getpagesize();
+        size_t Alignment = PageSize;
         for(PLH::MemoryBlock FreeBlock : FreeBlocks)
         {
             //Check acceptable ranges of block size within our Min-Max params
@@ -104,33 +105,33 @@ namespace PLH
                 assert(FreeBlock.GetEnd() + Size > FreeBlock.GetEnd() && "Check for wrap-around");
                 /*This is the normal case where the entire block is within our range. We now can walk
                  * the memory pages normally until we have a successful allocation*/
-                for(uint64_t Cur = FreeBlock.GetAlignedFirstPage(Alignment,PageSize);
-                    Cur != NULL;
-                    Cur = FreeBlock.GetAlignedNextPage(Cur,Alignment,PageSize))
+                for(auto Cur = FreeBlock.GetAlignedFirst(Alignment,PageSize);
+                    Cur;
+                    Cur = FreeBlock.GetAlignedNext(Cur.get(),Alignment,PageSize))
                 {
-                    if(AllocatedBlock = AllocateImp(Cur,Size,Flags,Protections))
+                    if(AllocatedBlock = AllocateImp(Cur.get(),Size,Flags,Protections))
                         return AllocatedBlock;
                 }
             }else if(FreeBlock.GetEnd() >= MinAddress + Size && FreeBlock.GetStart() < MinAddress){
                 assert(MinAddress + Size > MinAddress && "Check for wrap-around");
                 /*This is the case where our blocks upper range overlaps the minimum range of our range, but the
                 * majority of the lower range of the block is not in our range*/
-                for(uint64_t Cur = FreeBlock.GetAlignedPageNearestUp(MinAddress,Alignment,PageSize);
-                    Cur != NULL && (Cur + Size) <= MaxAddress;
-                    Cur = FreeBlock.GetAlignedNextPage(Cur,Alignment,PageSize))
+                for(auto Cur = FreeBlock.GetAlignedNearestUp(MinAddress,Alignment,PageSize);
+                    Cur && (Cur.get() + Size) <= MaxAddress;
+                    Cur = FreeBlock.GetAlignedNext(Cur.get(),Alignment,PageSize))
                 {
-                    if(AllocatedBlock = AllocateImp(Cur,Size,Flags,Protections))
+                    if(AllocatedBlock = AllocateImp(Cur.get(),Size,Flags,Protections))
                         return AllocatedBlock;
                 }
             }else if(FreeBlock.GetStart() + Size < MaxAddress && FreeBlock.GetEnd() > MaxAddress){
                 assert(FreeBlock.GetStart() + Size > FreeBlock.GetStart() && "Check for wrap-around");
                 /*This is the case where our blocks lower range overlaps the maximum of our range, but the
                  * majority of the blocks upper range is not in our range*/
-                for(uint64_t Cur = FreeBlock.GetAlignedPageNearestDown(FreeBlock.GetStart(),Alignment,PageSize);
-                    Cur != NULL && (Cur + Size) < MaxAddress && Cur >= MinAddress;
-                    Cur = FreeBlock.GetAlignedNextPage(Cur,Alignment,PageSize))
+                for(auto Cur = FreeBlock.GetAlignedNearestDown(FreeBlock.GetStart(),Alignment,PageSize);
+                    Cur && (Cur.get() + Size) < MaxAddress && Cur >= MinAddress;
+                    Cur = FreeBlock.GetAlignedNext(Cur.get(),Alignment,PageSize))
                 {
-                    if(AllocatedBlock = AllocateImp(Cur,Size,Flags,Protections))
+                    if(AllocatedBlock = AllocateImp(Cur.get(),Size,Flags,Protections))
                         return AllocatedBlock;
                 }
             }
@@ -151,7 +152,7 @@ namespace PLH
         std::vector<PLH::MemoryBlock> allocatedPages;
 
         char szMapPath[256] = {0};
-        sprintf(szMapPath, "/proc/%ld/maps", getpid( ));
+        sprintf(szMapPath, "/proc/%ld/maps", (long)getpid( ));
         std::ifstream file(szMapPath);
         std::string line;
         while( getline( file, line ) ) {

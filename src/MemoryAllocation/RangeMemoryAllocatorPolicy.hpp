@@ -90,6 +90,8 @@ namespace PLH
                 //Search for existing gaps in children we can use
                 std::vector<PLH::AllocatedMemoryBlock> Children = it->second;
                 boost::optional<PLH::MemoryBlock> NewChildDesc;
+                
+                //TO-DO: fix this bit, loop never executes
                 for(auto prev = Children.begin(), cur = Children.begin() + 1; cur < Children.end(); prev = cur, std::advance(cur,1))
                 {
                     //gap too small
@@ -134,7 +136,7 @@ namespace PLH
                 if(!IsInRange(NewChildDesc.get().GetStart()) || !IsInRange(NewChildDesc.get().GetEnd()))
                     continue;
 
-                PLH::AllocatedMemoryBlock NewChildBlock(CurBlock->GetDescription(), CurBlock->GetParentBlock(),NewChildDesc.get());
+                PLH::AllocatedMemoryBlock NewChildBlock(CurBlock->GetParentBlock(), NewChildDesc.get());
 
                 it->second.push_back(NewChildBlock);
                 AllocatedBlock = &it->second.back();
@@ -145,14 +147,16 @@ namespace PLH
 
         void deallocate(pointer ptr, size_type n)
         {
-            PLH::MemoryBlock block((uint64_t)ptr,(uint64_t)ptr + n,PLH::ProtFlag::UNSET);
             for(auto& ParentKeyValuePair : m_SplitBlockMap)
             {
-                if(ParentKeyValuePair.first.ContainsBlock(block))
+                //TO-DO fix this
+                PLH::MemoryBlock block((uint64_t)ptr,(uint64_t)ptr + n*sizeof(T), ParentKeyValuePair.first.GetDescription().GetProtection());
+                PLH::AllocatedMemoryBlock allocblock(ParentKeyValuePair.first.GetParentBlock(), block);
+                if(ParentKeyValuePair.first.ContainsBlock(allocblock))
                 {
                     ParentKeyValuePair.second.erase(
                             std::remove(ParentKeyValuePair.second.begin(),
-                                        ParentKeyValuePair.second.end(), block),
+                                        ParentKeyValuePair.second.end(), allocblock),
                             ParentKeyValuePair.second.end());
                 }
             }
@@ -188,11 +192,6 @@ namespace PLH
     template<typename T,typename Platform, typename OtherAllocator>
     inline bool operator==(PLH::RangeMemoryAllocatorPolicy<T, Platform> const&,
                            OtherAllocator const&) {
-        return false;
-    }
-
-    bool operator==(const PLH::AllocatedMemoryBlock& allocated, const PLH::MemoryBlock& block)
-    {
         return false;
     }
 }

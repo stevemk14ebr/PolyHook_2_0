@@ -40,7 +40,7 @@ TEST_CASE("Tests memory allocator for Unix platform","[ARangeMemAllocator],[Rang
     REQUIRE(AllocBlock);
     std::shared_ptr<uint8_t> Buffer = AllocBlock.get().GetParentBlock();
     REQUIRE(Buffer != nullptr);
-    std::cout << std::hex << "Allocated At: " << (uint64_t )Buffer.get()<< std::endl;
+    std::cout << std::hex << "Allocated At: " << (uint64_t)Buffer.get()<< std::endl;
 
     //Compute some statistics about how far away allocation was
     std::intmax_t AllocDelta = imaxabs((std::intmax_t) Buffer.get() - fnAddress);
@@ -52,12 +52,12 @@ TEST_CASE("Tests memory allocator for Unix platform","[ARangeMemAllocator],[Rang
     allocator.DeallocateMemory(AllocBlock.get());
 
     std::vector<int,PLH::Allocator<int,PLH::MemAllocatorUnix>> alloc_vec(PLH::Allocator<int,PLH::MemAllocatorUnix>(MinAddress,MaxAddress));
-    alloc_vec.reserve(1024); //1024 * 4 = 4096 = pagesize
-    for(int i = 0; i < 1024; i++)
+    for(int i = 0; i < 200; i++)
     {
+        if(i % 24 == 0)
+            alloc_vec.clear();
         alloc_vec.push_back(i);
     }
-    std::cout << alloc_vec[0] << alloc_vec[1] << std::endl;
 }
 
 

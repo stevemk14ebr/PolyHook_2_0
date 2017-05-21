@@ -19,20 +19,20 @@ namespace PLH
     class AllocatedMemoryBlock
     {
     public:
-        AllocatedMemoryBlock(PLH::MemoryBlock ParentBlockDesc, std::shared_ptr<uint8_t> ParentBlock, PLH::MemoryBlock OurDesc) :
-                m_ParentBlockDesc(ParentBlockDesc), m_ParentBlock(ParentBlock), m_OurDesc(OurDesc)
+        AllocatedMemoryBlock(std::shared_ptr<uint8_t> ParentBlock, PLH::MemoryBlock OurDesc) : m_ParentBlock(ParentBlock),
+                 m_OurDesc(OurDesc)
         {
-            assert(m_ParentBlockDesc.ContainsBlock(OurDesc) && "Parent blocks must contain full range of child");
+
         }
 
         //delegate constructors allowed in c++11
-        AllocatedMemoryBlock(PLH::MemoryBlock ParentBlockDesc, std::shared_ptr<uint8_t> ParentBlock, uint64_t Start, uint64_t End) :
-                AllocatedMemoryBlock(ParentBlockDesc,ParentBlock, PLH::MemoryBlock(Start,End,m_ParentBlockDesc.GetProtection()))
+        AllocatedMemoryBlock(std::shared_ptr<uint8_t> ParentBlock, uint64_t Start, uint64_t End,PLH::ProtFlag Protection) :
+                AllocatedMemoryBlock(ParentBlock, PLH::MemoryBlock(Start,End,Protection))
         {
 
         }
 
-        AllocatedMemoryBlock() : m_ParentBlock(std::shared_ptr<uint8_t>()), m_ParentBlockDesc(PLH::MemoryBlock()),
+        AllocatedMemoryBlock() : m_ParentBlock(std::shared_ptr<uint8_t>()),
                                  m_OurDesc(PLH::MemoryBlock())
         {
 
@@ -53,23 +53,27 @@ namespace PLH
             return m_OurDesc;
         }
 
+
+
         bool ContainsBlock(const PLH::MemoryBlock& other) const;
         bool ContainsBlock(const PLH::AllocatedMemoryBlock& other) const;
 
+        explicit operator PLH::MemoryBlock() const;
         bool operator==(const AllocatedMemoryBlock& other) const;
         bool operator!=(const AllocatedMemoryBlock& other) const;
         bool operator<(const AllocatedMemoryBlock& other) const;
-        std::string ToString();
+        bool operator>(const AllocatedMemoryBlock& other) const;
+        bool operator>=(const AllocatedMemoryBlock& other) const;
+        bool operator<=(const AllocatedMemoryBlock* other) const;
     private:
         //TO-DO: Determine if ParentBlockDesc is necessary info to store
         std::shared_ptr<uint8_t> m_ParentBlock;
-        PLH::MemoryBlock m_ParentBlockDesc;
         PLH::MemoryBlock m_OurDesc;
     };
 
     bool AllocatedMemoryBlock::operator==(const AllocatedMemoryBlock &other) const {
-        return (m_ParentBlock.get() == other.m_ParentBlock.get() &&
-                this->GetDescription() == other.m_OurDesc);
+        return this->GetParentBlock().get() == other.GetParentBlock().get() &&
+                this->GetDescription() == other.GetDescription();
     }
 
     bool AllocatedMemoryBlock::operator!=(const PLH::AllocatedMemoryBlock &other) const {
@@ -77,15 +81,37 @@ namespace PLH
     }
 
     bool AllocatedMemoryBlock::operator<(const PLH::AllocatedMemoryBlock &other) const {
-        return this->GetDescription().GetEnd() < other.GetDescription().GetStart();
+        return this->GetDescription() < other.GetDescription();
+    }
+
+    bool AllocatedMemoryBlock::operator>(const AllocatedMemoryBlock &other) const {
+        return this->GetDescription() > other.GetDescription();
     }
 
     bool AllocatedMemoryBlock::ContainsBlock(const PLH::MemoryBlock &other) const {
-        return m_OurDesc.ContainsBlock(other);
+        return this->GetDescription().ContainsBlock(other);
     }
 
     bool AllocatedMemoryBlock::ContainsBlock(const PLH::AllocatedMemoryBlock &other) const {
-        return m_OurDesc.ContainsBlock(other.m_OurDesc);
+        return this->GetDescription().ContainsBlock(other.GetDescription());
+    }
+
+    bool AllocatedMemoryBlock::operator>=(const AllocatedMemoryBlock &other) const {
+        return this->GetDescription() >= other.GetDescription();
+    }
+
+    bool AllocatedMemoryBlock::operator<=(const AllocatedMemoryBlock *other) const {
+        return this->GetDescription() <= other->GetDescription();
+    }
+
+    AllocatedMemoryBlock::operator PLH::MemoryBlock() const
+    {
+        return this->GetDescription();
+    }
+
+    std::ostream& operator<<(std::ostream &os, const PLH::AllocatedMemoryBlock& obj) {
+        os << std::hex << obj.GetParentBlock().get() << std::dec << obj.GetDescription() << std::endl;
+        return os;
     }
 }
 #endif
