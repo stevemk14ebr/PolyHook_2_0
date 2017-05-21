@@ -74,7 +74,6 @@ namespace PLH
         {
             //Custom deleter
             std::shared_ptr<uint8_t> BufferSp(Buffer,[=](uint8_t* ptr){
-                std::cout << "Destroyed" << std::endl;
                 Deallocate(ptr, Size);
             });
 

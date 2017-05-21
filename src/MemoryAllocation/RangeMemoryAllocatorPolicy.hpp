@@ -90,7 +90,7 @@ namespace PLH
                 //Search for existing gaps in children we can use
                 std::vector<PLH::AllocatedMemoryBlock> Children = it->second;
                 boost::optional<PLH::MemoryBlock> NewChildDesc;
-                
+
                 //TO-DO: fix this bit, loop never executes
                 for(auto prev = Children.begin(), cur = Children.begin() + 1; cur < Children.end(); prev = cur, std::advance(cur,1))
                 {
