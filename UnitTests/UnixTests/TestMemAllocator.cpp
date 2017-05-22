@@ -103,7 +103,19 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]")
 
 TEST_CASE("Test MemoryBlock","[MemoryBlock]")
 {
+    PLH::MemoryBlock block(0x7896,0x9876,PLH::ProtFlag::UNSET);
+    REQUIRE(block.GetStart() == 0x7896);
+    REQUIRE(block.GetEnd() == 0x9876);
+    REQUIRE(block.GetSize() == 0x1FE0);
 
+    size_t Alignment = 4;
+    auto first = block.GetAlignedFirst(Alignment,8);
+    REQUIRE(first);
+    REQUIRE(first.get() == 0x7898);
+
+    auto next = block.GetAlignedNext(first.get(),Alignment,8);
+    REQUIRE(next);
+    REQUIRE(next.get() == 0x78A0);
 }
 
 TEST_CASE("Test AllocatedMemoryBlock","[AllocatedMemoryBlock]")

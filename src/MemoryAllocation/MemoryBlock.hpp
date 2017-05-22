@@ -86,13 +86,16 @@ namespace PLH
     }
 
     boost::optional<uint64_t> MemoryBlock::GetAlignedFirst(const size_t Alignment,const size_t Size) const {
-        return GetAlignedNearestDown(m_Start,Alignment,Size);
+        if(auto Aligned = GetAlignedNearestDown(m_Start,Alignment,Size))
+            return Aligned;
+        return GetAlignedNearestUp(m_Start,Alignment,Size);
     }
 
     //[Start, End)
     boost::optional<uint64_t> MemoryBlock::GetAlignedNext(const uint64_t Address,const size_t Alignment,const size_t Size) const {
         boost::optional<uint64_t> AlignedAddress;
         assert(Size > 0);
+        assert(Alignment > 0);
 
         /* Next address is address + size, verify it follows alignment, if the entire 'next'
          * region doesn't fit in our MemoryBlock then return null, otherwise the address*/
@@ -111,6 +114,7 @@ namespace PLH
     boost::optional<uint64_t> MemoryBlock::GetAlignedNearestDown(const uint64_t Address,const size_t Alignment,const size_t Size) const {
         boost::optional<uint64_t> AlignedAddress;
         assert(Size > 0);
+        assert(Alignment > 0);
 
         uint64_t NearestDown = (uint64_t)PLH::AlignDownwards((uint8_t*)Address, Alignment);
         if(!InRange(NearestDown, Size))
@@ -126,6 +130,7 @@ namespace PLH
     boost::optional<uint64_t> MemoryBlock::GetAlignedNearestUp(const uint64_t Address,const size_t Alignment,const size_t Size) const {
         boost::optional<uint64_t> AlignedAddress;
         assert(Size > 0);
+        assert(Alignment > 0);
 
         uint64_t NearestUp = (uint64_t)PLH::AlignUpwards((uint8_t*)Address,Alignment);
         if(!InRange(NearestUp,Size))
