@@ -8,7 +8,7 @@
 #define MODE_x64 (0)
 #define MODE_x86 (1)
 
-#include "ADetour.hpp"
+#include "src/ADetour.hpp"
 
 namespace PLH
 {

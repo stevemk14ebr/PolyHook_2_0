@@ -3,7 +3,7 @@
 //
 #ifndef POLYHOOK_2_0_ALLOCATEDMEMORYBLOCK_HPP
 #define POLYHOOK_2_0_ALLOCATEDMEMORYBLOCK_HPP
-#include "MemoryBlock.hpp"
+#include "src/MemoryAllocation/MemoryBlock.hpp"
 #include <memory>
 namespace PLH
 {

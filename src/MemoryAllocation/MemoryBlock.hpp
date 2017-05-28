@@ -5,8 +5,8 @@
 #ifndef POLYHOOK_2_0_MEMORYPAGE_HPP
 #define POLYHOOK_2_0_MEMORYPAGE_HPP
 
-#include "../Misc.hpp"
-#include "../Enums.hpp"
+#include "src/Misc.hpp"
+#include "src/Enums.hpp"
 #include <sstream>
 #include <boost/optional.hpp>
 

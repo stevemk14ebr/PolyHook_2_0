@@ -6,11 +6,11 @@
 #define POLYHOOK_2_0_MEMALLOCATOR_HPP
 #include <vector>
 #include <memory>
-#include "../ErrorSystem.hpp"
-#include "../Misc.hpp"
-#include "../Enums.hpp"
-#include "MemoryBlock.hpp"
-#include "AllocatedMemoryBlock.hpp"
+#include "src/ErrorSystem.hpp"
+#include "src/Misc.hpp"
+#include "src/Enums.hpp"
+#include "src/MemoryAllocation/MemoryBlock.hpp"
+#include "src/MemoryAllocation/AllocatedMemoryBlock.hpp"
 #include <iostream>
 #include <algorithm>
 #include <boost/optional.hpp>

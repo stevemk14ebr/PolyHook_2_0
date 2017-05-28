@@ -10,9 +10,9 @@
 #include <fstream>
 #include <iostream>
 #include <string.h>
-#include "../MemoryBlock.hpp"
-#include "../AllocatedMemoryBlock.hpp"
-#include "../../../boost/optional.hpp"
+#include "src/MemoryAllocation/MemoryBlock.hpp"
+#include "src/MemoryAllocation/AllocatedMemoryBlock.hpp"
+#include <boost/optional.hpp>
 namespace PLH
 {
     /******************************************************************************************************************

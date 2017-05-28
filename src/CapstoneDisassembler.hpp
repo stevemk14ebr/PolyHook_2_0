@@ -8,8 +8,8 @@
 #include <inttypes.h>
 #include <string.h>
 #include <memory>   //memset on linux
-#include "ADisassembler.hpp"
-#include "../capstone/include/capstone/capstone.h"
+#include "src/ADisassembler.hpp"
+#include <capstone/include/capstone/capstone.h>
 
 namespace PLH
 {

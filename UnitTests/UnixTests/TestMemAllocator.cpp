@@ -1,8 +1,8 @@
 //
 // Created by steve on 4/7/17.
 //
-#include "../../Catch.hpp"
-#include "../../src/MemoryAllocation/RangeMemorySTLAllocator.h"
+#include "Catch.hpp"
+#include "src/MemoryAllocation/RangeMemorySTLAllocator.hpp"
 #include <inttypes.h>
 
 volatile void PlaceHolderFunction()

@@ -1,8 +1,8 @@
 //
 // Created by steve on 3/22/17.
 //
-#include "../Catch.hpp"
-#include "../src/CapstoneDisassembler.hpp"
+#include "Catch.hpp"
+#include "src/CapstoneDisassembler.hpp"
 
 std::vector<uint8_t> x64ASM = {
         //start address = 0x1800182B0

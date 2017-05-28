@@ -4,7 +4,7 @@
 
 #ifndef POLYHOOK_2_0_ADETOUR_HPP
 #define POLYHOOK_2_0_ADETOUR_HPP
-#include "IHook.hpp"
+#include "src/IHook.hpp"
 class ADetour : public PLH::IHook
 {
 public:

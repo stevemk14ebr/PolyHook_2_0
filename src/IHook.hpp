@@ -4,8 +4,8 @@
 
 #ifndef POLYHOOK_2_0_IHOOK_HPP
 #define POLYHOOK_2_0_IHOOK_HPP
-#include "ErrorSystem.hpp"
-#include "ADisassembler.hpp"
+#include "src/ErrorSystem.hpp"
+#include "src/ADisassembler.hpp"
 namespace PLH{
     enum class HookType
     {

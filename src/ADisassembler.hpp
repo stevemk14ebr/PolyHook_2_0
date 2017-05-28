@@ -6,8 +6,8 @@
 #define POLYHOOK_2_0_IDISASSEMBLER_HPP
 
 #include <vector>
-#include "ErrorSystem.hpp"
-#include "Instruction.hpp"
+#include "src/ErrorSystem.hpp"
+#include "src/Instruction.hpp"
 #include <memory>
 
 namespace PLH {

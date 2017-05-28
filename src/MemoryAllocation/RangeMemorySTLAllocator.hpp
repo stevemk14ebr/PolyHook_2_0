@@ -4,8 +4,8 @@
 
 #ifndef POLYHOOK_2_0_RANGEMEMORYSTLALLOCATOR_H
 #define POLYHOOK_2_0_RANGEMEMORYSTLALLOCATOR_H
-#include "RangeMemoryAllocatorPolicy.hpp"
-#include "RangeMemoryAllocatorObjectTraits.h"
+#include "src/MemoryAllocation/RangeMemoryAllocatorPolicy.hpp"
+#include "src/MemoryAllocation/RangeMemoryAllocatorObjectTraits.hpp"
 
 namespace PLH {
     template<typename T, typename Platform,
@@ -16,7 +16,7 @@ namespace PLH {
         typedef Policy AllocationPolicy;
         typedef Traits TTraits;
 
-    public :
+    public:
         typedef typename AllocationPolicy::size_type size_type;
         typedef typename AllocationPolicy::difference_type difference_type;
         typedef typename AllocationPolicy::pointer pointer;
