@@ -31,7 +31,7 @@ namespace PLH
         boost::optional<PLH::AllocatedMemoryBlock>
         AllocateMemory(const uint64_t MinAddress,const uint64_t MaxAddress,
                             const size_t Size,const PLH::ProtFlag Protections) const;
-        size_t QueryContiguousGaurantee();
+        size_t QueryPreferedAllocSize() const;
     protected:
         void Deallocate(uint8_t* Buffer,const size_t Length) const;
         
@@ -142,6 +142,11 @@ namespace PLH
     void RangeMemAllocatorUnixImp::Deallocate(uint8_t *Buffer,const size_t Length) const
     {
         munmap(Buffer,Length);
+    }
+
+    size_t RangeMemAllocatorUnixImp::QueryPreferedAllocSize() const
+    {
+        return (size_t)getpagesize();
     }
 
     /********************************************************************************

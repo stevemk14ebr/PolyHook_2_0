@@ -36,79 +36,118 @@ namespace PLH
             m_AllowedRegion = PLH::MemoryBlock(Min,Max,PLH::UNSET);
         }
 
+
         pointer allocate(size_type count, const_pointer = 0)
         {
-            std::size_t AllocationSize = count*sizeof(value_type);
-            std::size_t NeededAlignment = std::alignment_of<value_type>::value;
+            const std::size_t AllocationSize = count*sizeof(value_type);
+            const std::size_t NeededAlignment = std::alignment_of<value_type>::value;
+            std::size_t Allocated = 0;
+            uint64_t AllocationStart = 0;
+            uint64_t LastAllocEnd = 0; //used to verify children are contiguous
             std::vector<PLH::AllocatedMemoryBlock> AllocatedBlocks;
 
-            /* Loop avoids overhead/complication of recursion
-             * First attempt: possible no blocks are allocated yet, or cur block is full
-             * Second attempt: allocate a new block
-             * Third attempt: if condition should now succeed*/
+            /*****************************************************************************************
+             **  Splits "parent" memory pages into "child" blocks. If required allocation size spans
+             **  multiple "parent" blocks then child blocks are contiguously allocated and a pointer
+             **  to the first child is returned. Child blocks are always within one and only one
+             **  "parent" block, but they may be chained together so that the returned buffer appears
+             **  to be over multiple "parent" blocks.
+             **
+             **  NOTE: AllocationFailure exception is thrown when allocation of new contiguous "parent"
+             **  block fails.
+             ******************************************************************************************/
             int Attempts = 0;
             do {
-                //First try to find a big enough parent block to split
                 AllocatedBlocks =  m_AllocImp.GetAllocatedBlocks();
-                if (auto NewChild = FindAndSplitBlock(AllocatedBlocks, AllocationSize)) {
-                    return (pointer)NewChild.get()->GetDescription().GetStart();
+                if (auto NewChild = FindAndSplitBlock(AllocatedBlocks, AllocationSize - Allocated, NeededAlignment))
+                {
+                    PLH::MemoryBlock NewChildDesc = NewChild.get().GetDescription();
+                    if(Allocated == 0) {
+                        //Special case for first child
+                        AllocationStart = NewChildDesc.GetStart();
+                        LastAllocEnd = AllocationStart;
+                    }
+
+                    /* failed to allocate contiguous memory (implicitly required by the standard)
+                     * https://stackoverflow.com/questions/17878011/are-standard-allocators-required-to-allocate-contiguous-memory*/
+                    if(NewChildDesc.GetStart() != LastAllocEnd)
+                        throw AllocationFailure();
+
+                    LastAllocEnd = NewChildDesc.GetEnd();
+                    Allocated += NewChildDesc.GetSize();
                 } else {
                     //Allocate a new memory page "parent" block and add it to the map, give it no children yet
                     auto NewParent = m_AllocImp.AllocateMemory(m_AllowedRegion.GetStart(), m_AllowedRegion.GetEnd(),
-                                                               getpagesize(),
+                                                               m_AllocImp.QueryPreferedAllocSize(),
                                                                PLH::ProtFlag::R | PLH::ProtFlag::W);
                     if(NewParent) {
-                        std::cout << NewParent.get() << std::endl;
                         m_SplitBlockMap.insert(std::make_pair(NewParent.get(),
-                                std::vector<PLH::AllocatedMemoryBlock>()));
+                                                              std::vector<PLH::AllocatedMemoryBlock>()));
+                    }else{
+                        //failed to allocate new page
+                        throw AllocationFailure();
                     }
                 }
-            }while(Attempts++ < 2);
-
-            //TO-DO: this can be avoided by properly splitting RequiredSize across multiple allocations.
-            //When we do this we need to verify that the allocated chunks are contiguous
-            throw AllocationFailure();
-            return nullptr;
+            }while(Allocated < AllocationSize);
+            return (pointer)AllocationStart;
         }
 
-        //TO-DO: fix alignment
-        boost::optional<PLH::AllocatedMemoryBlock*> FindAndSplitBlock(std::vector<PLH::AllocatedMemoryBlock> &AllocatedBlocks,
-                                                     std::size_t RequiredSpace)
+        /*********************************************************************************************************************
+         ** Attempts to allocate a single child block inside of any parent block. Will allocate either at the start of      **
+         ** a new parent block, or at the end of an existing one, gaps are not filled. Will greedily allocate children      **
+         ** into the first free space at the end of any parent, even if the space is < DesiredSpace. Therefore, to use      **
+         ** properly the size of the returned child must be checked, and this called in loop to allocate up to DesiredSpace **
+         *********************************************************************************************************************/
+        boost::optional<PLH::AllocatedMemoryBlock&> FindAndSplitBlock(std::vector<PLH::AllocatedMemoryBlock> &AllocatedBlocks,
+                                                     std::size_t DesiredSpace, std::size_t RequiredAlignment)
         {
-            boost::optional<PLH::AllocatedMemoryBlock*> gaurd;
+            boost::optional<PLH::AllocatedMemoryBlock&> gaurd;
             for(int i = 0; i < AllocatedBlocks.size(); i++)
             {
-                PLH::AllocatedMemoryBlock* ParentBlock = &AllocatedBlocks[i];
-                assert(ParentBlock != nullptr);
-                PLH::MemoryBlock ParentDesc = ParentBlock->GetDescription();
+                PLH::AllocatedMemoryBlock ParentBlock = AllocatedBlocks[i];
+                PLH::MemoryBlock ParentDesc = ParentBlock.GetDescription();
 
-                auto ParentChildPair = m_SplitBlockMap.find(*ParentBlock);
+                auto ParentChildPair = m_SplitBlockMap.find(ParentBlock);
                 if(ParentChildPair == m_SplitBlockMap.end())
                     continue;
                 std::vector<PLH::AllocatedMemoryBlock>& Children = ParentChildPair->second;
 
-                PLH::MemoryBlock NewChildDesc;
-                if(Children.size() == 0 && RequiredSpace <= ParentBlock->GetSize())
+                uint64_t ChildBlockStart = 0;
+                if(Children.size() == 0)
                 {
+                    //TO-DO: align this start address, guarantees all following children are aligned
                     //Add first child
-                    NewChildDesc = PLH::MemoryBlock(ParentDesc.GetStart(), ParentDesc.GetStart() + RequiredSpace,
-                                                    ParentDesc.GetProtection());
+                    ChildBlockStart = ParentDesc.GetStart();
                 }else if(Children.size() != 0){
-                    //Check if there's room for a new child at the end
-                    PLH::MemoryBlock LastChildDesc = Children.back().GetDescription();
-                    uint64_t NewChildEnd = LastChildDesc.GetEnd() + RequiredSpace;
-                    if(!ParentDesc.ContainsAddress(NewChildEnd))
-                        continue;
-
-                    NewChildDesc = PLH::MemoryBlock(Children.back().GetDescription().GetEnd(), NewChildEnd,
-                                                  ParentDesc.GetProtection());
+                    //Add successive children to end
+                    ChildBlockStart = Children.back().GetDescription().GetEnd();
                 }else{
                     continue;
                 }
-                PLH::AllocatedMemoryBlock NewChildBlock(ParentBlock->GetParentBlock(), NewChildDesc);
+
+                /*
+                 * By aligning the start, we ensure that all following allocations are also aligned. This is true because
+                 * C/C++ guarantees object size is multiple of alignment:
+                 * https://stackoverflow.com/questions/4637774/is-the-size-of-a-struct-required-to-be-an-exact-multiple-of-the-alignment-of-tha
+                 * Range checks for possibly rounding up occur in ChildBlockEnd calculations.*/
+                ChildBlockStart = (uint64_t)PLH::AlignUpwards((uint8_t*)ChildBlockStart,RequiredAlignment);
+                assert(ChildBlockStart % RequiredAlignment == 0);
+
+                uint64_t ChildBlockEnd = 0;
+                if(ChildBlockStart + DesiredSpace <= ParentDesc.GetEnd())
+                {
+                    ChildBlockEnd = ChildBlockStart + DesiredSpace;
+                }else if(ParentDesc.GetEnd() - ChildBlockStart > 0){
+                    ChildBlockEnd = ParentDesc.GetEnd();
+                }else{
+                    continue;
+                }
+
+                PLH::MemoryBlock NewChildDesc(ChildBlockStart,ChildBlockEnd,ParentDesc.GetProtection());
+                PLH::AllocatedMemoryBlock NewChildBlock(ParentBlock.GetParentBlock(), NewChildDesc);
 
                 Children.push_back(NewChildBlock);
-                gaurd = &Children.back();
+                gaurd = Children.back();
                 return gaurd;
             }
             return gaurd;

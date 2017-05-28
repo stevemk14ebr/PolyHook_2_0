@@ -67,6 +67,11 @@ namespace PLH{
         {
             return m_AllocatedBlocks;
         }
+
+        size_t QueryPreferedAllocSize()
+        {
+            return PlatformImp::QueryPreferedAllocSize();
+        }
     protected:
         //[MinAddress, MaxAddress)
         bool VerifyMemInRange(uint64_t MinAddress, uint64_t MaxAddress, uint64_t Needle) const
