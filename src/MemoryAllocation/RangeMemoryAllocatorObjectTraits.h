@@ -25,7 +25,11 @@ namespace PLH {
         inline T* address(T& r) { return &r; }
         inline T const* address(T const& r) { return &r; }
 
-        inline void construct(T* p, const T& t) { new(p) T(t); }
+        inline void construct(T* p, const T& t)
+        {
+            assert(p != nullptr);
+            new(p) T(t);
+        }
         inline void destroy(T* p) { p->~T(); }
     };    //    end of class ObjectTraits
 }

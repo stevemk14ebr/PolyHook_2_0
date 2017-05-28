@@ -53,8 +53,6 @@ namespace PLH
             return m_OurDesc;
         }
 
-
-
         bool ContainsBlock(const PLH::MemoryBlock& other) const;
         bool ContainsBlock(const PLH::AllocatedMemoryBlock& other) const;
 

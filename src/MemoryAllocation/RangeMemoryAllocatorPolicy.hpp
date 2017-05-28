@@ -14,12 +14,6 @@
 //Design Inspiration: http://jrruethe.github.io/blog/2015/11/22/allocators/
 namespace PLH
 {
-    template<typename T>
-    struct max_allocations
-    {
-        enum{value = static_cast<std::size_t>(-1) / sizeof(T)};
-    };
-
     /******************************************************************************************************
     **  This class handles actually splitting AllocatedMemoryBlocks into smaller AllocatedMemoryBlocks and
     **  then serving the smaller chunks up to whatever uses the allocator. It deals with the mapping of
@@ -64,85 +58,60 @@ namespace PLH
                                                                getpagesize(),
                                                                PLH::ProtFlag::R | PLH::ProtFlag::W);
                     if(NewParent) {
+                        std::cout << NewParent.get() << std::endl;
                         m_SplitBlockMap.insert(std::make_pair(NewParent.get(),
                                 std::vector<PLH::AllocatedMemoryBlock>()));
                     }
                 }
-            }while(Attempts++ < 3);
+            }while(Attempts++ < 2);
+
+            //TO-DO: this can be avoided by properly splitting RequiredSize across multiple allocations.
+            //When we do this we need to verify that the allocated chunks are contiguous
+            throw AllocationFailure();
             return nullptr;
         }
 
+        //TO-DO: fix alignment
         boost::optional<PLH::AllocatedMemoryBlock*> FindAndSplitBlock(std::vector<PLH::AllocatedMemoryBlock> &AllocatedBlocks,
                                                      std::size_t RequiredSpace)
         {
-            boost::optional<PLH::AllocatedMemoryBlock*> AllocatedBlock;
+            boost::optional<PLH::AllocatedMemoryBlock*> gaurd;
             for(int i = 0; i < AllocatedBlocks.size(); i++)
             {
-                PLH::AllocatedMemoryBlock* CurBlock = &AllocatedBlocks[i];
-                assert(CurBlock != nullptr);
+                PLH::AllocatedMemoryBlock* ParentBlock = &AllocatedBlocks[i];
+                assert(ParentBlock != nullptr);
+                PLH::MemoryBlock ParentDesc = ParentBlock->GetDescription();
 
-                //Find the children associated with parent block
-                uint64_t BlockSize = CurBlock->GetSize();
-                auto it = m_SplitBlockMap.find(*CurBlock);
-                if(it == m_SplitBlockMap.end())
+                auto ParentChildPair = m_SplitBlockMap.find(*ParentBlock);
+                if(ParentChildPair == m_SplitBlockMap.end())
                     continue;
+                std::vector<PLH::AllocatedMemoryBlock>& Children = ParentChildPair->second;
 
-                //Search for existing gaps in children we can use
-                std::vector<PLH::AllocatedMemoryBlock> Children = it->second;
-                boost::optional<PLH::MemoryBlock> NewChildDesc;
-
-                //TO-DO: fix this bit, loop never executes
-                for(auto prev = Children.begin(), cur = Children.begin() + 1; cur < Children.end(); prev = cur, std::advance(cur,1))
+                PLH::MemoryBlock NewChildDesc;
+                if(Children.size() == 0 && RequiredSpace <= ParentBlock->GetSize())
                 {
-                    //gap too small
-                    if(prev->GetDescription().GetEnd() - cur->GetDescription().GetStart() < RequiredSpace)
+                    //Add first child
+                    NewChildDesc = PLH::MemoryBlock(ParentDesc.GetStart(), ParentDesc.GetStart() + RequiredSpace,
+                                                    ParentDesc.GetProtection());
+                }else if(Children.size() != 0){
+                    //Check if there's room for a new child at the end
+                    PLH::MemoryBlock LastChildDesc = Children.back().GetDescription();
+                    uint64_t NewChildEnd = LastChildDesc.GetEnd() + RequiredSpace;
+                    if(!ParentDesc.ContainsAddress(NewChildEnd))
                         continue;
 
-                    //make sure region is aligned for T
-                    PLH::MemoryBlock CandidateRegion(prev->GetDescription().GetEnd(), cur->GetDescription().GetStart(), CurBlock->GetDescription().GetProtection());
-                    if(CandidateRegion.GetStart() % std::alignment_of<T>::value == 0) {
-                        //Is properly aligned and region is big enough
-                        NewChildDesc == CandidateRegion;
-                        break;
-                    }else{
-                        //region wasn't aligned, so do so, now we have to check it's still big enough
-                        uint64_t AlignedCandidateStart = CandidateRegion.GetStart() + (CandidateRegion.GetStart() % std::alignment_of<T>::value);
-                        if(CandidateRegion.GetEnd() - AlignedCandidateStart < RequiredSpace)
-                            continue;
-
-                        //region now aligned and is big enough
-                        NewChildDesc = PLH::MemoryBlock(AlignedCandidateStart, CandidateRegion.GetEnd(), CurBlock->GetDescription().GetProtection());
-                        break;
-                    }
-                }
-
-                //no usable gap found in children, add one at end
-                if(!NewChildDesc)
-                {
-                    uint64_t Start;
-                    if(Children.size() > 0)
-                        Start = Children.back().GetDescription().GetEnd();
-                    else
-                        Start = CurBlock->GetDescription().GetStart();
-
-                    Start += Start % std::alignment_of<T>::value;
-                    uint64_t End = Start + RequiredSpace;
-                    if(End - Start < RequiredSpace)
-                        continue;
-
-                    NewChildDesc = PLH::MemoryBlock(Start,End,CurBlock->GetDescription().GetProtection());
-                }
-                //double check all the math above
-                if(!IsInRange(NewChildDesc.get().GetStart()) || !IsInRange(NewChildDesc.get().GetEnd()))
+                    NewChildDesc = PLH::MemoryBlock(Children.back().GetDescription().GetEnd(), NewChildEnd,
+                                                  ParentDesc.GetProtection());
+                }else{
                     continue;
+                }
+                PLH::AllocatedMemoryBlock NewChildBlock(ParentBlock->GetParentBlock(), NewChildDesc);
 
-                PLH::AllocatedMemoryBlock NewChildBlock(CurBlock->GetParentBlock(), NewChildDesc.get());
-
-                it->second.push_back(NewChildBlock);
-                AllocatedBlock = &it->second.back();
-                return AllocatedBlock;
+                Children.push_back(NewChildBlock);
+                gaurd = &Children.back();
+                return gaurd;
             }
-            return AllocatedBlock;
+            return gaurd;
         }
 
         void deallocate(pointer ptr, size_type n)
@@ -177,7 +146,11 @@ namespace PLH
         {
             return !(other == *this);
         }
-        size_type max_size(void) const {return max_allocations<T>::value;}
+
+        size_type max_size(void) const
+        {
+            return std::numeric_limits<size_type>::max() / sizeof(value_type);
+        }
     private:
         //[Start,End)
         bool IsInRange(uint64_t Address)

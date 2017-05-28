@@ -87,14 +87,14 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]")
             REQUIRE(AllocBlock);
             std::shared_ptr<uint8_t> Buffer = AllocBlock.get().GetParentBlock();
             REQUIRE(Buffer != nullptr);
-            std::cout << std::hex << "Allocated At: " << (uint64_t) Buffer.get() << std::endl;
+            //std::cout << std::hex << "Allocated At: " << (uint64_t) Buffer.get() << std::endl;
 
             //Compute some statistics about how far away allocation was
             std::intmax_t AllocDelta = imaxabs((std::intmax_t) Buffer.get() - fnAddress);
             double DeltaInGB = AllocDelta / std::pow(10.0,9);                                   //How far was our trampoline allocated from the target, in GB
             double DeltaPercentage = DeltaInGB * 100.0;                                //Allowed range is +-2GB, see in percentage how close to tolerance we were
-            std::cout << "Delta:[" << DeltaInGB << " GB] Percent Tolerance Used[" << DeltaPercentage << " % out of 2GB]"
-                      << std::endl;
+            //std::cout << "Delta:[" << DeltaInGB << " GB] Percent Tolerance Used[" << DeltaPercentage << " % out of 2GB]"
+            //<< std::endl;
 
             REQUIRE(DeltaInGB <= 2);
         }
@@ -127,29 +127,23 @@ TEST_CASE("Test range allocator STL wrapper","[RangeMemorySTLAllocator]")
 {
     std::cout << "fnAddress: " << std::hex << fnAddress << " Acceptable Range:" << MinAddress << "-" << MaxAddress << std::endl;
 
-    std::vector<int,PLH::Allocator<int,PLH::MemAllocatorUnix>> alloc_vec(PLH::Allocator<int,PLH::MemAllocatorUnix>(MinAddress,MaxAddress));
-    for(int i = 0; i < 200; i++)
-    {
-        alloc_vec.push_back(i);
+    try {
+        std::vector<int, PLH::Allocator<int, PLH::MemAllocatorUnix>> alloc_vec(
+                PLH::Allocator<int, PLH::MemAllocatorUnix>(MinAddress, MaxAddress));
+        std::vector<int> correct_vec;
+        for (int i = 0; i < 1025; i++) {
+            alloc_vec.push_back(i);
+            correct_vec.push_back(i);
+        }
+        REQUIRE(std::equal(alloc_vec.begin(), alloc_vec.end(), correct_vec.begin()));
+
+        alloc_vec.erase(alloc_vec.begin(), alloc_vec.begin() + 10);
+        REQUIRE(alloc_vec[1] != 1);
+        alloc_vec.reserve(100);
+        alloc_vec.shrink_to_fit();
+    }catch(const PLH::AllocationFailure& ex){
+        std::cout << ex.what() << std::endl;
     }
-
-    for(int i = 0; i < alloc_vec.size(); i++)
-    {
-        REQUIRE(alloc_vec[i] == i);
-    }
-    alloc_vec.erase(alloc_vec.begin() + 1);
-    REQUIRE(alloc_vec[1] != 1);
-    alloc_vec.reserve(100);
-    alloc_vec.shrink_to_fit();
-
-    //Compute some statistics about how far away allocation was
-    std::intmax_t AllocDelta = imaxabs((std::intmax_t) &alloc_vec[0] - fnAddress);
-    double DeltaInGB = AllocDelta / std::pow(10.0,9);                                   //How far was our trampoline allocated from the target, in GB
-    double DeltaPercentage = DeltaInGB * 100.0;                                //Allowed range is +-2GB, see in percentage how close to tolerance we were
-    std::cout << "Delta:[" << DeltaInGB << " GB] Percent Tolerance Used[" << DeltaPercentage << " % out of 2GB]"
-              << std::endl;
-
-    REQUIRE(DeltaInGB <= 2);
 }
 
 

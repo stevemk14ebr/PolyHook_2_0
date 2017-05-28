@@ -39,6 +39,7 @@ namespace PLH
         boost::optional<uint64_t> GetAlignedNearestDown(const uint64_t Address,const size_t Alignment,const size_t Size) const;
 
         bool ContainsBlock(const PLH::MemoryBlock& other) const;
+        bool ContainsAddress(const uint64_t Address) const;
         bool operator ==(const PLH::MemoryBlock& other) const;
         bool operator !=(const PLH::MemoryBlock& other) const;
         bool operator <(const PLH::MemoryBlock& other) const;
@@ -145,6 +146,12 @@ namespace PLH
     //[Start,End]
     bool MemoryBlock::ContainsBlock(const PLH::MemoryBlock &other) const {
         return other.GetStart() >= this->GetStart() && other.GetEnd() <= this->GetEnd();
+    }
+
+    //[Start,End)
+    bool MemoryBlock::ContainsAddress(const uint64_t Address) const
+    {
+        return this->GetStart() <= Address && Address < this->GetEnd();
     }
 
     std::ostream& operator<<(std::ostream &os, const MemoryBlock &obj) {

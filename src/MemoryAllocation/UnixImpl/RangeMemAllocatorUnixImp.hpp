@@ -31,6 +31,7 @@ namespace PLH
         boost::optional<PLH::AllocatedMemoryBlock>
         AllocateMemory(const uint64_t MinAddress,const uint64_t MaxAddress,
                             const size_t Size,const PLH::ProtFlag Protections) const;
+        size_t QueryContiguousGaurantee();
     protected:
         void Deallocate(uint8_t* Buffer,const size_t Length) const;
         
@@ -143,9 +144,11 @@ namespace PLH
         munmap(Buffer,Length);
     }
 
-    /*Parse linux maps file, these are regions of memory already allocated. If a
-     * region is allocated the protection of that region is returned. If it is not
-     * allocated then the value UNSET is returned*/
+    /********************************************************************************
+     ** Parse linux maps file, these are regions of memory already allocated. If a  *
+     ** region is allocated the protection of that region is returned. If it is not *
+     ** allocated then the value UNSET is returned                                  *
+     ********************************************************************************/
     std::vector<PLH::MemoryBlock> PLH::RangeMemAllocatorUnixImp::GetAllocatedVABlocks() const
     {
         std::vector<PLH::MemoryBlock> allocatedPages;
