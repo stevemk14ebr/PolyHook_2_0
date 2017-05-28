@@ -37,27 +37,20 @@ namespace PLH {
         inline explicit Allocator(uint64_t Min, uint64_t Max) : Policy(Min,Max) {}
         inline ~Allocator() {}
         inline Allocator(Allocator const& rhs):Traits(rhs), Policy(rhs) {}
-
-        template <typename U>
-        inline Allocator(Allocator<U, Platform> const&) {}
-
-        template <typename U, typename P, typename T2>
-        inline Allocator(Allocator<U, Platform, P,
-                T2> const& rhs):Traits(rhs), Policy(rhs) {}
     };    //    end of class Allocator
 
 
     template<typename T,typename Platform, typename P, typename Tr>
-    inline bool operator==(Allocator<T,Platform, P,
-            Tr> const& lhs, Allocator<T, Platform,
-            P, Tr> const& rhs) {
-        return operator==(static_cast<P&>(lhs),
-                          static_cast<P&>(rhs));
+    inline bool operator==(Allocator<T,Platform, P, Tr> const& lhs,
+                           Allocator<T, Platform, P, Tr> const& rhs)
+    {
+        //Call policy ==
+        return operator==(static_cast<P&>(lhs), static_cast<P&>(rhs));
     }
 
     template<typename T,typename Platform, typename P, typename Tr, typename OtherAllocator>
-    inline bool operator==(Allocator<T, Platform, P,
-            Tr> const& lhs, OtherAllocator const& rhs) {
+    inline bool operator==(Allocator<T, Platform, P, Tr> const& lhs,
+                           OtherAllocator const& rhs) {
         return operator==(static_cast<P&>(lhs), rhs);
     }
 
@@ -69,8 +62,8 @@ namespace PLH {
 
     template<typename T,typename Platform, typename P, typename Tr,
             typename OtherAllocator>
-    inline bool operator!=(Allocator<T, Platform, P,
-            Tr> const& lhs, OtherAllocator const& rhs) {
+    inline bool operator!=(Allocator<T, Platform, P, Tr> const& lhs,
+                           OtherAllocator const& rhs) {
         return !operator==(lhs, rhs);
     }
 }
