@@ -2,7 +2,7 @@
 // Created by steve on 4/7/17.
 //
 #include "Catch.hpp"
-#include "src/MemoryAllocation/RangeMemorySTLAllocator.hpp"
+#include "src/MemoryAllocation/RangeAllocator.hpp"
 #include <inttypes.h>
 
 volatile void PlaceHolderFunction()
@@ -129,8 +129,8 @@ TEST_CASE("Test range allocator STL wrapper","[RangeMemorySTLAllocator]")
 
     bool Exception = false;
     try {
-        std::vector<int, PLH::Allocator<int, PLH::MemAllocatorUnix>> alloc_vec(
-                PLH::Allocator<int, PLH::MemAllocatorUnix>(MinAddress, MaxAddress));
+        std::vector<int, PLH::RangeAllocator<int, PLH::MemAllocatorUnix>> alloc_vec(
+                PLH::RangeAllocator<int, PLH::MemAllocatorUnix>(MinAddress, MaxAddress));
         std::vector<int> correct_vec;
         for (int i = 0; i < 4567; i++) {
             alloc_vec.push_back(i);

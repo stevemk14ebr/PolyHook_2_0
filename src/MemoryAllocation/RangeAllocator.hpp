@@ -8,7 +8,7 @@
 #include <map>
 #include <type_traits>
 #include <algorithm>
-#include "src/MemoryAllocation/ARangeMemAllocator.hpp"
+#include "src/MemoryAllocation/ARangAllocator.hpp"
 
 //General Allocator Design: https://www.youtube.com/watch?v=LIb3L4vKZ7U
 //Design Inspiration: http://jrruethe.github.io/blog/2015/11/22/allocators/
@@ -20,7 +20,7 @@ namespace PLH
     **  larger "Parent" blocks to all of the parent's "Children" blocks via a map.
     ******************************************************************************************************/
     template<class T,class Platform>
-    class RangeMemoryAllocatorPolicy
+    class RangeAllocator
     {
     public:
         typedef T value_type;
@@ -31,7 +31,7 @@ namespace PLH
         typedef std::size_t size_type;
         typedef std::ptrdiff_t difference_type;
 
-        RangeMemoryAllocatorPolicy(uint64_t Min, uint64_t Max)
+        RangeAllocator(uint64_t Min, uint64_t Max)
         {
             m_AllowedRegion = PLH::MemoryBlock(Min,Max,PLH::UNSET);
         }
@@ -172,15 +172,15 @@ namespace PLH
         template<typename U>
         struct rebind
         {
-            typedef RangeMemoryAllocatorPolicy<U,Platform> other;
+            typedef RangeAllocator<U,Platform> other;
         };
 
-        bool operator==(PLH::RangeMemoryAllocatorPolicy<T, Platform> const& other)
+        bool operator==(PLH::RangeAllocator<T, Platform> const& other)
         {
             return m_AllowedRegion == other.m_AllowedRegion;
         }
 
-        bool operator!=(PLH::RangeMemoryAllocatorPolicy<T,Platform> const& other)
+        bool operator!=(PLH::RangeAllocator<T,Platform> const& other)
         {
             return !(other == *this);
         }
@@ -195,13 +195,13 @@ namespace PLH
         {
             return Address >= m_AllowedRegion.GetStart() && Address < m_AllowedRegion.GetEnd();
         }
-        PLH::ARangeMemAllocator<Platform> m_AllocImp;
+        PLH::ARangAllocator<Platform> m_AllocImp;
         PLH::MemoryBlock m_AllowedRegion;
         std::map<PLH::AllocatedMemoryBlock, std::vector<PLH::AllocatedMemoryBlock>> m_SplitBlockMap;
     };
 
     template<typename T,typename Platform, typename OtherAllocator>
-    inline bool operator==(PLH::RangeMemoryAllocatorPolicy<T, Platform> const&,
+    inline bool operator==(PLH::RangeAllocator<T, Platform> const&,
                            OtherAllocator const&) {
         return false;
     }

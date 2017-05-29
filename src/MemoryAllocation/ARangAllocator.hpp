@@ -24,7 +24,7 @@ namespace PLH{
      ** and then stores the blocks of memory that are allocated for use later.
      ********************************************************************************************************/
     template<typename PlatformImp>
-    class ARangeMemAllocator : private PlatformImp
+    class ARangAllocator : private PlatformImp
     {
     public:
         boost::optional<PLH::AllocatedMemoryBlock>
@@ -87,7 +87,7 @@ namespace PLH{
 //Implementation instantiations
 #include "UnixImpl/RangeMemAllocatorUnixImp.hpp"
 namespace PLH{
-    using MemAllocatorUnix = PLH::ARangeMemAllocator<PLH::RangeMemAllocatorUnixImp>;
+    using MemAllocatorUnix = PLH::ARangAllocator<PLH::RangeMemAllocatorUnixImp>;
 }
 #endif //POLYHOOK_2_0_MEMALLOCATOR_HPP
 
