@@ -10,8 +10,7 @@
 
 #include "src/ADetour.hpp"
 
-namespace PLH
-{
+namespace PLH {
 
 }
 

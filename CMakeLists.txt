@@ -20,6 +20,11 @@ add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
 #Set this variable to hold the path to capstone directory
 set(CAPSTONE_LIB_PATH ${PROJECT_SOURCE_DIR}/capstone)
 
+find_package(Boost)
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+endif()
+
 #Find the absolute path to the lib
 find_library(CAPSTONE_LIB NAMES libcapstone.a PATHS ${CAPSTONE_LIB_PATH})
 
