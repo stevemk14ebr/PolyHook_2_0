@@ -84,25 +84,27 @@ public:
                     //Special case to add first child
                     ChildChainIt = m_ChildSiblingMap.insert({NewChild.get(),
                                               std::vector<PLH::AllocatedMemoryBlock>()}).first;
-                } else {
                     Allocated += NewChildDesc.GetSize();
-
+                } else {
                     //Contiguous allocation check, if it fails then the chain failed
                     if (ChildChainIt->second.size() == 0) {
                         //case there are no sibling blocks, check first block against new one
                         if (ChildChainIt->first.GetDescription().GetEnd() != NewChildDesc.GetStart()) {
                             FailedChains.emplace_back(std::make_pair(ChildChainIt, Allocated));
                             Allocated = 0;
+                            continue;
                         }
                     } else {
                         //case there are sibling blocks, check the last sibling against new one
                         if (ChildChainIt->second.back().GetDescription().GetEnd() != NewChildDesc.GetStart()) {
                             FailedChains.emplace_back(std::make_pair(ChildChainIt, Allocated));
                             Allocated = 0;
+                            continue;
                         }
                     }
                     //Allocations past first must be siblings, add them
                     ChildChainIt->second.push_back(std::move(NewChild.get()));
+                    Allocated += NewChildDesc.GetSize();
                 }
             } else {
                 //Allocate a new memory page "parent" block and add it to the map, give it no children yet
@@ -168,7 +170,7 @@ public:
             assert(ChildBlockStart % RequiredAlignment == 0);
 
             uint64_t ChildBlockEnd = 0;
-            if (ChildBlockStart + DesiredSpace <= ParentDesc.GetEnd()) {
+            if (ChildBlockStart + DesiredSpace < ParentDesc.GetEnd()) {
                 ChildBlockEnd = ChildBlockStart + DesiredSpace;
             } else if (ParentDesc.GetEnd() - ChildBlockStart > 0) {
                 ChildBlockEnd = ParentDesc.GetEnd();

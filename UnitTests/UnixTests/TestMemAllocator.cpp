@@ -141,7 +141,7 @@ TEST_CASE("Test range allocator STL wrapper", "[RangeMemorySTLAllocator]") {
         std::vector<int, PLH::RangeAllocator<int, PLH::MemAllocatorUnix>> alloc_vec(
                 PLH::RangeAllocator<int, PLH::MemAllocatorUnix>(MinAddress, MaxAddress));
         std::vector<int> correct_vec;
-        for (int i = 0; i < 4000; i++) {
+        for (int i = 0; i < 2000; i++) {
             alloc_vec.push_back(i);
             correct_vec.push_back(i);
         }
