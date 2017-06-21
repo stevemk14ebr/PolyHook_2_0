@@ -59,9 +59,9 @@ public:
          * parent blocks fail to be allocated. Before this function returns all failed chains
          * are freed.
          *
-         * TODO: needs implemented
+         * This is a pair of the chain iterator and an integer specifying its size
          * *************************************************************************************/
-        std::vector<ChildSiblingMap::iterator> FailedChains;
+        std::vector<std::pair<ChildSiblingMap::iterator, int>> FailedChains;
 
         /*****************************************************************************************
          **  Splits "parent" memory pages into "child" blocks. If required allocation size spans
@@ -75,30 +75,35 @@ public:
          **  NOTE: AllocationFailure exception is thrown when allocation of new contiguous "parent"
          **  block fails.
          ******************************************************************************************/
-        int Attempts = 0;
         do {
             AllocatedBlocks = m_AllocImp.GetAllocatedBlocks();
             if (auto NewChild = CreateChildInParent(AllocatedBlocks, AllocationSize - Allocated, NeededAlignment)) {
                 PLH::MemoryBlock NewChildDesc = NewChild.get().GetDescription();
-                std::cout << *NewChild << std::endl;
+
                 if (Allocated == 0) {
                     //Special case to add first child
                     ChildChainIt = m_ChildSiblingMap.insert({NewChild.get(),
                                               std::vector<PLH::AllocatedMemoryBlock>()}).first;
                 } else {
-                    //Contiguous allocation check
+                    Allocated += NewChildDesc.GetSize();
+
+                    //Contiguous allocation check, if it fails then the chain failed
                     if (ChildChainIt->second.size() == 0) {
-                        if (ChildChainIt->first.GetDescription().GetEnd() != NewChildDesc.GetStart())
-                            throw AllocationFailure();
+                        //case there are no sibling blocks, check first block against new one
+                        if (ChildChainIt->first.GetDescription().GetEnd() != NewChildDesc.GetStart()) {
+                            FailedChains.emplace_back(std::make_pair(ChildChainIt, Allocated));
+                            Allocated = 0;
+                        }
                     } else {
+                        //case there are sibling blocks, check the last sibling against new one
                         if (ChildChainIt->second.back().GetDescription().GetEnd() != NewChildDesc.GetStart()) {
-                            throw AllocationFailure();
+                            FailedChains.emplace_back(std::make_pair(ChildChainIt, Allocated));
+                            Allocated = 0;
                         }
                     }
                     //Allocations past first must be siblings, add them
                     ChildChainIt->second.push_back(std::move(NewChild.get()));
                 }
-                Allocated += NewChildDesc.GetSize();
             } else {
                 //Allocate a new memory page "parent" block and add it to the map, give it no children yet
                 auto NewParent = m_AllocImp.AllocateMemory(m_AllowedRegion.GetStart(), m_AllowedRegion.GetEnd(),
@@ -112,7 +117,14 @@ public:
                 }
             }
         } while (Allocated < AllocationSize);
-        std::cout << std::endl;
+
+        //deallocate all the failed chains
+        for(auto& pair : FailedChains)
+        {
+            deallocate((pointer)pair.first->first.GetDescription().GetStart(), pair.second);
+        }
+
+        //chain start is the address of the first block in the chain
         return (pointer)ChildChainIt->first.GetDescription().GetStart();
     }
 
@@ -125,6 +137,7 @@ public:
     boost::optional<PLH::AllocatedMemoryBlock> CreateChildInParent(
             std::vector<PLH::AllocatedMemoryBlock>& AllocatedBlocks,
             std::size_t DesiredSpace, std::size_t RequiredAlignment) {
+
         boost::optional<PLH::AllocatedMemoryBlock> gaurd;
         for (int i = 0; i < AllocatedBlocks.size(); i++) {
             PLH::AllocatedMemoryBlock ParentBlock = AllocatedBlocks[i];
