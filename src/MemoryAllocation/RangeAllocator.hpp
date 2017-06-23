@@ -86,25 +86,25 @@ public:
                                               std::vector<PLH::AllocatedMemoryBlock>()}).first;
                     Allocated += NewChildDesc.GetSize();
                 } else {
-                    //Contiguous allocation check, if it fails then the chain failed
-                    if (ChildChainIt->second.size() == 0) {
-                        //case there are no sibling blocks, check first block against new one
-                        if (ChildChainIt->first.GetDescription().GetEnd() != NewChildDesc.GetStart()) {
-                            FailedChains.emplace_back(std::make_pair(ChildChainIt, Allocated));
-                            Allocated = 0;
-                            continue;
-                        }
-                    } else {
-                        //case there are sibling blocks, check the last sibling against new one
-                        if (ChildChainIt->second.back().GetDescription().GetEnd() != NewChildDesc.GetStart()) {
-                            FailedChains.emplace_back(std::make_pair(ChildChainIt, Allocated));
-                            Allocated = 0;
-                            continue;
-                        }
-                    }
-                    //Allocations past first must be siblings, add them
+                    bool isFirstSibling = ChildChainIt->second.size() == 0;
+
                     ChildChainIt->second.push_back(std::move(NewChild.get()));
                     Allocated += NewChildDesc.GetSize();
+
+                    uint64_t prevBlockStart = 0;
+                    if(isFirstSibling)
+                        prevBlockStart = ChildChainIt->first.GetDescription().GetEnd();
+                    else
+                        prevBlockStart = std::prev(ChildChainIt->second.end() - 1)->GetDescription().GetEnd();
+
+                    uint64_t newBlockStart = ChildChainIt->second.back().GetDescription().GetStart();
+
+                    if(prevBlockStart != newBlockStart)
+                    {
+                        FailedChains.emplace_back(std::make_pair(ChildChainIt, Allocated));
+                        Allocated = 0;
+                        break;
+                    }
                 }
             } else {
                 //Allocate a new memory page "parent" block and add it to the map, give it no children yet
@@ -123,7 +123,7 @@ public:
         //deallocate all the failed chains
         for(auto& pair : FailedChains)
         {
-            deallocate((pointer)pair.first->first.GetDescription().GetStart(), pair.second);
+            deallocate_impl((pointer)pair.first->first.GetDescription().GetStart(), pair.second);
         }
 
         //chain start is the address of the first block in the chain
@@ -195,8 +195,13 @@ public:
     void deallocate(pointer ptr, size_type n) {
         const std::size_t allocationSize = n * sizeof(value_type);
         std::size_t deAllocated = 0;
-        std::vector<PLH::AllocatedMemoryBlock>::iterator childIt;
+       deallocate_impl(ptr, allocationSize);
+    }
 
+    void deallocate_impl(pointer ptr, const size_t allocationSize)
+    {
+        std::vector<PLH::AllocatedMemoryBlock>::iterator childIt;
+        size_t deAllocated = 0;
 
         //Figure out which chain the ptr we got is part of. And erase chain start
         for (auto& KeyValuePair : m_ParentChildMap) {
