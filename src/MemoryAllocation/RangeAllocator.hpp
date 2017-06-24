@@ -36,18 +36,20 @@ public:
     typedef std::map<PLH::AllocatedMemoryBlock, std::vector<PLH::AllocatedMemoryBlock>>
             ParentChildMap;
 
-    RangeAllocator(uint64_t Min, uint64_t Max) {
+    RangeAllocator(uint64_t Min, uint64_t Max) : m_ParentChildMap(new ParentChildMap){
         m_AllowedRegion = PLH::MemoryBlock(Min, Max, PLH::UNSET);
     }
 
     pointer allocate(size_type count, const_pointer = 0) {
+        assert(m_ParentChildMap != nullptr);
+
         const std::size_t AllocationSize = count * sizeof(value_type);
         const std::size_t NeededAlignment = std::alignment_of<value_type>::value;
         std::size_t Allocated = 0;
 
         std::vector<PLH::AllocatedMemoryBlock> AllocatedBlocks;
         std::vector<PLH::AllocatedMemoryBlock> Chain;
-        std::vector<std::vector<PLH::AllocatedMemoryBlock>> FailedChains;
+        std::vector<std::pair<uint64_t, size_t>> FailedChains;
         /*****************************************************************************************
          **  Splits "parent" memory pages into "child" blocks. If required allocation size spans
          **  multiple "parent" blocks then child blocks are contiguously allocated and a pointer
@@ -67,14 +69,24 @@ public:
                 Allocated += NewChildDesc.GetSize();
                 Chain.push_back(*NewChild);
 
+                //Verify blocks are contiguous, if not then de-allocate and re-try
                 if (Chain.size() > 1)
                 {
                     uint64_t prevBlockEnd = std::prev(Chain.end() - 1)->GetDescription().GetEnd();
                     uint64_t newBlockStart = NewChildDesc.GetStart();
 
-                    //TODO: Call de-allocate
                     if(prevBlockEnd != newBlockStart)
                     {
+                        FailedChains.push_back(std::make_pair(
+                                (uint64_t)Chain[0].GetDescription().GetStart(),
+                                                             Allocated));
+
+                        std::cout << Chain[0].GetDescription().GetStart() << std::endl;
+                        for(const auto& block : Chain)
+                        {
+                            std::cout << '\t' << block.id().value() << block <<  std::endl;
+                        }
+                        std::cout << "end " << Allocated << std::endl;
                         Allocated = 0;
                         Chain.clear();
                         continue;
@@ -86,7 +98,7 @@ public:
                                                            m_AllocImp.QueryPreferedAllocSize(),
                                                            PLH::ProtFlag::R | PLH::ProtFlag::W);
                 if (NewParent) {
-                    m_ParentChildMap.insert({NewParent.get(), std::vector<PLH::AllocatedMemoryBlock>()});
+                    m_ParentChildMap->insert({NewParent.get(), std::vector<PLH::AllocatedMemoryBlock>()});
                 } else {
                     //failed to allocate new page
                     throw AllocationFailure();
@@ -94,19 +106,13 @@ public:
             }
         } while (Allocated < AllocationSize);
 
-        assert(Chain.size() >= 1);
-        std::cout << Chain[0].GetDescription().GetStart() << std::endl;
-        for(int i =0; i< Chain.size(); i++)
+        //De-allocate failed chains
+        for(const auto& failedChain : FailedChains)
         {
-            if(Chain[0].GetDescription().GetStart() == 0x5555557da000)
-            {
-                std::cout <<  "\t" << Chain[i].id().value() << Chain[i]<< std::endl;
-            }else
-             std::cout <<  "\t" << Chain[i].id().value() << std::endl;
+            deallocate_impl((pointer)failedChain.first, failedChain.second);
         }
-        std::cout << "End" << std::endl;
-
         //chain start is the address of the first block in the chain
+        assert(Chain.size() >= 1);
         return (pointer)Chain[0].GetDescription().GetStart();
     }
 
@@ -125,8 +131,8 @@ public:
             PLH::AllocatedMemoryBlock ParentBlock = AllocatedBlocks[i];
             PLH::MemoryBlock ParentDesc = ParentBlock.GetDescription();
 
-            auto ParentChildPair = m_ParentChildMap.find(ParentBlock);
-            if (ParentChildPair == m_ParentChildMap.end())
+            auto ParentChildPair = m_ParentChildMap->find(ParentBlock);
+            if (ParentChildPair == m_ParentChildMap->end())
                 continue;
             std::vector<PLH::AllocatedMemoryBlock>& Children = ParentChildPair->second;
 
@@ -181,10 +187,13 @@ public:
     //TODO: Fix allocator state-fulness
     void deallocate_impl(pointer ptr, const size_t allocationSize)
     {
+        assert(m_ParentChildMap != nullptr);
         size_t deAllocated = 0;
 
-        //Figure out which chain the ptr we got is part of. And erase chain start
-        for (auto& KeyValuePair : m_ParentChildMap) {
+        //Remove any blocks that are within [ptr, ptr + allocationSize]
+        PLH::MemoryBlock deallocateRegion((uint64_t)ptr, (uint64_t)ptr + allocationSize, PLH::ProtFlag::UNSET);
+
+        for (auto& KeyValuePair : *m_ParentChildMap) {
             const PLH::AllocatedMemoryBlock       & ParentBlock = KeyValuePair.first;
             std::vector<PLH::AllocatedMemoryBlock>& Children    = KeyValuePair.second;
 
@@ -192,10 +201,7 @@ public:
                 break;
 
             Children.erase(std::remove_if(Children.begin(), Children.end(),[&](const PLH::AllocatedMemoryBlock& Child){
-                uint64_t childStart = Child.GetDescription().GetStart();
-                uint64_t childEnd = Child.GetDescription().GetEnd();
-
-                if(childStart >= (uint64_t)ptr && childEnd <= ((uint64_t)ptr + allocationSize)) {
+                if(deallocateRegion.ContainsBlock(Child.GetDescription())) {
                     deAllocated += Child.GetDescription().GetSize();
                     std::cout << Child.id().value() << std::endl;
                     return true;
@@ -213,7 +219,7 @@ public:
     };
 
     bool operator==(PLH::RangeAllocator<T, Platform> const& other) {
-        return this == &other;
+        return m_AllowedRegion == other.m_AllowedRegion;
     }
 
     bool operator!=(PLH::RangeAllocator<T, Platform> const& other) {
@@ -234,8 +240,11 @@ private:
     PLH::MemoryBlock m_AllowedRegion;
 
     /* The map between larger parent blocks, and the children blocks currently allocated inside
-     * of it. Key is a parent block, value is a vector of children blocks*/
-    ParentChildMap m_ParentChildMap;
+     * of it. Key is a parent block, value is a vector of children blocks*. This is
+     * a shared_ptr because the standard requires allocatores to share their state
+     * after being copied. So all copies point to the same map of blocks. This
+     * also means this allocator is not thread-safe*/
+    std::shared_ptr<ParentChildMap> m_ParentChildMap;
 };
 
 template<typename T, typename Platform, typename OtherAllocator>
