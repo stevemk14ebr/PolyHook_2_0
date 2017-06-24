@@ -7,6 +7,7 @@
 
 #include "src/Misc.hpp"
 #include "src/Enums.hpp"
+#include "src/UID.hpp"
 #include <sstream>
 #include <boost/optional.hpp>
 
@@ -31,6 +32,10 @@ public:
     uint64_t GetSize() const;
 
     PLH::ProtFlag GetProtection() const;
+
+    UID id() const {
+        return uid;
+    }
 
     /**Alignment helpers that always return in range [Start, End) of MemoryBlock. Return Value is the
      * aligned address, Alignment is desired alignment, Size is the size of the region attempting
@@ -66,20 +71,21 @@ public:
 private:
     bool InRange(const uint64_t Address, const size_t Size) const;
 
-    uint64_t m_Start;
-    uint64_t m_End;
+    uint64_t      m_Start;
+    uint64_t      m_End;
     PLH::ProtFlag m_Protection;
+    UID           uid;
 };
 
 MemoryBlock::MemoryBlock(const uint64_t Start, const uint64_t End, const PLH::ProtFlag Prot) {
-    m_Start = Start;
-    m_End = End;
+    m_Start      = Start;
+    m_End        = End;
     m_Protection = Prot;
 }
 
 MemoryBlock::MemoryBlock() {
-    m_Start = 0;
-    m_End = 0;
+    m_Start      = 0;
+    m_End        = 0;
     m_Protection = PLH::ProtFlag::UNSET;
 }
 

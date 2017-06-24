@@ -6,6 +6,7 @@
 
 #include "src/MemoryAllocation/MemoryBlock.hpp"
 #include <memory>
+#include "src/UID.hpp"
 
 namespace PLH {
 /* This is a "Chunk" of allocated virtual memory, this object exists to split a real system memory page into usable,
@@ -48,6 +49,10 @@ public:
         return m_OurDesc;
     }
 
+    UID id() const {
+        return uid;
+    }
+
     bool ContainsBlock(const PLH::MemoryBlock& other) const;
 
     bool ContainsBlock(const PLH::AllocatedMemoryBlock& other) const;
@@ -69,7 +74,8 @@ public:
 private:
     //TO-DO: Determine if ParentBlockDesc is necessary info to store
     std::shared_ptr<uint8_t> m_ParentBlock;
-    PLH::MemoryBlock m_OurDesc;
+    PLH::MemoryBlock         m_OurDesc;
+    UID                      uid;
 };
 
 bool AllocatedMemoryBlock::operator==(const AllocatedMemoryBlock& other) const {
@@ -110,7 +116,7 @@ AllocatedMemoryBlock::operator PLH::MemoryBlock() const {
 }
 
 std::ostream& operator<<(std::ostream& os, const PLH::AllocatedMemoryBlock& obj) {
-    os << std::hex << "{Parent:"<<(uint64_t)obj.GetParentBlock().get() << std::dec << obj.GetDescription()<<"}";
+    os << std::hex << "{Parent:" << (uint64_t)obj.GetParentBlock().get() << std::dec << obj.GetDescription() << "}";
     return os;
 }
 }

@@ -34,9 +34,6 @@ public:
     typedef std::ptrdiff_t difference_type;
 
     typedef std::map<PLH::AllocatedMemoryBlock, std::vector<PLH::AllocatedMemoryBlock>>
-            ChildSiblingMap;
-
-    typedef std::map<PLH::AllocatedMemoryBlock, std::vector<PLH::AllocatedMemoryBlock>>
             ParentChildMap;
 
     RangeAllocator(uint64_t Min, uint64_t Max) {
@@ -47,22 +44,10 @@ public:
         const std::size_t AllocationSize = count * sizeof(value_type);
         const std::size_t NeededAlignment = std::alignment_of<value_type>::value;
         std::size_t Allocated = 0;
-        ChildSiblingMap::iterator ChildChainIt;
+
         std::vector<PLH::AllocatedMemoryBlock> AllocatedBlocks;
-
-        /****************************************************************************************
-         * Sometimes a chain can be in the process of being built, we'll have a few
-         * child blocks allocated, and then the gap that we are filling runs out of
-         * room. When this happens we call it a "failed chain" and store it to be
-         * removed freed later. After we store the failed chain we try to start a new chain.
-         * This continues until either then chain is successfully build or
-         * parent blocks fail to be allocated. Before this function returns all failed chains
-         * are freed.
-         *
-         * This is a pair of the chain iterator and an integer specifying its size
-         * *************************************************************************************/
-        std::vector<std::pair<ChildSiblingMap::iterator, int>> FailedChains;
-
+        std::vector<PLH::AllocatedMemoryBlock> Chain;
+        std::vector<std::vector<PLH::AllocatedMemoryBlock>> FailedChains;
         /*****************************************************************************************
          **  Splits "parent" memory pages into "child" blocks. If required allocation size spans
          **  multiple "parent" blocks then child blocks are contiguously allocated and a pointer
@@ -79,31 +64,20 @@ public:
             AllocatedBlocks = m_AllocImp.GetAllocatedBlocks();
             if (auto NewChild = CreateChildInParent(AllocatedBlocks, AllocationSize - Allocated, NeededAlignment)) {
                 PLH::MemoryBlock NewChildDesc = NewChild.get().GetDescription();
+                Allocated += NewChildDesc.GetSize();
+                Chain.push_back(*NewChild);
 
-                if (Allocated == 0) {
-                    //Special case to add first child
-                    ChildChainIt = m_ChildSiblingMap.insert({NewChild.get(),
-                                              std::vector<PLH::AllocatedMemoryBlock>()}).first;
-                    Allocated += NewChildDesc.GetSize();
-                } else {
-                    bool isFirstSibling = ChildChainIt->second.size() == 0;
+                if (Chain.size() > 1)
+                {
+                    uint64_t prevBlockEnd = std::prev(Chain.end() - 1)->GetDescription().GetEnd();
+                    uint64_t newBlockStart = NewChildDesc.GetStart();
 
-                    ChildChainIt->second.push_back(std::move(NewChild.get()));
-                    Allocated += NewChildDesc.GetSize();
-
-                    uint64_t prevBlockStart = 0;
-                    if(isFirstSibling)
-                        prevBlockStart = ChildChainIt->first.GetDescription().GetEnd();
-                    else
-                        prevBlockStart = std::prev(ChildChainIt->second.end() - 1)->GetDescription().GetEnd();
-
-                    uint64_t newBlockStart = ChildChainIt->second.back().GetDescription().GetStart();
-
-                    if(prevBlockStart != newBlockStart)
+                    //TODO: Call de-allocate
+                    if(prevBlockEnd != newBlockStart)
                     {
-                        FailedChains.emplace_back(std::make_pair(ChildChainIt, Allocated));
                         Allocated = 0;
-                        break;
+                        Chain.clear();
+                        continue;
                     }
                 }
             } else {
@@ -120,14 +94,20 @@ public:
             }
         } while (Allocated < AllocationSize);
 
-        //deallocate all the failed chains
-        for(auto& pair : FailedChains)
+        assert(Chain.size() >= 1);
+        std::cout << Chain[0].GetDescription().GetStart() << std::endl;
+        for(int i =0; i< Chain.size(); i++)
         {
-            deallocate_impl((pointer)pair.first->first.GetDescription().GetStart(), pair.second);
+            if(Chain[0].GetDescription().GetStart() == 0x5555557da000)
+            {
+                std::cout <<  "\t" << Chain[i].id().value() << Chain[i]<< std::endl;
+            }else
+             std::cout <<  "\t" << Chain[i].id().value() << std::endl;
         }
+        std::cout << "End" << std::endl;
 
         //chain start is the address of the first block in the chain
-        return (pointer)ChildChainIt->first.GetDescription().GetStart();
+        return (pointer)Chain[0].GetDescription().GetStart();
     }
 
     /*********************************************************************************************************************
@@ -198,49 +178,30 @@ public:
        deallocate_impl(ptr, allocationSize);
     }
 
+    //TODO: Fix allocator state-fulness
     void deallocate_impl(pointer ptr, const size_t allocationSize)
     {
-        std::vector<PLH::AllocatedMemoryBlock>::iterator childIt;
         size_t deAllocated = 0;
 
         //Figure out which chain the ptr we got is part of. And erase chain start
         for (auto& KeyValuePair : m_ParentChildMap) {
-            const PLH::AllocatedMemoryBlock& ParentBlock = KeyValuePair.first;
-            std::vector<PLH::AllocatedMemoryBlock>& Children = KeyValuePair.second;
+            const PLH::AllocatedMemoryBlock       & ParentBlock = KeyValuePair.first;
+            std::vector<PLH::AllocatedMemoryBlock>& Children    = KeyValuePair.second;
 
-            if(deAllocated >= allocationSize)
+            if (deAllocated >= allocationSize)
                 break;
 
-            //If it's the first run, find the chain start
-            if(deAllocated == 0) {
-                //Find the containing parent block
-                if (!ParentBlock.GetDescription().ContainsAddress((uint64_t)ptr))
-                    continue;
+            Children.erase(std::remove_if(Children.begin(), Children.end(),[&](const PLH::AllocatedMemoryBlock& Child){
+                uint64_t childStart = Child.GetDescription().GetStart();
+                uint64_t childEnd = Child.GetDescription().GetEnd();
 
-                //Find the block that starts the allocation chain
-                auto firstChild = std::find_if(Children.begin(), Children.end(),
-                                               [=](const PLH::AllocatedMemoryBlock& Child) -> bool {
-                                                   return Child.GetDescription().GetStart() == (uint64_t)ptr;
-                                               });
-
-                //Erase the child to sibling mappings
-                ChildSiblingMap::iterator childSiblingChainIt = m_ChildSiblingMap.find((*firstChild));
-                m_ChildSiblingMap.erase(childSiblingChainIt, std::next(childSiblingChainIt));
-
-                childIt = firstChild;
-            }else{
-                childIt = Children.begin();
-            }
-
-            //Remove the chain up to what's in this parent block
-            while(childIt != Children.end())
-            {
-                if(deAllocated >= allocationSize)
-                    break;
-
-                deAllocated += childIt->GetDescription().GetSize();
-                childIt = Children.erase(childIt, std::next(childIt));
-            }
+                if(childStart >= (uint64_t)ptr && childEnd <= ((uint64_t)ptr + allocationSize)) {
+                    deAllocated += Child.GetDescription().GetSize();
+                    std::cout << Child.id().value() << std::endl;
+                    return true;
+                }
+                return false;
+            }), Children.end());
         }
         assert(deAllocated == allocationSize);
     }
@@ -252,7 +213,7 @@ public:
     };
 
     bool operator==(PLH::RangeAllocator<T, Platform> const& other) {
-        return m_AllowedRegion == other.m_AllowedRegion;
+        return this == &other;
     }
 
     bool operator!=(PLH::RangeAllocator<T, Platform> const& other) {
@@ -275,12 +236,6 @@ private:
     /* The map between larger parent blocks, and the children blocks currently allocated inside
      * of it. Key is a parent block, value is a vector of children blocks*/
     ParentChildMap m_ParentChildMap;
-
-    /* The map between the the first child memory block for an allocation, and the child blocks chained
-     * after it. The vector (value of key-value pair) can span multiple "parent" blocks. This conceptually
-     * remembers which allocations had to be chained together so that de-allocation is easier. Key is a
-     * child block, value is a vector of other children blocks (siblings)*/
-    ChildSiblingMap m_ChildSiblingMap;
 };
 
 template<typename T, typename Platform, typename OtherAllocator>
