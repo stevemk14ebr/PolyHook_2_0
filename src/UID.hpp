@@ -9,10 +9,12 @@
 class UID
 {
 public:
+    typedef long Value;
+
     UID() : uid(singleton()++)
     {}
 
-    long value()
+    Value value()
     {
         return uid;
     }
@@ -22,6 +24,6 @@ private:
         static std::atomic_long base = {0};
         return base;
     }
-    long uid;
+    Value uid;
 };
 #endif //POLYHOOK_2_UID_HPP

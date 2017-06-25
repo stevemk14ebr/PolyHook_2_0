@@ -49,7 +49,7 @@ public:
 
         std::vector<PLH::AllocatedMemoryBlock> AllocatedBlocks;
         std::vector<PLH::AllocatedMemoryBlock> Chain;
-        std::vector<std::pair<uint64_t, size_t>> FailedChains;
+        std::vector<std::vector<UID::Value>> FailedChains;
         /*****************************************************************************************
          **  Splits "parent" memory pages into "child" blocks. If required allocation size spans
          **  multiple "parent" blocks then child blocks are contiguously allocated and a pointer
@@ -75,18 +75,17 @@ public:
                     uint64_t prevBlockEnd = std::prev(Chain.end() - 1)->GetDescription().GetEnd();
                     uint64_t newBlockStart = NewChildDesc.GetStart();
 
+                    //chain not contiguous, store it to free later, re-try
                     if(prevBlockEnd != newBlockStart)
                     {
-                        FailedChains.push_back(std::make_pair(
-                                (uint64_t)Chain[0].GetDescription().GetStart(),
-                                                             Allocated));
-
-                        std::cout << Chain[0].GetDescription().GetStart() << std::endl;
-                        for(const auto& block : Chain)
+                        //Transform into an array of uids
+                        std::vector<UID::Value> chainUIDs;
+                        std::transform(Chain.begin(), Chain.end(), std::back_inserter(chainUIDs), [](const PLH::AllocatedMemoryBlock& block)
                         {
-                            std::cout << '\t' << block.id().value() << block <<  std::endl;
-                        }
-                        std::cout << "end " << Allocated << std::endl;
+                            return block.id().value();
+                        });
+                        FailedChains.push_back(chainUIDs);
+
                         Allocated = 0;
                         Chain.clear();
                         continue;
@@ -109,8 +108,9 @@ public:
         //De-allocate failed chains
         for(const auto& failedChain : FailedChains)
         {
-            deallocate_impl((pointer)failedChain.first, failedChain.second);
+            deallocate_impl(failedChain);
         }
+
         //chain start is the address of the first block in the chain
         assert(Chain.size() >= 1);
         return (pointer)Chain[0].GetDescription().GetStart();
@@ -176,40 +176,83 @@ public:
 
     /*********************************************************************
      * Frees either a single child block or a chain of child blocks if the ptr we
-     * are passed is the start of a chain.
+     * are passed is the start of a chain. Builds up the uids of the chain, then
+     * calls the implementation to do the freeing
      * ******************************************************************/
     void deallocate(pointer ptr, size_type n) {
         const std::size_t allocationSize = n * sizeof(value_type);
-        std::size_t deAllocated = 0;
-       deallocate_impl(ptr, allocationSize);
-    }
+        PLH::MemoryBlock deallocationRegion((uint64_t)ptr, (uint64_t)ptr + allocationSize, PLH::ProtFlag::UNSET);
 
-    //TODO: Fix allocator state-fulness
-    void deallocate_impl(pointer ptr, const size_t allocationSize)
-    {
-        assert(m_ParentChildMap != nullptr);
-        size_t deAllocated = 0;
+        size_t deAllocationBlocks = 0;
+        std::vector<PLH::AllocatedMemoryBlock>::iterator childIt;
 
-        //Remove any blocks that are within [ptr, ptr + allocationSize]
-        PLH::MemoryBlock deallocateRegion((uint64_t)ptr, (uint64_t)ptr + allocationSize, PLH::ProtFlag::UNSET);
-
+        std::vector<UID::Value> uidsToFree;
         for (auto& KeyValuePair : *m_ParentChildMap) {
-            const PLH::AllocatedMemoryBlock       & ParentBlock = KeyValuePair.first;
-            std::vector<PLH::AllocatedMemoryBlock>& Children    = KeyValuePair.second;
+            const PLH::AllocatedMemoryBlock& parentBlock = KeyValuePair.first;
+            std::vector<PLH::AllocatedMemoryBlock>& children = KeyValuePair.second;
 
-            if (deAllocated >= allocationSize)
+            if(deAllocationBlocks >= allocationSize)
                 break;
 
+            //If it's the first run, find the chain start
+            if(deAllocationBlocks== 0) {
+                //Find the containing parent block
+                if (!parentBlock.GetDescription().ContainsAddress((uint64_t)ptr))
+                    continue;
+
+                //Find the block that starts the allocation chain
+                auto firstChild = std::find_if(children.begin(), children.end(),
+                                               [=](const PLH::AllocatedMemoryBlock& Child) -> bool {
+                                                   return Child.GetDescription().GetStart() == (uint64_t)ptr;
+                                               });
+
+                childIt = firstChild;
+            }else{
+                childIt = children.begin();
+            }
+
+            //Add the chains uids to the vector
+            while(childIt != children.end())
+            {
+                if(deAllocationBlocks >= allocationSize)
+                    break;
+
+                deAllocationBlocks += childIt->GetDescription().GetSize();
+                uidsToFree.push_back(childIt->id().value());
+                std::advance(childIt,1);
+            }
+        }
+        //Remove all the uids
+        deallocate_impl(uidsToFree);
+    }
+
+    /**Free Allocated memory blocks with some uid. Removes things
+     * from the ParentChildMap, once the reference counter of the
+     * shared_ptrs hits zero the memory gets freed. **/
+    void deallocate_impl(const std::vector<UID::Value>& blockUIDs)
+    {
+        assert(m_ParentChildMap != nullptr);
+        std::vector<UID::Value> uidsLeftToFree = blockUIDs;
+
+        for (auto& KeyValuePair : *m_ParentChildMap) {
+            std::vector<PLH::AllocatedMemoryBlock>& Children    = KeyValuePair.second;
+
+            if(uidsLeftToFree.size() == 0)
+                break;
+
+            //Remove the blocks in this parent that have uids we want to remove
             Children.erase(std::remove_if(Children.begin(), Children.end(),[&](const PLH::AllocatedMemoryBlock& Child){
-                if(deallocateRegion.ContainsBlock(Child.GetDescription())) {
-                    deAllocated += Child.GetDescription().GetSize();
-                    std::cout << Child.id().value() << std::endl;
-                    return true;
-                }
-                return false;
+                auto iterator = std::find(uidsLeftToFree.begin(), uidsLeftToFree.end(), Child.id().value());
+                if(iterator == uidsLeftToFree.end())
+                    return false;
+
+                //We've removed the block, remove its uid from the list
+                uidsLeftToFree.erase(iterator);
+                return true;
             }), Children.end());
         }
-        assert(deAllocated == allocationSize);
+        //Check that we got them all
+        assert(uidsLeftToFree.size() == 0);
     }
 
     template<typename U>
