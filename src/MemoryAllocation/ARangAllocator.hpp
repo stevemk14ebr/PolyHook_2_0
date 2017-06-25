@@ -10,11 +10,11 @@
 #include "src/ErrorSystem.hpp"
 #include "src/Misc.hpp"
 #include "src/Enums.hpp"
+#include "src/Maybe.hpp"
 #include "src/MemoryAllocation/MemoryBlock.hpp"
 #include "src/MemoryAllocation/AllocatedMemoryBlock.hpp"
 #include <iostream>
 #include <algorithm>
-#include <boost/optional.hpp>
 
 //http://altdevblog.com/2011/06/27/platform-abstraction-with-cpp-templates/
 namespace PLH {
@@ -28,14 +28,14 @@ template<typename PlatformImp>
 class ARangAllocator : private PlatformImp
 {
 public:
-    boost::optional<PLH::AllocatedMemoryBlock>
+    PLH::Maybe<PLH::AllocatedMemoryBlock>
     AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections) {
         //TO-DO: Add call to Verify Mem in range
         auto Block = PlatformImp::AllocateMemory(MinAddress, MaxAddress, Size, Protections);
         if (Block &&
-            VerifyMemInRange(MinAddress, MaxAddress, Block.get().GetDescription().GetStart()) &&
-            VerifyMemInRange(MinAddress, MaxAddress, Block.get().GetDescription().GetEnd())) {
-            m_AllocatedBlocks.push_back(Block.get());
+            VerifyMemInRange(MinAddress, MaxAddress, Block.unwrap().GetDescription().GetStart()) &&
+            VerifyMemInRange(MinAddress, MaxAddress, Block.unwrap().GetDescription().GetEnd())) {
+            m_AllocatedBlocks.push_back(Block.unwrap());
         }
         return Block;
     }

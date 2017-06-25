@@ -64,26 +64,27 @@ public:
          ******************************************************************************************/
         do {
             AllocatedBlocks = m_AllocImp.GetAllocatedBlocks();
-            if (auto NewChild = CreateChildInParent(AllocatedBlocks, AllocationSize - Allocated, NeededAlignment)) {
-                PLH::MemoryBlock NewChildDesc = NewChild.get().GetDescription();
+            auto NewChild = CreateChildInParent(AllocatedBlocks, AllocationSize - Allocated, NeededAlignment);
+            if (NewChild) {
+                PLH::MemoryBlock NewChildDesc = NewChild.unwrap().GetDescription();
                 Allocated += NewChildDesc.GetSize();
-                Chain.push_back(*NewChild);
+                Chain.push_back(NewChild.unwrap());
 
                 //Verify blocks are contiguous, if not then de-allocate and re-try
-                if (Chain.size() > 1)
-                {
-                    uint64_t prevBlockEnd = std::prev(Chain.end() - 1)->GetDescription().GetEnd();
+                if (Chain.size() > 1) {
+                    uint64_t prevBlockEnd  = std::prev(Chain.end() - 1)->GetDescription().GetEnd();
                     uint64_t newBlockStart = NewChildDesc.GetStart();
 
                     //chain not contiguous, store it to free later, re-try
-                    if(prevBlockEnd != newBlockStart)
-                    {
+                    if (prevBlockEnd != newBlockStart) {
                         //Transform into an array of uids
                         std::vector<UID::Value> chainUIDs;
-                        std::transform(Chain.begin(), Chain.end(), std::back_inserter(chainUIDs), [](const PLH::AllocatedMemoryBlock& block)
-                        {
-                            return block.id().value();
-                        });
+                        std::transform(Chain.begin(),
+                                       Chain.end(),
+                                       std::back_inserter(chainUIDs),
+                                       [](const PLH::AllocatedMemoryBlock& block) {
+                                           return block.id().value();
+                                       });
                         FailedChains.push_back(chainUIDs);
 
                         Allocated = 0;
@@ -91,18 +92,17 @@ public:
                         continue;
                     }
                 }
-            } else {
-                //Allocate a new memory page "parent" block and add it to the map, give it no children yet
-                auto NewParent = m_AllocImp.AllocateMemory(m_AllowedRegion.GetStart(), m_AllowedRegion.GetEnd(),
+                continue; //Only make a parent block if child allocation failed
+            }
+
+            //Allocate a new memory page "parent" block and add it to the map, give it no children yet
+            auto NewParent = m_AllocImp.AllocateMemory(m_AllowedRegion.GetStart(), m_AllowedRegion.GetEnd(),
                                                            m_AllocImp.QueryPreferedAllocSize(),
                                                            PLH::ProtFlag::R | PLH::ProtFlag::W);
-                if (NewParent) {
-                    m_ParentChildMap->insert({NewParent.get(), std::vector<PLH::AllocatedMemoryBlock>()});
-                } else {
-                    //failed to allocate new page
-                    throw AllocationFailure();
-                }
+            if (!NewParent) {
+                throw AllocationFailure();
             }
+            m_ParentChildMap->insert({NewParent.unwrap(), std::vector<PLH::AllocatedMemoryBlock>()});
         } while (Allocated < AllocationSize);
 
         //De-allocate failed chains
@@ -122,11 +122,10 @@ public:
      ** into the first free space of any parent, even if the space is < DesiredSpace. Therefore, to use this            **
      ** properly the size of the returned child must be checked, and this called in loop to allocate up to DesiredSpace **
      *********************************************************************************************************************/
-    boost::optional<PLH::AllocatedMemoryBlock> CreateChildInParent(
+    PLH::Maybe<PLH::AllocatedMemoryBlock> CreateChildInParent(
             std::vector<PLH::AllocatedMemoryBlock>& AllocatedBlocks,
             std::size_t DesiredSpace, std::size_t RequiredAlignment) {
 
-        boost::optional<PLH::AllocatedMemoryBlock> gaurd;
         for (int i = 0; i < AllocatedBlocks.size(); i++) {
             PLH::AllocatedMemoryBlock ParentBlock = AllocatedBlocks[i];
             PLH::MemoryBlock ParentDesc = ParentBlock.GetDescription();
@@ -168,10 +167,9 @@ public:
             PLH::AllocatedMemoryBlock NewChildBlock(ParentBlock.GetParentBlock(), NewChildDesc);
 
             Children.push_back(NewChildBlock);
-            gaurd = Children.back();
-            return gaurd;
+            return std::move(Children.back());
         }
-        return gaurd;
+        function_fail("Unable to allocate child");
     }
 
     /*********************************************************************

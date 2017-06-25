@@ -85,8 +85,8 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
         //Try to allocate a few pages
         for (int i = 0; i < 100; i++) {
             auto AllocBlock = allocator.AllocateMemory(MinAddress, MaxAddress, PageSize, (X | W | R));
-            REQUIRE(AllocBlock);
-            std::shared_ptr<uint8_t> Buffer = AllocBlock.get().GetParentBlock();
+            REQUIRE(AllocBlock.isOk());
+            std::shared_ptr<uint8_t> Buffer = AllocBlock.unwrap().GetParentBlock();
             REQUIRE(Buffer != nullptr);
             std::cout << std::hex << "Allocated At: " << (uint64_t)Buffer.get() << std::endl;
 
@@ -113,12 +113,12 @@ TEST_CASE("Test MemoryBlock", "[MemoryBlock]") {
 
     size_t Alignment = 4;
     auto first = block.GetAlignedFirst(Alignment, 8);
-    REQUIRE(first);
-    REQUIRE(first.get() == 0x7898);
+    REQUIRE(first.isOk());
+    REQUIRE(first.unwrap() == 0x7898);
 
-    auto next = block.GetAlignedNext(first.get(), Alignment, 8);
-    REQUIRE(next);
-    REQUIRE(next.get() == 0x78A0);
+    auto next = block.GetAlignedNext(first.unwrap(), Alignment, 8);
+    REQUIRE(next.isOk());
+    REQUIRE(next.unwrap() == 0x78A0);
 }
 
 TEST_CASE("Test AllocatedMemoryBlock", "[AllocatedMemoryBlock]") {

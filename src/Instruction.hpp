@@ -136,9 +136,10 @@ private:
         m_OpStr        = OpStr;
     }
 
-    uint64_t             m_Address;
-    Displacement         m_Displacement;
-    uint8_t              m_DispOffset;
+    uint64_t     m_Address;
+    Displacement m_Displacement;
+    uint8_t      m_DispOffset;
+
     bool                 m_IsRelative;
     std::vector<uint8_t> m_Bytes;
     std::string          m_Mnemonic;

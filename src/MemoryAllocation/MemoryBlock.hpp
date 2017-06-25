@@ -8,8 +8,8 @@
 #include "src/Misc.hpp"
 #include "src/Enums.hpp"
 #include "src/UID.hpp"
+#include "src/Maybe.hpp"
 #include <sstream>
-#include <boost/optional.hpp>
 
 namespace PLH {
 /* ******************************************************************************************
@@ -42,14 +42,14 @@ public:
      * to be aligned. For example if we want to find the nearest memory page to an address with an alignment
      * of 4 bytes, and we also what to ensure the aligned page address is > Address:
      * GetAlignedNearestUp(Address, 4, 4096) where 4096 is the size of a single page.**/
-    boost::optional<uint64_t> GetAlignedFirst(const size_t Alignment, const size_t Size) const;
+    PLH::Maybe<uint64_t> GetAlignedFirst(const size_t Alignment, const size_t Size) const;
 
-    boost::optional<uint64_t> GetAlignedNext(const uint64_t Address, const size_t Alignment, const size_t Size) const;
+    PLH::Maybe<uint64_t> GetAlignedNext(const uint64_t Address, const size_t Alignment, const size_t Size) const;
 
-    boost::optional<uint64_t>
+    PLH::Maybe<uint64_t>
     GetAlignedNearestUp(const uint64_t Address, const size_t Alignment, const size_t Size) const;
 
-    boost::optional<uint64_t>
+    PLH::Maybe<uint64_t>
     GetAlignedNearestDown(const uint64_t Address, const size_t Alignment, const size_t Size) const;
 
     bool ContainsBlock(const PLH::MemoryBlock& other) const;
@@ -110,16 +110,15 @@ bool MemoryBlock::InRange(const uint64_t Address, const size_t Size) const {
     return Address >= m_Start && (Address + Size) <= m_End;
 }
 
-boost::optional<uint64_t> MemoryBlock::GetAlignedFirst(const size_t Alignment, const size_t Size) const {
+PLH::Maybe<uint64_t> MemoryBlock::GetAlignedFirst(const size_t Alignment, const size_t Size) const {
     if (auto Aligned = GetAlignedNearestDown(m_Start, Alignment, Size))
         return Aligned;
     return GetAlignedNearestUp(m_Start, Alignment, Size);
 }
 
 //[Start, End)
-boost::optional<uint64_t>
+PLH::Maybe<uint64_t>
 MemoryBlock::GetAlignedNext(const uint64_t Address, const size_t Alignment, const size_t Size) const {
-    boost::optional<uint64_t> AlignedAddress;
     assert(Size > 0);
     assert(Alignment > 0);
 
@@ -130,44 +129,39 @@ MemoryBlock::GetAlignedNext(const uint64_t Address, const size_t Alignment, cons
     assert(Next + Size > Next && "Check for wrap-around");
     assert(Next % Alignment == 0);
     if (!InRange(Next, Size))
-        return AlignedAddress;
+        function_fail("Address not in range after alignment");
 
-    AlignedAddress = Next;
-    return AlignedAddress;
+    return Next;
 }
 
 //[Start, End)
-boost::optional<uint64_t>
+PLH::Maybe<uint64_t>
 MemoryBlock::GetAlignedNearestDown(const uint64_t Address, const size_t Alignment, const size_t Size) const {
-    boost::optional<uint64_t> AlignedAddress;
     assert(Size > 0);
     assert(Alignment > 0);
 
     uint64_t NearestDown = (uint64_t)PLH::AlignDownwards((uint8_t*)Address, Alignment);
     if (!InRange(NearestDown, Size))
-        return AlignedAddress;
+        function_fail("Address not in range after alignment");
 
     assert(NearestDown <= Address && "Check block boundary alignment down");
     assert(NearestDown % Alignment == 0);
-    AlignedAddress = NearestDown;
-    return AlignedAddress;
+    return NearestDown;
 }
 
 //[Start, End)
-boost::optional<uint64_t>
+PLH::Maybe<uint64_t>
 MemoryBlock::GetAlignedNearestUp(const uint64_t Address, const size_t Alignment, const size_t Size) const {
-    boost::optional<uint64_t> AlignedAddress;
     assert(Size > 0);
     assert(Alignment > 0);
 
     uint64_t NearestUp = (uint64_t)PLH::AlignUpwards((uint8_t*)Address, Alignment);
     if (!InRange(NearestUp, Size))
-        return AlignedAddress;
+        function_fail("Address not in range after alignment");
 
     assert(NearestUp >= Address && "Check block boundary alignment up");
     assert(NearestUp % Alignment == 0);
-    AlignedAddress = NearestUp;
-    return AlignedAddress;
+    return NearestUp;
 }
 
 //[Start,End]

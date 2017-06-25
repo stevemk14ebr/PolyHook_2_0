@@ -13,7 +13,7 @@
 #include <string.h>
 #include "src/MemoryAllocation/MemoryBlock.hpp"
 #include "src/MemoryAllocation/AllocatedMemoryBlock.hpp"
-#include <boost/optional.hpp>
+#include "src/Maybe.hpp"
 
 namespace PLH {
 /******************************************************************************************************************
@@ -29,7 +29,7 @@ class RangeMemAllocatorUnixImp
 public:
     int TranslateProtection(const PLH::ProtFlag flags) const;
 
-    boost::optional<PLH::AllocatedMemoryBlock>
+    PLH::Maybe<PLH::AllocatedMemoryBlock>
     AllocateMemory(const uint64_t MinAddress, const uint64_t MaxAddress,
                    const size_t Size, const PLH::ProtFlag Protections) const;
 
@@ -38,7 +38,7 @@ public:
 protected:
     void Deallocate(uint8_t* Buffer, const size_t Length) const;
 
-    boost::optional<PLH::AllocatedMemoryBlock>
+    PLH::Maybe<PLH::AllocatedMemoryBlock>
     AllocateImp(const uint64_t AddressOfPage, const size_t Size, const int MapFlags,
                 const PLH::ProtFlag Protections) const;
 
@@ -67,10 +67,10 @@ int PLH::RangeMemAllocatorUnixImp::TranslateProtection(const PLH::ProtFlag flags
 ** On Unix virtual address granularity is 4KB. When using MAP_FIXED flag allocation must be page aligned,
 ** so it is best to call with a size of 4KB to not waste memory.
 *******************************************************************************************************/
-boost::optional<PLH::AllocatedMemoryBlock>
+PLH::Maybe<PLH::AllocatedMemoryBlock>
 PLH::RangeMemAllocatorUnixImp::AllocateImp(const uint64_t AddressOfPage, const size_t Size,
                                            const int MapFlags, const PLH::ProtFlag Protections) const {
-    boost::optional<PLH::AllocatedMemoryBlock> AllocatedBlock;
+
     assert(Size > 0 && "Size must be >0");
     uint8_t* Buffer = (uint8_t*)mmap((void*)AddressOfPage, Size, TranslateProtection(Protections), MapFlags, 0, 0);
     if (Buffer != MAP_FAILED && Buffer != nullptr) {
@@ -80,18 +80,18 @@ PLH::RangeMemAllocatorUnixImp::AllocateImp(const uint64_t AddressOfPage, const s
         });
 
         PLH::MemoryBlock BufferDesc(AddressOfPage, AddressOfPage + Size, Protections);
-        AllocatedBlock = PLH::AllocatedMemoryBlock(BufferSp, BufferDesc);
+        return PLH::AllocatedMemoryBlock(BufferSp, BufferDesc);
     }
-    return AllocatedBlock;
+    function_fail("Allocation failed");
 }
 
 //[MinAddress, MaxAddress)
-boost::optional<PLH::AllocatedMemoryBlock>
+PLH::Maybe<PLH::AllocatedMemoryBlock>
 PLH::RangeMemAllocatorUnixImp::AllocateMemory(const uint64_t MinAddress,
                                               const uint64_t MaxAddress,
                                               const size_t Size,
                                               const PLH::ProtFlag Protections) const {
-    boost::optional<PLH::AllocatedMemoryBlock> AllocatedBlock;
+
     int Flags = MAP_PRIVATE |
                 MAP_ANONYMOUS |
                 MAP_FIXED; //TO-DO make use of MAP_32Bit for x64?
@@ -107,8 +107,8 @@ PLH::RangeMemAllocatorUnixImp::AllocateMemory(const uint64_t MinAddress,
              * the memory pages normally until we have a successful allocation*/
             for (auto Cur = FreeBlock.GetAlignedFirst(Alignment, PageSize);
                  Cur;
-                 Cur = FreeBlock.GetAlignedNext(Cur.get(), Alignment, PageSize)) {
-                if (AllocatedBlock = AllocateImp(Cur.get(), Size, Flags, Protections))
+                 Cur = FreeBlock.GetAlignedNext(Cur.unwrap(), Alignment, PageSize)) {
+                if (auto AllocatedBlock = AllocateImp(Cur.unwrap(), Size, Flags, Protections))
                     return AllocatedBlock;
             }
         } else if (FreeBlock.GetEnd() >= MinAddress + Size && FreeBlock.GetStart() < MinAddress) {
@@ -116,9 +116,9 @@ PLH::RangeMemAllocatorUnixImp::AllocateMemory(const uint64_t MinAddress,
             /*This is the case where our blocks upper range overlaps the minimum range of our range, but the
             * majority of the lower range of the block is not in our range*/
             for (auto Cur = FreeBlock.GetAlignedNearestUp(MinAddress, Alignment, PageSize);
-                 Cur && (Cur.get() + Size) <= MaxAddress;
-                 Cur = FreeBlock.GetAlignedNext(Cur.get(), Alignment, PageSize)) {
-                if (AllocatedBlock = AllocateImp(Cur.get(), Size, Flags, Protections))
+                 Cur && (Cur.unwrap() + Size) <= MaxAddress;
+                 Cur = FreeBlock.GetAlignedNext(Cur.unwrap(), Alignment, PageSize)) {
+                if (auto AllocatedBlock = AllocateImp(Cur.unwrap(), Size, Flags, Protections))
                     return AllocatedBlock;
             }
         } else if (FreeBlock.GetStart() + Size < MaxAddress && FreeBlock.GetEnd() > MaxAddress) {
@@ -126,14 +126,14 @@ PLH::RangeMemAllocatorUnixImp::AllocateMemory(const uint64_t MinAddress,
             /*This is the case where our blocks lower range overlaps the maximum of our range, but the
              * majority of the blocks upper range is not in our range*/
             for (auto Cur = FreeBlock.GetAlignedNearestDown(FreeBlock.GetStart(), Alignment, PageSize);
-                 Cur && (Cur.get() + Size) < MaxAddress && Cur >= MinAddress;
-                 Cur = FreeBlock.GetAlignedNext(Cur.get(), Alignment, PageSize)) {
-                if (AllocatedBlock = AllocateImp(Cur.get(), Size, Flags, Protections))
+                 Cur && (Cur.unwrap() + Size) < MaxAddress && Cur >= MinAddress;
+                 Cur = FreeBlock.GetAlignedNext(Cur.unwrap(), Alignment, PageSize)) {
+                if (auto AllocatedBlock = AllocateImp(Cur.unwrap(), Size, Flags, Protections))
                     return AllocatedBlock;
             }
         }
     }
-    return AllocatedBlock;
+    function_fail("Failed to find block within range");
 }
 
 void RangeMemAllocatorUnixImp::Deallocate(uint8_t* Buffer, const size_t Length) const {
