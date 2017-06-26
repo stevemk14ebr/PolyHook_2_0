@@ -113,10 +113,6 @@ void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction* Inst, const c
     for (uint_fast32_t j = 0; j < x86->op_count; j++) {
         cs_x86_op* op = &(x86->operands[j]);
         if (op->type == X86_OP_MEM) {
-            //MEM are types like lea rcx,[rip+0xdead]
-            if (op->mem.base == X86_REG_INVALID)
-                continue;
-
             //Are we relative to instruction pointer?
             if (op->mem.base != GetIpReg())
                 continue;
@@ -126,9 +122,6 @@ void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction* Inst, const c
             CopyAndSExtendDisp(Inst, Offset, Size);
         } else if (op->type == X86_OP_IMM) {
             //IMM types are like call 0xdeadbeef
-            if (x86->op_count > 1) //exclude types like sub rsp,0x20
-                continue;
-
             if (!HasGroup(CapInst, x86_insn_group::X86_GRP_JUMP) &&
                 !HasGroup(CapInst, x86_insn_group::X86_GRP_CALL))
                 continue;

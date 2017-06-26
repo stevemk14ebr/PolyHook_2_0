@@ -220,6 +220,8 @@ public:
                 std::advance(childIt,1);
             }
         }
+        assert(deAllocationBlocks == allocationSize);
+
         //Remove all the uids
         deallocate_impl(uidsToFree);
     }
