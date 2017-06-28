@@ -92,13 +92,15 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
     }
 }
 
-// Page 590:
+// page 590 for jmp types, page 40 for mod/rm table:
 // https://www-ssl.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf
 // stolen from capstones unit tests
 std::vector<uint8_t> x86ASM = {
-        0x01, 0xd8, //add eax, ebx
+        0x01, 0xd8,                         //add eax, ebx
         0x81, 0xc6, 0x34, 0x12, 0x00, 0x00, //add esi, 0x1234
-        0x05, 0x78, 0x56, 0x00, 0x00, //add eax, 0x5678
+        0x05, 0x78, 0x56, 0x00, 0x00,       //add eax, 0x5678
+        0x0F, 0x85, 0x07, 0x00, 0x00, 0x00, //jne eip + 6 + 7
+        0x74, 0x01,                         //je eip + 2 + 1
         0x8D, 0x87, 0x89, 0x67, 0x00, 0x00, //lea eax, [edi+0x6789]
         0xEB, 0x03,                         //jmp 0x5
         0xE9, 0x00, 0xFF, 0x00, 0x00        //jmp 0xFF05
@@ -110,26 +112,29 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
                                                                 (uint64_t)&x86ASM.front() + x86ASM.size());
 
     //TO-DO: Break this section in further sub-sections
-    SECTION("Check disassembler integrity")
-    {
-        REQUIRE(Instructions.size() == 6);
-        const uint8_t CorrectSizes[] = {2, 6, 5 ,6 ,2, 5};
+    SECTION("Check disassembler integrity") {
+        REQUIRE(Instructions.size() == 8);
+        const uint8_t CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
 
-        const char* CorrectMnemonic[] = {"add", "add", "add", "lea", "jmp", "jmp"};
+        const char* CorrectMnemonic[] = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp"};
 
         uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
-        size_t PrevInstSize = 0;
-        for(int i = 0; i < Instructions.size();i++)
-        {
+        size_t   PrevInstSize    = 0;
+        for (int i               = 0; i < Instructions.size(); i++) {
             INFO("Index: " << i);
             REQUIRE(Instructions[i]->Size() == CorrectSizes[i]);
 
             INFO("Index: " << i);
             REQUIRE(Instructions[i]->GetAddress() == (PrevInstAddress + PrevInstSize));
             PrevInstAddress = Instructions[i]->GetAddress();
-            PrevInstSize = Instructions[i]->Size();
+            PrevInstSize    = Instructions[i]->Size();
 
-            INFO("Index: " << i << " Correct Mnemonic:" << CorrectMnemonic[i] << " Mnemonic:"<<Instructions[i]->GetMnemonic());
+            INFO("Index: "
+                         << i
+                         << " Correct Mnemonic:"
+                         << CorrectMnemonic[i]
+                         << " Mnemonic:"
+                         << Instructions[i]->GetMnemonic());
             REQUIRE(Instructions[i]->GetMnemonic().compare(CorrectMnemonic[i]) == 0);
 
             std::cout << Instructions[i]->GetDisplacement().Absolute << std::endl;
