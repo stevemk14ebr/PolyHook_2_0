@@ -88,7 +88,7 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
         printf("Children[%ld] [%"PRIx64"] ", Inst->GetChildren().size(), Inst->GetAddress());
         for (int i = 0; i < Inst->Size(); i++)
             printf("%02X ", Inst->GetByte(i));
-        printf("%s\n", Inst->GetFullName().c_str());
+        printf("%s %d\n", Inst->GetFullName().c_str(), Inst->IsDispRelative());
     }
 }
 
@@ -137,7 +137,10 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
                          << Instructions[i]->GetMnemonic());
             REQUIRE(Instructions[i]->GetMnemonic().compare(CorrectMnemonic[i]) == 0);
 
-            std::cout << Instructions[i]->GetDisplacement().Absolute << std::endl;
+            if(!Instructions[i]->IsDispRelative())
+                std::cout << Instructions[i]->GetDisplacement().Absolute << std::endl;
+            else
+                std::cout << Instructions[i]->GetDisplacement().Relative << std::endl;
         }
     }
 }

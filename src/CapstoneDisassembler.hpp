@@ -56,7 +56,7 @@ private:
 
     void SetDisplacementFields(Instruction* Inst, const cs_insn* CapInst) const;
 
-    void CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size) const;
+    void CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size, const bool ipRelative) const;
 
     csh m_CapHandle;
 };
@@ -119,7 +119,7 @@ void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction* Inst, const c
 
             const uint8_t Offset = x86->encoding.disp_offset;
             const uint8_t Size   = x86->encoding.disp_size;
-            CopyAndSExtendDisp(Inst, Offset, Size);
+            CopyAndSExtendDisp(Inst, Offset, Size, true);
         } else if (op->type == X86_OP_IMM) {
             //IMM types are like call 0xdeadbeef
             if (!HasGroup(CapInst, x86_insn_group::X86_GRP_JUMP) &&
@@ -128,13 +128,19 @@ void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction* Inst, const c
 
             const uint8_t Offset = x86->encoding.imm_offset;
             const uint8_t Size   = x86->encoding.imm_size;
-            CopyAndSExtendDisp(Inst, Offset, Size);
+
+            //All x64 opcodes are RIP relative, otherwise in x86 IMM types are absolute
+            bool ipRelative = false;
+            #if __x86_64__ || __ppc64__
+                ipRelative = true;
+            #endif
+            CopyAndSExtendDisp(Inst, Offset, Size, ipRelative);
         }
     }
 }
 
 void
-PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size) const {
+PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size, const bool ipRelative) const {
     /* Sign extension necessary because we are storing numbers (possibly) smaller than uint64_t that may be negative.
      * 1 << (Size*8-1) dynamically calculates the position of the sign bit (furthest left) (our byte mask)
      * the Size*8 gives us the size in bits, i do -1 because zero based. Then left shift to set that bit to one.
@@ -151,7 +157,10 @@ PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const uint
         displacement = (displacement ^ mask) - mask;
     }
     //uint64_t Destination = Base + displacement  + Inst->Size();
-    Inst->SetRelativeDisplacement(displacement);
+    if(ipRelative)
+        Inst->SetRelativeDisplacement(displacement);
+    else
+        Inst->SetAbsoluteDisplacement(displacement);
     Inst->SetDispOffset(Offset);
 }
 
