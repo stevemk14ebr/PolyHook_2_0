@@ -92,7 +92,7 @@ public:
         return m_Bytes.size();
     }
 
-    void AddChild(std::shared_ptr<Instruction>& Child) {
+    void AddChild(const std::shared_ptr<Instruction>& Child) {
         m_Children.push_back(Child);
     }
 
@@ -100,7 +100,7 @@ public:
         return m_Children;
     }
 
-    std::shared_ptr<Instruction> GetChild(size_t index) const {
+    std::shared_ptr<Instruction> GetChild(const size_t index) const {
         if (index >= m_Children.size())
             return nullptr;
 

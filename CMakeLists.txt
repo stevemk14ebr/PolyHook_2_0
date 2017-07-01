@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.6)
 project(PolyHook_2)
 
+set(BUILD32 true)
+
+if(BUILD32)
+    set(CMAKE_C_FLAGS -m32)
+    set(CMAKE_CXX_FLAGS -m32)
+endif()
+
 set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
@@ -17,13 +24,16 @@ set(SOURCE_FILES_PLH ${PROJECT_SOURCE_DIR}/MainTests.cpp
         )
 add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
 
-#Set this variable to hold the path to capstone directory
-set(CAPSTONE_LIB_PATH ${PROJECT_SOURCE_DIR}/capstone)
 
 find_package(Boost)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
+
+#To build capstone for 32bit use:
+#cmake -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 ../
+#Set this variable to hold the path to capstone directory
+set(CAPSTONE_LIB_PATH ${PROJECT_SOURCE_DIR}/capstone/build/)
 
 #Find the absolute path to the lib
 find_library(CAPSTONE_LIB NAMES libcapstone.a PATHS ${CAPSTONE_LIB_PATH})

@@ -12,6 +12,9 @@
 #include "src/Maybe.hpp"
 #include <capstone/include/capstone/capstone.h>
 
+//debug
+#include <iostream>
+
 namespace PLH {
 class CapstoneDisassembler : public ADisassembler
 {
@@ -30,12 +33,19 @@ public:
     virtual void WriteEncoding(const PLH::Instruction& instruction) override;
 
 private:
-    PLH::Maybe<int> GetParentIndex(const std::vector<std::shared_ptr<PLH::Instruction>>& Haystack, const uint64_t NeedleAddress) const {
+    /**When new instructions are inserted we have to re-itterate the list and add
+     * a child to an instruction if the new instruction points to it**/
+    void ModifyParentIndices(std::vector<std::shared_ptr<PLH::Instruction>>& Haystack,
+                                        std::shared_ptr<PLH::Instruction>& NewInstruction) const {
         for (int i = 0; i < Haystack.size(); i++) {
-            if (Haystack.at(i)->GetAddress() == NeedleAddress)
-                return i;
+            //Check for things that the new instruction may point too
+            if (Haystack.at(i)->GetAddress() == NewInstruction->GetDestination())
+                Haystack.at(i)->AddChild(NewInstruction);
+
+            //Check for things that may point to the new instruction
+            if(Haystack.at(i)->GetDestination() == NewInstruction->GetAddress())
+                NewInstruction->AddChild(Haystack.at(i));
         }
-        function_fail("No parent found");
     }
 
     x86_reg GetIpReg() const {
@@ -56,7 +66,11 @@ private:
 
     void SetDisplacementFields(Instruction* Inst, const cs_insn* CapInst) const;
 
-    void CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size, const bool ipRelative) const;
+    /*For immediate types capstone gives us only the final destination, but *we* care about the base + displacement. To
+     * deconstruct the info we need we first read the imm value byte by byte out of the instruction, if that value is
+     * less than what capstone told us we know that it is relative and we have to add the base. If it is equal to the given
+     * value then it is a true absolute jmp/call (only possible in x64), if it's greater then something broke.*/
+    void CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size, const int64_t immDestination) const;
 
     csh m_CapHandle;
 };
@@ -69,10 +83,10 @@ PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start
 
     size_t Size = End - Start;
     while (cs_disasm_iter(m_CapHandle, (const uint8_t**)(&Start), &Size, &FirstInstruction, InsInfo)) {
-//        printf("%" PRIx64 "[%d]: ", InsInfo->address, InsInfo->size);
-//        for (uint_fast32_t j = 0; j < InsInfo->size; j++)
-//            printf("%02X ", InsInfo->bytes[j]);
-//        printf("%s %s\n", InsInfo->mnemonic, InsInfo->op_str);
+        printf("%" PRIx64 "[%d]: ", InsInfo->address, InsInfo->size);
+        for (uint_fast32_t j = 0; j < InsInfo->size; j++)
+            printf("%02X ", InsInfo->bytes[j]);
+        printf("%s %s\n", InsInfo->mnemonic, InsInfo->op_str);
 
         //Set later by 'SetDisplacementFields'
         PLH::Instruction::Displacement displacement;
@@ -87,11 +101,7 @@ PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start
                                                        InsInfo->mnemonic,
                                                        InsInfo->op_str);
         SetDisplacementFields(Inst.get(), InsInfo);
-
-        auto ParentIndex = GetParentIndex(InsVec, Inst->GetDestination());
-        if (ParentIndex.isOk())
-            InsVec[ParentIndex.unwrap()]->AddChild(Inst);
-
+        ModifyParentIndices(InsVec, Inst);
         InsVec.push_back(std::move(Inst));
     }
     cs_free(InsInfo, 1);
@@ -119,7 +129,7 @@ void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction* Inst, const c
 
             const uint8_t Offset = x86->encoding.disp_offset;
             const uint8_t Size   = x86->encoding.disp_size;
-            CopyAndSExtendDisp(Inst, Offset, Size, true);
+            CopyAndSExtendDisp(Inst, Offset, Size, 0x7FFFFFFFFFFFFFFF);
         } else if (op->type == X86_OP_IMM) {
             //IMM types are like call 0xdeadbeef
             if (!HasGroup(CapInst, x86_insn_group::X86_GRP_JUMP) &&
@@ -129,24 +139,18 @@ void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction* Inst, const c
             const uint8_t Offset = x86->encoding.imm_offset;
             const uint8_t Size   = x86->encoding.imm_size;
 
-            //All x64 opcodes are RIP relative, otherwise in x86 IMM types are absolute
-            bool ipRelative = false;
-            #if __x86_64__ || __ppc64__
-                ipRelative = true;
-            #endif
-            CopyAndSExtendDisp(Inst, Offset, Size, ipRelative);
+            CopyAndSExtendDisp(Inst, Offset, Size, op->imm);
         }
     }
 }
 
-void
-PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size, const bool ipRelative) const {
-    /* Sign extension necessary because we are storing numbers (possibly) smaller than uint64_t that may be negative.
+void PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size, const int64_t immDestination) const {
+    /* Sign extension necessary because we are storing numbers (possibly) smaller than int64_t that may be negative.
      * 1 << (Size*8-1) dynamically calculates the position of the sign bit (furthest left) (our byte mask)
      * the Size*8 gives us the size in bits, i do -1 because zero based. Then left shift to set that bit to one.
      * Then & that with the value, the result will be positive if sign bit is set (negative displacement)
      * and 0 when sign bit not set (positive displacement)*/
-    uint64_t displacement = 0;
+    int64_t displacement = 0;
     memcpy(&displacement, &Inst->GetBytes()[Offset], Size);
 
     uint64_t mask = (1U << (Size * 8 - 1));
@@ -154,13 +158,16 @@ PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const uint
         /* sign extend if negative, requires that bits above Size*8 are zero,
          * if bits are not zero use x = x & ((1U << b) - 1) where x is a temp for displacement
          * and b is Size*8*/
-        displacement = (displacement ^ mask) - mask;
+        displacement = (displacement ^ mask) - mask; //xor clears sign bit, subtraction makes number negative again but in int64 range
     }
-    //uint64_t Destination = Base + displacement  + Inst->Size();
-    if(ipRelative)
+
+    if(displacement < immDestination) {
         Inst->SetRelativeDisplacement(displacement);
-    else
-        Inst->SetAbsoluteDisplacement(displacement);
+    }else {
+        assert(((uint64_t)displacement) == ((uint64_t)immDestination));
+        Inst->SetAbsoluteDisplacement((uint64_t)displacement);
+    }
+
     Inst->SetDispOffset(Offset);
 }
 

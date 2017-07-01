@@ -5,7 +5,7 @@
 #include "src/CapstoneDisassembler.hpp"
 
 #include <iostream>
-
+#include <vector>
 std::vector<uint8_t> x64ASM = {
         //start address = 0x1800182B0
         0x48, 0x89, 0x5C, 0x24, 0x08,           //0) mov QWORD PTR [rsp+0x8],rbx    with child @index 8
@@ -17,9 +17,9 @@ std::vector<uint8_t> x64ASM = {
         0x48, 0x8B, 0xF1,                       //6) mov rsi, rcx
         0x83, 0xFA, 0x01,                       //7) cmp edx, 1
         0x75,
-        0xE4,                             //8) jne  0x1800182B0               when @0x1800182CA (base + 0xE4(neg) + 0x2)
+        0xE4,                                   //8) jne  0x1800182B0   when @0x1800182CA (base + 0xE4(neg) + 0x2)
         0xE8, 0xCB, 0x57, 0x01,
-        0x00,           //9) call 0x18002DA9C               when @0x1800182CC (base + 0x157CB + 0x5)
+        0x00,                                   //9) call 0x18002DA9C   when @0x1800182CC (base + 0x157CB + 0x5)
         0xFF, 0x25, 0xCB, 0x57, 0x01, 0x00,     //10)jmp qword ptr [rip + 0x157cb]  when @0x1800182d1FF
 };
 
@@ -43,20 +43,16 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
             INFO("Index: " << i);
             REQUIRE(Instructions[i]->Size() == CorrectSizes[i]);
 
-            INFO("Index: " << i);
             REQUIRE(Instructions[i]->GetAddress() == (PrevInstAddress + PrevInstSize));
             PrevInstAddress = Instructions[i]->GetAddress();
             PrevInstSize    = Instructions[i]->Size();
 
-            INFO("Index: "
-                         << i
-                         << " Correct Mnemonic:"
+            INFO("Correct Mnemonic:"
                          << CorrectMnemonic[i]
                          << " Mnemonic:"
                          << Instructions[i]->GetMnemonic());
             REQUIRE(Instructions[i]->GetMnemonic().compare(CorrectMnemonic[i]) == 0);
 
-            INFO("Index: " << i);
             auto Children = Instructions[i]->GetChildren();
             REQUIRE(Children.size() == CorrectChildCount[i]);
             if (Children.size() > 0) {
@@ -96,14 +92,15 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
 // https://www-ssl.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf
 // stolen from capstones unit tests
 std::vector<uint8_t> x86ASM = {
-        0x01, 0xd8,                         //add eax, ebx
-        0x81, 0xc6, 0x34, 0x12, 0x00, 0x00, //add esi, 0x1234
-        0x05, 0x78, 0x56, 0x00, 0x00,       //add eax, 0x5678
-        0x0F, 0x85, 0x07, 0x00, 0x00, 0x00, //jne eip + 6 + 7
-        0x74, 0x01,                         //je eip + 2 + 1
-        0x8D, 0x87, 0x89, 0x67, 0x00, 0x00, //lea eax, [edi+0x6789]
-        0xEB, 0x03,                         //jmp 0x5
-        0xE9, 0x00, 0xFF, 0x00, 0x00        //jmp 0xFF05
+        //start @0x57b8edb8
+        0x01, 0xc0,                         //57b8edb8) add eax, eax
+        0x81, 0xc6, 0x34, 0x12, 0x00, 0x00, //57b8edba) add esi, 0x1234
+        0x05, 0x78, 0x56, 0x00, 0x00,       //57b8edc0) add eax, 0x5678
+        0x0f, 0x85, 0x08, 0x00, 0x00, 0x00, //57b8edc5) jne 0x57b8edd3       child@6
+        0x74, 0x00,                         //57b8edcb) je  0x57b8edcd
+        0x8d, 0x87, 0x89, 0x67, 0x00, 0x00, //57b8edcd) lea eax, [edi+0x6789]child@4
+        0xeb, 0xf0,                         //57b8edd3) jmp 0x57b8edc5       child@3
+        0xe9, 0x00, 0xff, 0x00, 0x00        //57b8edd5) jmp 57b9ecda
 };
 
 TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembler]") {
@@ -117,6 +114,9 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
         const uint8_t CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
 
         const char* CorrectMnemonic[] = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp"};
+        const bool CorrectChildCount[] = {0 ,0,0, 1,0,1,1,0};
+        const std::vector<std::shared_ptr<PLH::Instruction>> CorrectChildren[]   = {{nullptr}, {nullptr}, {nullptr}, {Instructions[6]},
+                                                                                    {nullptr}, {Instructions[4]}, {Instructions[3]}, {nullptr}, {nullptr}};
 
         uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
         size_t   PrevInstSize    = 0;
@@ -124,23 +124,25 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
             INFO("Index: " << i);
             REQUIRE(Instructions[i]->Size() == CorrectSizes[i]);
 
-            INFO("Index: " << i);
             REQUIRE(Instructions[i]->GetAddress() == (PrevInstAddress + PrevInstSize));
             PrevInstAddress = Instructions[i]->GetAddress();
             PrevInstSize    = Instructions[i]->Size();
 
-            INFO("Index: "
-                         << i
-                         << " Correct Mnemonic:"
+            INFO("Correct Mnemonic:"
                          << CorrectMnemonic[i]
                          << " Mnemonic:"
                          << Instructions[i]->GetMnemonic());
             REQUIRE(Instructions[i]->GetMnemonic().compare(CorrectMnemonic[i]) == 0);
 
-            if(!Instructions[i]->IsDispRelative())
-                std::cout << Instructions[i]->GetDisplacement().Absolute << std::endl;
-            else
-                std::cout << Instructions[i]->GetDisplacement().Relative << std::endl;
+            auto Children = Instructions[i]->GetChildren();
+            REQUIRE(Children.size() == CorrectChildCount[i]);
+            std::cout << Children.size() << std::endl;
+            if (Children.size() > 0) {
+                for (int j = 0; j < Children.size(); j++) {
+                    INFO("Instruction Index:" << i << " Child Index:" << j);
+                    REQUIRE(Instructions[i]->GetChildren().at(j) == CorrectChildren[i][j]);
+                }
+            }
         }
     }
 }
