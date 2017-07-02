@@ -102,8 +102,10 @@ PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start
                                                        InsInfo->size,
                                                        InsInfo->mnemonic,
                                                        InsInfo->op_str);
+
         SetDisplacementFields(Inst.get(), InsInfo);
         ModifyParentIndices(InsVec, Inst);
+
         InsVec.push_back(std::move(Inst));
     }
     printf("\n\n");
@@ -127,7 +129,7 @@ void PLH::CapstoneDisassembler::WriteEncoding(const PLH::Instruction& instructio
  * this determines if an instruction is a jmp/call variant, and then further if it is is jumping via
  * memory or immediate, and then finally if that mem/imm is encoded via a displacement relative to
  * the instruction pointer, or directly to an absolute address**/
-void PLH::CapstoneDisassembler::SetDisplacementFields(Instruction* Inst, const cs_insn* CapInst) const {
+void PLH::CapstoneDisassembler::SetDisplacementFields(PLH::Instruction* Inst, const cs_insn* CapInst) const {
     cs_x86* x86 = &(CapInst->detail->x86);
 
     for (uint_fast32_t j = 0; j < x86->op_count; j++) {
@@ -174,6 +176,8 @@ void PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const
         displacement = (displacement ^ mask) - mask; //xor clears sign bit, subtraction makes number negative again but in the int64 range
     }
 
+    Inst->SetDisplacementOffset(Offset);
+
     /*When the retrieved displacement is < immDestination we know that the base address is included
      * in the destinations calculation. By definition this means it is relative. Otherwise it is absolute*/
     if(displacement < immDestination) {
@@ -184,7 +188,6 @@ void PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const
         assert(((uint64_t)displacement) == ((uint64_t)immDestination));
         Inst->SetAbsoluteDisplacement((uint64_t)displacement);
     }
-    Inst->SetDisplacementOffset(Offset);
 }
 
 #endif //POLYHOOK_2_0_CAPSTONEDISASSEMBLER_HPP

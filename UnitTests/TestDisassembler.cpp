@@ -66,7 +66,6 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
     }
 
     SECTION("Check instruction re-encoding integrity") {
-        std::cout << "modifying" << std::endl;
         Instructions[8]->SetRelativeDisplacement(0x00);
         disasm.WriteEncoding(*Instructions[8]);
 
@@ -177,8 +176,8 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
         REQUIRE(Instructions[7]->GetDestination() == Instructions[7]->GetAddress() + Instructions[7]->Size());
 
         Instructions =
-                disasm.Disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
-                                   (uint64_t)&x64ASM.front() + x64ASM.size());
+                disasm.Disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+                                   (uint64_t)&x86ASM.front() + x86ASM.size());
 
         uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
         size_t   PrevInstSize    = 0;
