@@ -20,6 +20,9 @@ namespace PLH {
 **  larger "Parent" blocks to all of the parent's "Children" blocks via a map. This follows the
 **  first fit allocation algorithm with address ordering. This means it allocates at the lower addresses
 **  first towards the higher addresses.
+ *
+ * **THIS IS NOT A THREAD SAFE CLASS, ANY CLASS THAT USES THIS MUST HAVE SEPERATE LOGIC TO HANDLE THIS*
+ * ^See parentchildmap member comment's below for reason why
 ******************************************************************************************************/
 template<class T, class Platform>
 class RangeAllocator
@@ -269,10 +272,10 @@ public:
         return !(other == *this);
     }
 
+    //TODO: find a more appropriate value for this
     size_type max_size(void) const {
         return std::numeric_limits<size_type>::max() / sizeof(value_type);
     }
-
 private:
     //[Start,End)
     bool IsInRange(uint64_t Address) {

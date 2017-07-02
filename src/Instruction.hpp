@@ -5,6 +5,7 @@
 #ifndef POLYHOOK_2_0_INSTRUCTION_HPP
 #define POLYHOOK_2_0_INSTRUCTION_HPP
 
+#include <cstring> //memcpy
 #include <string>
 #include <vector>
 #include <memory>
@@ -57,16 +58,20 @@ public:
         return m_Displacement;
     }
 
-    void SetDispOffset(const uint8_t offset) {
+    void SetDisplacementOffset(const uint8_t offset) {
         m_DispOffset = offset;
     }
 
-    uint8_t GetDispOffset() const {
+    uint8_t GetDisplacementOffset() const {
         return m_DispOffset;
     }
 
-    bool IsDispRelative() const {
+    bool IsDisplacementRelative() const {
         return m_IsRelative;
+    }
+
+    bool HasDisplacement() const {
+        return m_HasDisplacement;
     }
 
     const std::vector<uint8_t>& GetBytes() const {
@@ -81,13 +86,6 @@ public:
         return m_Mnemonic + " " + m_OpStr;
     }
 
-    uint8_t GetByte(uint32_t index) const {
-        if (index >= Size())
-            return 0;
-
-        return m_Bytes[index];
-    }
-
     size_t Size() const {
         return m_Bytes.size();
     }
@@ -100,21 +98,26 @@ public:
         return m_Children;
     }
 
-    std::shared_ptr<Instruction> GetChild(const size_t index) const {
-        if (index >= m_Children.size())
-            return nullptr;
-
-        return m_Children[index];
-    }
-
     void SetRelativeDisplacement(const int64_t displacement) {
+        /**Update our class' book-keeping of this stuff and then modify the byte array.
+         * This doesn't actually write the changes to the executeable code, it writes to our
+         * copy of the bytes**/
         m_Displacement.Relative = displacement;
         m_IsRelative = true;
+        m_HasDisplacement = true;
+
+        memcpy(&m_Bytes[0] + m_DispOffset, &m_Displacement.Relative, sizeof(m_Displacement.Relative));
     }
 
     void SetAbsoluteDisplacement(const uint64_t displacement) {
         m_Displacement.Absolute = displacement;
         m_IsRelative = false;
+        m_HasDisplacement = true;
+
+        /**Update our class' book-keeping of this stuff and then modify the byte array.
+         * This doesn't actually write the changes to the executeable code, it writes to our
+         * copy of the bytes**/
+        memcpy(&m_Bytes[0] + m_DispOffset, &m_Displacement.Absolute, sizeof(m_Displacement.Absolute));
     }
 
 protected:
@@ -134,15 +137,17 @@ private:
         m_Bytes        = Bytes;
         m_Mnemonic     = Mnemonic;
         m_OpStr        = OpStr;
+        m_HasDisplacement = false;
     }
 
-    uint64_t     m_Address;
-    Displacement m_Displacement;
-    uint8_t      m_DispOffset;
+    uint64_t     m_Address;       //Address the instruction is at
+    Displacement m_Displacement;  //Where an instruction points too (valid for jmp + call types)
+    uint8_t      m_DispOffset;    //Offset into the byte array where displacement is encoded
+    bool         m_IsRelative;    //Does the displacement need to be added to the address to retrieve where it points too?
+    bool         m_HasDisplacement; //Does this instruction have the displacement fields filled (only call + jmp types do)
 
-    bool                 m_IsRelative;
-    std::vector<uint8_t> m_Bytes;
-    std::string          m_Mnemonic;
+    std::vector<uint8_t> m_Bytes; //All the raw bytes of this instruction
+    std::string          m_Mnemonic; //If you don't know what these two are then gtfo of this source code :)
     std::string          m_OpStr;
 };
 }

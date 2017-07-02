@@ -14,7 +14,8 @@ namespace PLH {
  * the same can be accomplished using in-place-new, and a buffer
  * that uses std::aligned_storage.**/
 
-//A container for the error type to allow returning from a function
+/*A container for the error type to allow returning from a function. This should
+ * definitely call std::decay, but i don't use char* or array types so no*/
 template<typename E>
 struct ExplicitMaybeError
 {
@@ -28,7 +29,6 @@ struct ExplicitMaybeError
 private:
     E errorValue;
 };
-
 
 template<typename T>
 class Maybe
@@ -71,6 +71,7 @@ public:
         return isOk();
     }
 private:
+    /*TODO: replace with std::variant when it is available. Or alternatively use std::aligned_storage + in-place new*/
     boost::variant<T, ExplicitMaybeError<EType>> content;
 };
 }
