@@ -23,7 +23,7 @@ std::vector<uint8_t> x64ASM = {
 };
 
 TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembler]") {
-    PLH::CapstoneDisassembler disasm(PLH::ADisassembler::Mode::x64);
+    PLH::CapstoneDisassembler disasm(PLH::Mode::x64);
     auto                      Instructions = disasm.Disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
                                                                 (uint64_t)&x64ASM.front() + x64ASM.size());
 
@@ -100,7 +100,7 @@ std::vector<uint8_t> x86ASM = {
 };
 
 TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembler]") {
-    PLH::CapstoneDisassembler disasm(PLH::ADisassembler::Mode::x86);
+    PLH::CapstoneDisassembler disasm(PLH::Mode::x86);
     auto                      Instructions   = disasm.Disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
                                                                   (uint64_t)&x86ASM.front() + x86ASM.size());
 

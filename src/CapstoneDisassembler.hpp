@@ -19,8 +19,8 @@ namespace PLH {
 class CapstoneDisassembler : public ADisassembler
 {
 public:
-    CapstoneDisassembler(ADisassembler::Mode mode) : ADisassembler(mode) {
-        cs_mode capmode = (mode == ADisassembler::Mode::x64 ? CS_MODE_64 : CS_MODE_32);
+    CapstoneDisassembler(PLH::Mode mode) : ADisassembler(mode) {
+        cs_mode capmode = (mode == PLH::Mode::x64 ? CS_MODE_64 : CS_MODE_32);
         if (cs_open(CS_ARCH_X86, capmode, &m_CapHandle) != CS_ERR_OK)
             m_ErrorCallback.Invoke(PLH::Message("Capstone Init Failed"));
 
@@ -49,7 +49,7 @@ private:
     }
 
     x86_reg GetIpReg() const {
-        if (m_Mode == PLH::ADisassembler::Mode::x64)
+        if (m_Mode == PLH::Mode::x64)
             return X86_REG_RIP;
         else //if(m_Mode == PLH::ADisassembler::Mode::x86)
             return X86_REG_EIP;
@@ -85,10 +85,10 @@ PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start
 
     size_t Size = End - Start;
     while (cs_disasm_iter(m_CapHandle, (const uint8_t**)(&Start), &Size, &FirstInstruction, InsInfo)) {
-        printf("%" PRIx64 "[%d]: ", InsInfo->address, InsInfo->size);
-        for (uint_fast32_t j = 0; j < InsInfo->size; j++)
-            printf("%02X ", InsInfo->bytes[j]);
-        printf("%s %s\n", InsInfo->mnemonic, InsInfo->op_str);
+//        printf("%" PRIx64 "[%d]: ", InsInfo->address, InsInfo->size);
+//        for (uint_fast32_t j = 0; j < InsInfo->size; j++)
+//            printf("%02X ", InsInfo->bytes[j]);
+//        printf("%s %s\n", InsInfo->mnemonic, InsInfo->op_str);
 
         //Set later by 'SetDisplacementFields'
         PLH::Instruction::Displacement displacement;
@@ -108,7 +108,7 @@ PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start
 
         InsVec.push_back(std::move(Inst));
     }
-    printf("\n\n");
+    //printf("\n\n");
     cs_free(InsInfo, 1);
     return InsVec;
 }

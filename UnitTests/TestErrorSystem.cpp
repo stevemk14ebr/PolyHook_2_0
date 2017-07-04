@@ -1,7 +1,7 @@
 //
 // Created by steve on 3/19/17.
 //
-#include "src/PolyHook.h"
+#include "src/IHook.hpp"
 #include "Catch.hpp"
 class TestDerived : public PLH::IHook
 {
@@ -15,7 +15,7 @@ public:
 
     }
 
-    virtual void UnHook(){
+    virtual bool UnHook(){
 
     }
 

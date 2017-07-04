@@ -5,9 +5,11 @@
 #ifndef POLYHOOK_2_0_IDISASSEMBLER_HPP
 #define POLYHOOK_2_0_IDISASSEMBLER_HPP
 
-#include <vector>
 #include "src/ErrorSystem.hpp"
 #include "src/Instruction.hpp"
+#include "src/Enums.hpp"
+
+#include <vector>
 #include <memory>
 
 namespace PLH {
@@ -15,13 +17,7 @@ namespace PLH {
 class ADisassembler
 {
 public:
-    enum class Mode
-    {
-        x86,
-        x64
-    };
-
-    ADisassembler(Mode mode) {
+    ADisassembler(PLH::Mode mode) {
         m_Mode = mode;
     }
 

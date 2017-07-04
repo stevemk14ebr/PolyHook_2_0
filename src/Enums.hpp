@@ -21,18 +21,18 @@ enum ProtFlag : std::uint8_t
     NONE  = 1 << 6 //The flag meaning PROT_UNSET
 };
 
-bool operator&(ProtFlag lhs, ProtFlag rhs) {
+inline bool operator&(ProtFlag lhs, ProtFlag rhs) {
     return static_cast<std::uint8_t>(lhs) &
            static_cast<std::uint8_t>(rhs);
 }
 
-ProtFlag operator|(ProtFlag lhs, ProtFlag rhs) {
+inline ProtFlag operator|(ProtFlag lhs, ProtFlag rhs) {
     return static_cast<ProtFlag >(
             static_cast<std::uint8_t>(lhs) |
             static_cast<std::uint8_t>(rhs));
 }
 
-std::string ProtFlagToString(PLH::ProtFlag flags) {
+inline std::string ProtFlagToString(PLH::ProtFlag flags) {
     std::string s = "";
     if (flags == PLH::ProtFlag::UNSET) {
         s += "UNSET";
@@ -65,5 +65,11 @@ std::string ProtFlagToString(PLH::ProtFlag flags) {
         s += " shared";
     return s;
 }
+
+enum class Mode
+{
+    x86,
+    x64
+};
 }
 #endif //POLYHOOK_2_0_ENUMS_HPP

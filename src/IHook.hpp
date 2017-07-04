@@ -36,7 +36,7 @@ public:
 
     virtual bool Hook() = 0;
 
-    virtual void UnHook() = 0;
+    virtual bool UnHook() = 0;
 
     virtual HookType GetType() = 0;
 };
