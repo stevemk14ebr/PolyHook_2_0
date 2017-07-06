@@ -5,14 +5,15 @@
 #ifndef POLYHOOK_2_0_MEMALLOCATOR_HPP
 #define POLYHOOK_2_0_MEMALLOCATOR_HPP
 
+#include "headers/ErrorSystem.hpp"
+#include "headers/Misc.hpp"
+#include "headers/Enums.hpp"
+#include "headers/Maybe.hpp"
+#include "headers/MemoryAllocation/MemoryBlock.hpp"
+#include "headers/MemoryAllocation/AllocatedMemoryBlock.hpp"
+
 #include <vector>
 #include <memory>
-#include "src/ErrorSystem.hpp"
-#include "src/Misc.hpp"
-#include "src/Enums.hpp"
-#include "src/Maybe.hpp"
-#include "src/MemoryAllocation/MemoryBlock.hpp"
-#include "src/MemoryAllocation/AllocatedMemoryBlock.hpp"
 #include <iostream>
 #include <algorithm>
 

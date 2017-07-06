@@ -1,7 +1,7 @@
 //
 // Created by steve on 3/19/17.
 //
-#include "src/IHook.hpp"
+#include "headers/IHook.hpp"
 #include "Catch.hpp"
 class TestDerived : public PLH::IHook
 {

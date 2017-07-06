@@ -5,9 +5,9 @@
 #ifndef POLYHOOK_2_0_IDISASSEMBLER_HPP
 #define POLYHOOK_2_0_IDISASSEMBLER_HPP
 
-#include "src/ErrorSystem.hpp"
-#include "src/Instruction.hpp"
-#include "src/Enums.hpp"
+#include "headers/ErrorSystem.hpp"
+#include "headers/Instruction.hpp"
+#include "headers/Enums.hpp"
 
 #include <vector>
 #include <memory>

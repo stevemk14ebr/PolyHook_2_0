@@ -2,7 +2,7 @@
 // Created by steve on 3/22/17.
 //
 #include "Catch.hpp"
-#include "src/CapstoneDisassembler.hpp"
+#include "headers/CapstoneDisassembler.hpp"
 
 #include <iostream>
 #include <vector>

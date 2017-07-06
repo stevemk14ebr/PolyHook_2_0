@@ -2,7 +2,7 @@
 // Created by steve on 4/7/17.
 //
 #include "Catch.hpp"
-#include "src/MemoryAllocation/RangeAllocator.hpp"
+#include "headers/MemoryAllocation/RangeAllocator.hpp"
 #include <inttypes.h>
 
 volatile void PlaceHolderFunction() {

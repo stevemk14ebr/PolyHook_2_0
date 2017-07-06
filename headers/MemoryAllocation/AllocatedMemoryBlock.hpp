@@ -4,9 +4,10 @@
 #ifndef POLYHOOK_2_0_ALLOCATEDMEMORYBLOCK_HPP
 #define POLYHOOK_2_0_ALLOCATEDMEMORYBLOCK_HPP
 
-#include "src/MemoryAllocation/MemoryBlock.hpp"
+#include "headers/MemoryAllocation/MemoryBlock.hpp"
+#include "headers/UID.hpp"
 #include <memory>
-#include "src/UID.hpp"
+
 
 namespace PLH {
 /* This is a "Chunk" of allocated virtual memory, this object exists to split a real system memory page into usable,
@@ -77,47 +78,5 @@ private:
     PLH::MemoryBlock         m_OurDesc;
     UID                      uid;
 };
-
-bool AllocatedMemoryBlock::operator==(const AllocatedMemoryBlock& other) const {
-    return this->GetParentBlock().get() == other.GetParentBlock().get() &&
-           this->GetDescription() == other.GetDescription();
-}
-
-bool AllocatedMemoryBlock::operator!=(const PLH::AllocatedMemoryBlock& other) const {
-    return !(*this == other);
-}
-
-bool AllocatedMemoryBlock::operator<(const PLH::AllocatedMemoryBlock& other) const {
-    return this->GetDescription() < other.GetDescription();
-}
-
-bool AllocatedMemoryBlock::operator>(const AllocatedMemoryBlock& other) const {
-    return this->GetDescription() > other.GetDescription();
-}
-
-bool AllocatedMemoryBlock::ContainsBlock(const PLH::MemoryBlock& other) const {
-    return this->GetDescription().ContainsBlock(other);
-}
-
-bool AllocatedMemoryBlock::ContainsBlock(const PLH::AllocatedMemoryBlock& other) const {
-    return this->GetDescription().ContainsBlock(other.GetDescription());
-}
-
-bool AllocatedMemoryBlock::operator>=(const AllocatedMemoryBlock& other) const {
-    return this->GetDescription() >= other.GetDescription();
-}
-
-bool AllocatedMemoryBlock::operator<=(const AllocatedMemoryBlock* other) const {
-    return this->GetDescription() <= other->GetDescription();
-}
-
-AllocatedMemoryBlock::operator PLH::MemoryBlock() const {
-    return this->GetDescription();
-}
-
-std::ostream& operator<<(std::ostream& os, const PLH::AllocatedMemoryBlock& obj) {
-    os << std::hex << "{Parent:" << (uint64_t)obj.GetParentBlock().get() << std::dec << obj.GetDescription() << "}";
-    return os;
-}
 }
 #endif

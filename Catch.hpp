@@ -2152,7 +2152,7 @@ namespace Catch {
 // In the event of a failure works out if the debugger needs to be invoked
 // and/or an exception thrown and takes appropriate action.
 // This needs to be done as a macro so the debugger will stop in the user
-// source code rather than in Catch library code
+// sources code rather than in Catch library code
 #define INTERNAL_CATCH_REACT( resultBuilder ) \
     if( resultBuilder.shouldDebugBreak() ) CATCH_BREAK_INTO_DEBUGGER(); \
     resultBuilder.react();
