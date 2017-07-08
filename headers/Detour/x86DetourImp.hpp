@@ -23,6 +23,9 @@ public:
 
     PLH::Mode GetArchType() const;
 
+    uint8_t minimumPrologueLength() const;
+
+    uint8_t preferedPrologueLength() const;
 private:
 
 };

@@ -101,11 +101,11 @@ std::vector<uint8_t> x86ASM = {
 
 TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembler]") {
     PLH::CapstoneDisassembler disasm(PLH::Mode::x86);
-    auto                      Instructions   = disasm.Disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-                                                                  (uint64_t)&x86ASM.front() + x86ASM.size());
-
+    auto                      Instructions = disasm.Disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+                                                                (uint64_t)&x86ASM.front() + x86ASM.size());
     REQUIRE(Instructions.size() == 8);
-    const uint8_t             CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
+
+    const uint8_t CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
     const char* CorrectMnemonic[] = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp"};
 
     SECTION("Check disassembler integrity") {

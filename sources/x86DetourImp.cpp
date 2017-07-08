@@ -14,3 +14,11 @@ PLH::HookType PLH::x86DetourImp::GetType() const {
 PLH::Mode PLH::x86DetourImp::GetArchType() const {
     return PLH::Mode::x86;
 }
+
+uint8_t PLH::x86DetourImp::preferedPrologueLength() const {
+    return 5; //e9 jump size
+}
+
+uint8_t PLH::x86DetourImp::minimumPrologueLength() const {
+    return 5;
+}

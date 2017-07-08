@@ -9,7 +9,9 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <iostream>
+#include <iostream> //ostream operator
+#include <iomanip> //setw
+
 namespace PLH {
 class Instruction
 {
@@ -150,5 +152,17 @@ private:
     std::string          m_Mnemonic; //If you don't know what these two are then gtfo of this source code :)
     std::string          m_OpStr;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
+    std::stringstream byteStream;
+    for(std::size_t i = 0; i < obj.Size(); i++)
+        byteStream << std::hex << std::setfill('0') << std::setw(2) << (unsigned)obj.GetBytes()[i] << " ";
+
+    os << std::hex << obj.GetAddress() << " [" << obj.Size() << "]: ";
+    os << std::setfill(' ') << std::setw(20) << std::left << byteStream.str();
+    os << obj.GetFullName() << std::dec << std::endl;
+    return os;
+}
+
 }
 #endif //POLYHOOK_2_0_INSTRUCTION_HPP

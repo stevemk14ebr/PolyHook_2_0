@@ -16,6 +16,7 @@
 #include <iostream> //for debug printing
 
 namespace PLH {
+
 class CapstoneDisassembler : public ADisassembler
 {
 public:
@@ -36,14 +37,15 @@ private:
     /**When new instructions are inserted we have to re-itterate the list and add
      * a child to an instruction if the new instruction points to it**/
     void ModifyParentIndices(std::vector<std::shared_ptr<PLH::Instruction>>& Haystack,
-                                        std::shared_ptr<PLH::Instruction>& NewInstruction) const {
+                             std::shared_ptr<PLH::Instruction>& NewInstruction) const {
+
         for (int i = 0; i < Haystack.size(); i++) {
             //Check for things that the new instruction may point too
             if (Haystack.at(i)->GetAddress() == NewInstruction->GetDestination())
                 Haystack.at(i)->AddChild(NewInstruction);
 
             //Check for things that may point to the new instruction
-            if(Haystack.at(i)->GetDestination() == NewInstruction->GetAddress())
+            if (Haystack.at(i)->GetDestination() == NewInstruction->GetAddress())
                 NewInstruction->AddChild(Haystack.at(i));
         }
     }
@@ -72,7 +74,10 @@ private:
      * by byte out of the instruction, if that value is less than what capstone told us is the destination then we know that it is relative and we have to add the base.
      * Otherwise if our retreived displacement is equal to the given destination then it is a true absolute jmp/call (only possible in x64),
      * if it's greater then something broke.*/
-    void CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size, const int64_t immDestination) const;
+    void CopyAndSExtendDisp(PLH::Instruction* Inst,
+                            const uint8_t Offset,
+                            const uint8_t Size,
+                            const int64_t immDestination) const;
 
     csh m_CapHandle;
 };

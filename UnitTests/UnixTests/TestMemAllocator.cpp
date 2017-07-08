@@ -69,18 +69,19 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
     }
 
     SECTION("Test implementation can allocate in range") {
-        std::cout
-                << "fnAddress: "
-                << std::hex
-                << fnAddress
-                << " Acceptable Range:"
-                << MinAddress
-                << "-"
-                << MaxAddress
-                << std::endl;
+//        std::cout
+//                << "fnAddress: "
+//                << std::hex
+//                << fnAddress
+//                << " Acceptable Range:"
+//                << MinAddress
+//                << "-"
+//                << MaxAddress
+//                << std::endl;
 
         int PageSize = getpagesize();
-        std::cout << std::dec << "PageSize: " << PageSize << std::endl;
+
+        //std::cout << std::dec << "PageSize: " << PageSize << std::endl;
 
         //Try to allocate a few pages
         for (int i = 0; i < 100; i++) {
@@ -88,7 +89,8 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
             REQUIRE(AllocBlock.isOk());
             std::shared_ptr<uint8_t> Buffer = AllocBlock.unwrap().GetParentBlock();
             REQUIRE(Buffer != nullptr);
-            std::cout << std::hex << "Allocated At: " << (uint64_t)Buffer.get() << std::endl;
+
+            //std::cout << std::hex << "Allocated At: " << (uint64_t)Buffer.get() << std::endl;
 
             //Compute some statistics about how far away allocation was
             std::intmax_t AllocDelta = imaxabs((std::intmax_t)Buffer.get() - fnAddress);
@@ -97,8 +99,9 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
                                         9);                                   //How far was our trampoline allocated from the target, in GB
             double DeltaPercentage = DeltaInGB *
                                      100.0;                                //Allowed range is +-2GB, see in percentage how close to tolerance we were
-            std::cout << "Delta:[" << DeltaInGB << " GB] Percent Tolerance Used[" << DeltaPercentage << " % out of 2GB]"
-                      << std::endl;
+
+//            std::cout << "Delta:[" << DeltaInGB << " GB] Percent Tolerance Used[" << DeltaPercentage << " % out of 2GB]"
+//                      << std::endl;
 
             REQUIRE(DeltaInGB <= 2);
         }
@@ -126,15 +129,15 @@ TEST_CASE("Test AllocatedMemoryBlock", "[AllocatedMemoryBlock]") {
 }
 
 TEST_CASE("Test range allocator STL wrapper", "[RangeMemorySTLAllocator]") {
-    std::cout
-            << "fnAddress: "
-            << std::hex
-            << fnAddress
-            << " Acceptable Range:"
-            << MinAddress
-            << "-"
-            << MaxAddress
-            << std::endl;
+//    std::cout
+//            << "fnAddress: "
+//            << std::hex
+//            << fnAddress
+//            << " Acceptable Range:"
+//            << MinAddress
+//            << "-"
+//            << MaxAddress
+//            << std::endl;
 
     bool Exception = false;
     try {

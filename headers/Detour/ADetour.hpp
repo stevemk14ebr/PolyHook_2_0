@@ -33,8 +33,8 @@ public:
     virtual PLH::HookType GetType() override;
 
 private:
-    uint64_t   hookAddress;
-    uint64_t   callbackAddress;
+    uint64_t   fnAddress;
+    uint64_t   fnCallback;
     bool       hooked;
     ArchBuffer detourBuffer;
 
@@ -44,27 +44,45 @@ private:
 
 
 template<typename Architecture, typename Disassembler>
-Detour<Architecture, Disassembler>::Detour(const uint64_t fnAddress, const uint64_t fnCallback) :
+Detour<Architecture, Disassembler>::Detour(const uint64_t hookAddress, const uint64_t callbackAddress) :
         archImpl(), disassembler(archImpl.GetArchType()) {
-    hookAddress     = fnAddress;
-    callbackAddress = fnCallback;
+    fnAddress = hookAddress;
+    fnCallback = callbackAddress;
     hooked          = false;
 }
 
 template<typename Architecture, typename Disassembler>
-Detour<Architecture, Disassembler>::Detour(const uint8_t* fnAddress, const uint8_t* fnCallback) :
+Detour<Architecture, Disassembler>::Detour(const uint8_t* hookAddress, const uint8_t* callbackAddress) :
         archImpl(), disassembler(archImpl.GetArchType()) {
-    hookAddress     = (uint64_t)fnAddress;
-    callbackAddress = (uint64_t)fnCallback;
+
+    fnAddress = (uint64_t)hookAddress;
+    fnCallback = (uint64_t)callbackAddress;
     hooked          = false;
 }
 
 template<typename Architecture, typename Disassembler>
 bool Detour<Architecture, Disassembler>::Hook() {
-    auto bufMaybe = archImpl.AllocateMemory(callbackAddress);
+
+    //Allocate some memory near the callback for the trampoline
+    auto bufMaybe = archImpl.AllocateMemory(fnCallback);
     if(!bufMaybe)
         return false;
     ArchBuffer buf = std::move(bufMaybe).unwrap();
+
+    std::vector<std::shared_ptr<PLH::Instruction>> instructions = disassembler.Disassemble(fnAddress, fnAddress, fnAddress + 100);
+    if(instructions.size() == 0)
+        return false;
+
+    std::size_t prologueLength = 0;
+    for(auto inst : instructions)
+    {
+        if(prologueLength >= archImpl.minimumPrologueLength())
+            break;
+
+        prologueLength += inst->Size();
+        
+        //TODO: detect end of function
+    }
 
     return true;
 }

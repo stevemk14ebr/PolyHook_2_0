@@ -25,6 +25,10 @@ public:
     PLH::HookType GetType() const;
 
     PLH::Mode GetArchType() const;
+
+    uint8_t minimumPrologueLength() const;
+
+    uint8_t preferedPrologueLength() const;
 };
 }
 #endif //POLYHOOK_2_X64DETOURIMPL_HPP

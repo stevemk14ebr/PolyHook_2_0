@@ -19,3 +19,11 @@ PLH::HookType PLH::x64DetourImp::GetType() const {
 PLH::Mode PLH::x64DetourImp::GetArchType() const {
     return PLH::Mode::x64;
 }
+
+uint8_t PLH::x64DetourImp::preferedPrologueLength() const {
+    return 16;
+}
+
+uint8_t PLH::x64DetourImp::minimumPrologueLength() const {
+    return 6;
+}
