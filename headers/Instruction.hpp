@@ -56,6 +56,11 @@ public:
         return m_Address;
     }
 
+    void SetAddress(const uint64_t address)
+    {
+        m_Address = address;
+    }
+
     Displacement GetDisplacement() const {
         return m_Displacement;
     }
@@ -121,6 +126,8 @@ public:
          * copy of the bytes**/
         memcpy(&m_Bytes[GetDisplacementOffset()], &m_Displacement.Absolute, Size() - GetDisplacementOffset());
     }
+
+
 
 protected:
     std::vector<std::shared_ptr<Instruction>> m_Children;

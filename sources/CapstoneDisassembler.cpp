@@ -97,7 +97,7 @@ void PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const
 
     Inst->SetDisplacementOffset(Offset);
 
-    /*When the retrieved displacement is < immDestination we know that the base address is included
+    /* When the retrieved displacement is < immDestination we know that the base address is included
      * in the destinations calculation. By definition this means it is relative. Otherwise it is absolute*/
     if(displacement < immDestination) {
         if(immDestination != std::numeric_limits<int64_t>::max())
@@ -107,4 +107,25 @@ void PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const
         assert(((uint64_t)displacement) == ((uint64_t)immDestination));
         Inst->SetAbsoluteDisplacement((uint64_t)displacement);
     }
+}
+
+bool PLH::CapstoneDisassembler::isConditionalJump(const PLH::Instruction& instruction) const {
+    //http://unixwiz.net/techtips/x86-jumps.html
+    if (instruction.Size() < 1)
+        return false;
+
+    std::vector<uint8_t> bytes = instruction.GetBytes();
+    if (bytes[0] == 0x0F && instruction.Size() > 1)
+    {
+        if (bytes[1] >= 0x80 && bytes[1] <= 0x8F)
+            return true;
+    }
+
+    if (bytes[0] >= 0x70 && bytes[0] <= 0x7F)
+        return true;
+
+    if (bytes[0] == 0xE3)
+        return true;
+
+    return false;
 }

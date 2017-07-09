@@ -6,9 +6,10 @@
 #define POLYHOOK_2_X86DETOUR_HPP
 
 #include "headers/Maybe.hpp"
+#include "headers/IHook.hpp"
 
+#include <memory>
 #include <vector>
-#include <headers/IHook.hpp>
 
 namespace PLH {
 
@@ -26,6 +27,10 @@ public:
     uint8_t minimumPrologueLength() const;
 
     uint8_t preferedPrologueLength() const;
+
+    std::shared_ptr<PLH::Instruction> makeMinimumSizeJump(const uint64_t address, const uint64_t destination) const;
+
+    std::shared_ptr<PLH::Instruction> makePreferedSizeJump(const uint64_t address, const uint64_t destination) const;
 private:
 
 };

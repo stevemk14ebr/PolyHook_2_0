@@ -33,12 +33,20 @@ public:
 
     virtual void WriteEncoding(const PLH::Instruction& instruction) = 0;
 
-    typedef PLH::EventDispatcher<void(const PLH::Message&)> tErrorHandler;
+    virtual bool isConditionalJump(const PLH::Instruction& inst) const = 0;
 
+    template<typename T>
+    static T CalculateRelativeDisplacement(uint64_t From,uint64_t To, uint8_t InsSize)
+    {
+        if (To < From)
+            return 0 - (From - To) - InsSize;
+        return To - (From + InsSize);
+    }
+
+    typedef PLH::EventDispatcher<void(const PLH::Message&)> tErrorHandler;
     virtual tErrorHandler& OnError() {
         return m_ErrorCallback;
     }
-
 protected:
     Mode          m_Mode;
     tErrorHandler m_ErrorCallback;

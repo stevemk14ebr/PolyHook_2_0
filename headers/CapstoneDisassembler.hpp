@@ -33,6 +33,7 @@ public:
 
     virtual void WriteEncoding(const PLH::Instruction& instruction) override;
 
+    virtual bool isConditionalJump(const PLH::Instruction& instruction) const override ;
 private:
     /**When new instructions are inserted we have to re-itterate the list and add
      * a child to an instruction if the new instruction points to it**/

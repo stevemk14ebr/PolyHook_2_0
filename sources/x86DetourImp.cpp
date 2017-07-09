@@ -16,9 +16,29 @@ PLH::Mode PLH::x86DetourImp::GetArchType() const {
 }
 
 uint8_t PLH::x86DetourImp::preferedPrologueLength() const {
-    return 5; //e9 jump size
+    return minimumPrologueLength();
 }
 
 uint8_t PLH::x86DetourImp::minimumPrologueLength() const {
     return 5;
+}
+
+std::shared_ptr<PLH::Instruction> PLH::x86DetourImp::makeMinimumSizeJump(const uint64_t address,
+                                                                         const uint64_t destination) const {
+    PLH::Instruction::Displacement disp;
+    disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(address, destination, 5);
+
+    std::vector<uint8_t> bytes(5);
+    bytes[0] = 0xE9;
+    memcpy(&bytes[1], &disp.Relative, 4);
+
+    std::stringstream ss;
+    ss << std::hex << destination;
+
+    return std::make_shared<PLH::Instruction>(address, disp, 1, true, bytes, "jmp", ss.str());
+}
+
+std::shared_ptr<PLH::Instruction> PLH::x86DetourImp::makePreferedSizeJump(const uint64_t address,
+                                                                          const uint64_t destination) const {
+    return makeMinimumSizeJump(address, destination);
 }
