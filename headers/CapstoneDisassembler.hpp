@@ -33,14 +33,15 @@ public:
 
     virtual void WriteEncoding(const PLH::Instruction& instruction) override;
 
-    virtual bool isConditionalJump(const PLH::Instruction& instruction) const override ;
+    virtual bool isConditionalJump(const PLH::Instruction& instruction) const override;
+
 private:
     /**When new instructions are inserted we have to re-itterate the list and add
      * a child to an instruction if the new instruction points to it**/
     void ModifyParentIndices(std::vector<std::shared_ptr<PLH::Instruction>>& Haystack,
                              std::shared_ptr<PLH::Instruction>& NewInstruction) const {
 
-        for (int i = 0; i < Haystack.size(); i++) {
+        for (uint8_t i = 0; i < Haystack.size(); i++) {
             //Check for things that the new instruction may point too
             if (Haystack.at(i)->GetAddress() == NewInstruction->GetDestination())
                 Haystack.at(i)->AddChild(NewInstruction);
@@ -59,8 +60,9 @@ private:
     }
 
     bool HasGroup(const cs_insn* Inst, const x86_insn_group grp) const {
-        uint8_t  GrpSize = Inst->detail->groups_count;
-        for (int i       = 0; i < GrpSize; i++) {
+        uint8_t GrpSize = Inst->detail->groups_count;
+
+        for (int i = 0; i < GrpSize; i++) {
             if (Inst->detail->groups[i] == grp)
                 return true;
         }

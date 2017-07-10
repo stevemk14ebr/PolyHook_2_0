@@ -17,6 +17,7 @@ class x86DetourImp
 {
 public:
     typedef std::vector<uint8_t> DetourBuffer;
+    typedef std::vector<std::shared_ptr<PLH::Instruction>>      InstructionVector;
 
     PLH::Maybe<DetourBuffer> AllocateMemory(const uint64_t Hint);
 
@@ -26,11 +27,11 @@ public:
 
     uint8_t minimumPrologueLength() const;
 
-    uint8_t preferedPrologueLength() const;
+    uint8_t preferredPrologueLength() const;
 
-    std::shared_ptr<PLH::Instruction> makeMinimumSizeJump(const uint64_t address, const uint64_t destination) const;
+    InstructionVector makeMinimumJump(const uint64_t address, const uint64_t destination) const;
 
-    std::shared_ptr<PLH::Instruction> makePreferedSizeJump(const uint64_t address, const uint64_t destination) const;
+    InstructionVector makePreferredJump(const uint64_t address, const uint64_t destination) const;
 private:
 
 };

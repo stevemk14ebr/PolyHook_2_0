@@ -33,15 +33,23 @@ public:
 
     virtual PLH::HookType GetType() override;
 
+    template<typename T>
+    T getOriginal()
+    {
+        return &trampoline[0];
+    }
 private:
     typedef std::vector<std::shared_ptr<PLH::Instruction>> InstructionVector;
 
     /**Walks the given prologue instructions and checks if the length is >= lengthWanted. If the prologue
      * is of the needed length it returns a vector of instruction that includes all instruction from the start up to
-     * and including the last instruction giving the needed length. **/
-    PLH::Maybe<InstructionVector> calculatePrologueLength(const InstructionVector& functionInsts, const uint8_t lengthWanted);
+     * and including the last instruction giving the needed length. The lengthWanted parameter is set to the
+     * size (in bytes) of the returned InstructionVector, this vector's size is the smallest prologue length that
+     * is >= lengthWanted and doesn't split any instructions**/
+    PLH::Maybe<InstructionVector>
+    calculatePrologueLength(const InstructionVector& functionInsts, uint8_t& lengthWanted);
 
-    void addJumpTableEntry(ArchBuffer& trampoline,PLH::Instruction& instruction);
+    void addJumpTableEntry(ArchBuffer& trampoline, PLH::Instruction& instruction);
 
     uint64_t   fnAddress;
     uint64_t   fnCallback;
@@ -56,18 +64,18 @@ private:
 template<typename Architecture, typename Disassembler>
 Detour<Architecture, Disassembler>::Detour(const uint64_t hookAddress, const uint64_t callbackAddress) :
         archImpl(), disassembler(archImpl.GetArchType()) {
-    fnAddress = hookAddress;
+    fnAddress  = hookAddress;
     fnCallback = callbackAddress;
-    hooked          = false;
+    hooked     = false;
 }
 
 template<typename Architecture, typename Disassembler>
 Detour<Architecture, Disassembler>::Detour(const uint8_t* hookAddress, const uint8_t* callbackAddress) :
         archImpl(), disassembler(archImpl.GetArchType()) {
 
-    fnAddress = (uint64_t)hookAddress;
+    fnAddress  = (uint64_t)hookAddress;
     fnCallback = (uint64_t)callbackAddress;
-    hooked          = false;
+    hooked     = false;
 }
 
 template<typename Architecture, typename Disassembler>
@@ -75,74 +83,160 @@ bool Detour<Architecture, Disassembler>::Hook() {
 
     // Allocate some memory near the callback for the trampoline
     auto bufMaybe = archImpl.AllocateMemory(fnCallback);
-    if(!bufMaybe)
+    if (!bufMaybe)
         return false;
     trampoline = std::move(bufMaybe).unwrap();
 
     /* Disassemble the prologue and find the instructions that will be overwritten by our jump.
      * Also simultaneously check that the function prologue is big enough for our jump*/
     InstructionVector instructions = disassembler.Disassemble(fnAddress, fnAddress, fnAddress + 100);
-    if(instructions.size() == 0)
+    if (instructions.size() == 0)
         return false;
 
     // Certain jump types are better than others, see if we have room for the better one, otherwise fallback
-    auto maybeInstructionsToMove = calculatePrologueLength(instructions, archImpl.preferedPrologueLength());
-    if(!maybeInstructionsToMove)
-        maybeInstructionsToMove = calculatePrologueLength(instructions, archImpl.minimumPrologueLength());
+    bool    doPreferredJmp = true;
+    uint8_t jumpLength     = archImpl.preferredPrologueLength();
+    uint8_t prologueLength = jumpLength;
 
-    if(!maybeInstructionsToMove)
+    auto maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
+    if (!maybePrologueInstructions) {
+        jumpLength                = archImpl.minimumPrologueLength();
+        prologueLength            = jumpLength;
+        maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
+        doPreferredJmp            = false;
+    }
+
+    if (!maybePrologueInstructions)
         return false;
+    InstructionVector prologueInstructions = std::move(maybePrologueInstructions).unwrap();
+
+    // Count # of entries that will be in the jump table
+    InstructionVector conditionalJumpsToFix;
+    for (auto         inst : prologueInstructions) {
+        if (disassembler.isConditionalJump(*inst))
+            conditionalJumpsToFix.push_back(inst);
+    }
+
+    /* reserve space for relocated prologue + jmp to fnAddress.Body + N jump table entries.
+     * DO NOT remove this reservation, without it the underlying vector could relocate the
+     * trampoline without letting us know on a push_back or insert, and all our precious
+     * fixups are out the window.*/
+    trampoline.reserve(prologueLength +
+                       jumpLength +
+                       (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength()));
 
     /* Copy instructions in the prologue to the trampoline. Also fixup the various types of
-     instructions that need to be fixed (RIP/EIP relative insts + cond jumps) */
-    InstructionVector conditionalJumpsToFix;
-    InstructionVector instructionsToMove = std::move(maybeInstructionsToMove).unwrap();
-
+       instructions that need to be fixed (RIP/EIP relative), excluding conditional jumps */
     std::int64_t trampolineDelta = ((uint64_t)&trampoline[0]) - fnAddress;
-    for(auto inst : instructionsToMove)
-    {
+
+    for (auto inst : prologueInstructions) {
         inst->SetAddress(inst->GetAddress() + trampolineDelta);
 
-        /* Conditional jumps are pointed to the jump table. We have to
-         * delay this however because we don't know how long the trampoline
-         * will be, and the jump table is inserted at the end. Rather than
-         * over-estimate space and waste trampoline memory space in the long term,
-         * we store these instructions in a vector and waste memory in the short term.*/
-        if(disassembler.isConditionalJump(*inst)) {
-            conditionalJumpsToFix.push_back(inst);
-        }else{
-            if(inst->HasDisplacement() && inst->IsDisplacementRelative())
-                inst->SetRelativeDisplacement(inst->GetDisplacement().Relative + trampolineDelta);
-        }
+        if (inst->HasDisplacement() && inst->IsDisplacementRelative() && !disassembler.isConditionalJump(*inst))
+            inst->SetRelativeDisplacement(inst->GetDisplacement().Relative + trampolineDelta);
+
         // Copy instruction into the trampoline
         trampoline.insert(trampoline.end(), inst->GetBytes().begin(), inst->GetBytes().end());
     }
 
+    // Insert the jmp to fnAddress.Body
+    InstructionVector bodyJump = archImpl.makePreferredJump((uint64_t)&trampoline.front() + trampoline.size(), fnAddress + jumpLength);
+    for(auto inst : bodyJump)
+        trampoline.insert(trampoline.end(), inst->GetBytes().begin(), inst->GetBytes().end());
 
+    // Build the jump table
+    for(auto inst : conditionalJumpsToFix)
+    {
+        uint64_t intermediateJumpLoc = (uint64_t)&trampoline.front() + trampoline.size();
 
+        // Reset instructions address to it's original so we can find where it original jumped too
+        inst->SetAddress(inst->GetAddress() - trampolineDelta);
+        InstructionVector intermediateJump = archImpl.makePreferredJump(intermediateJumpLoc,
+                                                                        inst->GetDestination());
+        inst->SetAddress(inst->GetAddress() + trampolineDelta);
+
+        PLH::Instruction::Displacement disp = {0};
+        disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(inst->GetAddress(), intermediateJumpLoc, inst->Size());
+        inst->SetRelativeDisplacement(disp.Relative);
+
+        disassembler.WriteEncoding(*inst);
+    }
+    
+    //TODO: this is incomplete and incorrect, works for testing tho
+    if(mprotect(PLH::AlignDownwards((uint8_t*)fnAddress, getpagesize()), jumpLength, PROT_READ | PROT_WRITE | PROT_EXEC) != 0)
+        std::cout << strerror(errno);
+
+    InstructionVector detourJump;
+    if (doPreferredJmp) {
+        detourJump = archImpl.makePreferredJump(fnAddress, fnCallback);
+
+        for (auto inst : detourJump)
+            disassembler.WriteEncoding(*inst);
+    } else {
+        //TODO: implement
+    }
     return true;
+
+    /** Before Hook:                                                After hook:
+     *
+     * --------fnAddress--------                                    --------fnAddress--------
+     * |    prologue           |                                   |    jmp fnCallback      |
+     * |    ...body...         |      ----> Converted into ---->   |    ...body...          |
+     * |    ret                |                                   |    ret                 |
+     * -------------------------                                   --------------------------
+     *
+     *                               Created during hooking:
+     *                              --------Trampoline--------
+     *                              |     prologue            | Executes fnAddress's prologue (we overwrote it with jmp)
+     *                              |     jmp fnAddress.body  | Jmp back to first address after the overwritten prologue
+     *                              |  ...jump table...       | Long jmp table that short jmps in prologue point to
+     *                              --------------------------
+     *
+     *
+     *                      Example jmp table (with an example prologue):
+     *
+     *        Prologue before fix:          Prologue after fix:
+     *        ------prologue-----           ------prologue----          ----jmp table----
+     *        push ebp                      push ebp                    jump_table.Entry1: long jmp original je address + 0x20
+     *        mov ebp, esp                  mov ebp, esp
+     *        cmp eax, 1                    cmp eax, 1
+     *        je 0x20                       je jump_table.Entry1
+     *
+     *        This jump table is needed because the original je instruction's displacement has a max vale of 0x80. It's
+     *        extremely likely that our Trampoline was not placed +-0x80 bytes away from fnAddress. Therefore we have
+     *        to add an intermediate long jmp so that the moved je will still jump to where it originally pointed. To
+     *        do this we insert a jump table at the end of the trampoline, there's N entrys where conditional jmp N points
+     *        to jump_table.EntryN.
+     *
+     *
+     *                          User Implements callback as C++ code
+     *                              --------fnCallback--------
+     *                              | ...user defined code... |
+     *                              |   return Trampoline     |
+     *                              |                         |
+     *                              --------------------------
+     * **/
 }
 
 template<typename Architecture, typename Disassembler>
 PLH::Maybe<typename PLH::Detour<Architecture, Disassembler>::InstructionVector>
-    Detour<Architecture, Disassembler>::calculatePrologueLength(const InstructionVector& functionInsts,
-                                                                const uint8_t lengthWanted) {
-    std::size_t prologueLength = 0;
+Detour<Architecture, Disassembler>::calculatePrologueLength(const InstructionVector& functionInsts,
+                                                            uint8_t& lengthWanted) {
+    std::size_t                                    prologueLength = 0;
     std::vector<std::shared_ptr<PLH::Instruction>> instructionsInRange;
-    for(auto inst : functionInsts)
-    {
-        if(prologueLength >= lengthWanted)
+    for (auto                                      inst : functionInsts) {
+        if (prologueLength >= lengthWanted)
             break;
 
         //TODO: detect end of function better (will currently fail on small functions)
-        if(inst->GetMnemonic() == "ret")
+        if (inst->GetMnemonic() == "ret")
             break;
 
         prologueLength += inst->Size();
         instructionsInRange.push_back(inst);
     }
 
-    if(prologueLength >= lengthWanted)
+    if (prologueLength >= lengthWanted)
         return std::move(instructionsInRange);
     function_fail("Function too small, function is not of length >= " + std::to_string(lengthWanted));
 }
