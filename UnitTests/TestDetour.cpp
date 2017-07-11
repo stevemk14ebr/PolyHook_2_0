@@ -22,5 +22,5 @@ TEST_CASE("Testing x86 detours", "[ADetour]")
 
     REQUIRE(detour.Hook() == true);
 
-   hookMe();
+    hookMe();
 }

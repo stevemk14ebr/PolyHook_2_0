@@ -66,6 +66,24 @@ inline std::string ProtFlagToString(PLH::ProtFlag flags) {
     return s;
 }
 
+// TODO: add if-def for windows
+#include <sys/mman.h>
+inline int TranslateProtection(const PLH::ProtFlag flags) {
+    int NativeFlag = 0;
+    if (flags & PLH::ProtFlag::X)
+        NativeFlag |= PROT_EXEC;
+
+    if (flags & PLH::ProtFlag::R)
+        NativeFlag |= PROT_READ;
+
+    if (flags & PLH::ProtFlag::W)
+        NativeFlag |= PROT_WRITE;
+
+    if (flags & PLH::ProtFlag::NONE)
+        NativeFlag |= PROT_NONE;
+    return NativeFlag;
+}
+
 enum class Mode
 {
     x86,

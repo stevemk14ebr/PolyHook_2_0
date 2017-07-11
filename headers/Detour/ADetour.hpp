@@ -8,6 +8,8 @@
 #include "headers/CapstoneDisassembler.hpp"
 #include "headers/Detour/x64DetourImp.hpp"
 #include "headers/Detour/x86DetourImp.hpp"
+#include "headers/MemoryAllocation/MemoryProtector.hpp"
+#include "headers/Finally.hpp"
 #include "headers/Maybe.hpp"
 
 /**All of these methods must be transactional. That
@@ -161,10 +163,13 @@ bool Detour<Architecture, Disassembler>::Hook() {
 
         disassembler.WriteEncoding(*inst);
     }
-    
+
     //TODO: this is incomplete and incorrect, works for testing tho
-    if(mprotect(PLH::AlignDownwards((uint8_t*)fnAddress, getpagesize()), jumpLength, PROT_READ | PROT_WRITE | PROT_EXEC) != 0)
-        std::cout << strerror(errno);
+    PLH::MemoryProtector<PLH::UnixMemProtImp> memoryProtector((uint64_t)PLH::AlignDownwards((uint8_t*)fnAddress, getpagesize()), getpagesize(), PLH::ProtFlag::R | PLH::ProtFlag::W | PLH::ProtFlag::X);
+    if(!memoryProtector.origProtection()) {
+        SendError(memoryProtector.origProtection().unwrapError());
+        return false;
+    }
 
     InstructionVector detourJump;
     if (doPreferredJmp) {
@@ -228,7 +233,7 @@ Detour<Architecture, Disassembler>::calculatePrologueLength(const InstructionVec
         if (prologueLength >= lengthWanted)
             break;
 
-        //TODO: detect end of function better (will currently fail on small functions)
+        //TODO: detect end of function better
         if (inst->GetMnemonic() == "ret")
             break;
 

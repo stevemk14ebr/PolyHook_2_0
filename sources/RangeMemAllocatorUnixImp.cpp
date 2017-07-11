@@ -3,22 +3,6 @@
 //
 #include "headers/MemoryAllocation/UnixImpl/RangeMemAllocatorUnixImp.hpp"
 
-int PLH::RangeMemAllocatorUnixImp::TranslateProtection(const PLH::ProtFlag flags) const {
-    int NativeFlag = 0;
-    if (flags & PLH::ProtFlag::X)
-        NativeFlag |= PROT_EXEC;
-
-    if (flags & PLH::ProtFlag::R)
-        NativeFlag |= PROT_READ;
-
-    if (flags & PLH::ProtFlag::W)
-        NativeFlag |= PROT_WRITE;
-
-    if (flags & PLH::ProtFlag::NONE)
-        NativeFlag |= PROT_NONE;
-    return NativeFlag;
-}
-
 /*******************************************************************************************************
 ** On Unix virtual address granularity is 4KB. When using MAP_FIXED flag allocation must be page aligned,
 ** so it is best to call with a size of 4KB to not waste memory.

@@ -75,6 +75,6 @@ private:
     boost::variant<T, ExplicitMaybeError<EType>> content;
 };
 }
-#define function_fail(error) return ExplicitMaybeError<std::string>(error);
+#define function_fail(error) return PLH::ExplicitMaybeError<std::string>(error);
 
 #endif //POLYHOOK_2_MONAD_HPP

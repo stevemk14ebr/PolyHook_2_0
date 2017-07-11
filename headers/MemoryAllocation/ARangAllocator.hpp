@@ -47,7 +47,7 @@ public:
     }
 
     int TranslateProtection(const ProtFlag flags) const {
-        return PlatformImp::TranslateProtection(flags);
+        return TranslateProtection(flags);
     }
 
     //MemoryBlock because it's not an allocated region 'we' allocated

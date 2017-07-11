@@ -49,10 +49,10 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
     PLH::ProtFlag N = PLH::ProtFlag::NONE;
 
     SECTION("Test Protection Flag bit OR-ing and translation") {
-        REQUIRE(allocator.TranslateProtection(X) == PROT_EXEC);
-        REQUIRE(allocator.TranslateProtection(W) == PROT_WRITE);
-        REQUIRE(allocator.TranslateProtection(R) == PROT_READ);
-        REQUIRE(allocator.TranslateProtection(N) == PROT_NONE);
+        REQUIRE(TranslateProtection(X) == PROT_EXEC);
+        REQUIRE(TranslateProtection(W) == PROT_WRITE);
+        REQUIRE(TranslateProtection(R) == PROT_READ);
+        REQUIRE(TranslateProtection(N) == PROT_NONE);
 
         //Test all combinations translate properly
         auto plhSets = PowerSet<PLH::ProtFlag>({R, W, X, N});
@@ -64,7 +64,7 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
                 plhFlag = plhFlag | plhSets[i][j];
                 lnxFlag = lnxFlag | lnxSets[i][j];
             }
-            REQUIRE(allocator.TranslateProtection(plhFlag) == lnxFlag);
+            REQUIRE(TranslateProtection(plhFlag) == lnxFlag);
         }
     }
 

@@ -60,35 +60,5 @@ static inline uint8_t* AlignDownwards(uint8_t* stack, uintptr_t align) {
     assert(addr <= (uintptr_t)stack);
     return (uint8_t*)addr;
 }
-
-//TO-DO: replace with c++17 optional when appropriately supported
-template<typename T>
-class Optional
-{
-public:
-    Optional(const T& val) {
-        m_HasVal = true;
-        m_Val    = val;
-    }
-
-    Optional() {
-        m_HasVal = false;
-    }
-
-    T get() const {
-        if (m_HasVal)
-            return m_Val;
-        throw ValueNotSetException();
-    }
-
-    operator bool() {
-        return m_HasVal;
-    }
-
-private:
-    bool m_HasVal;
-    T    m_Val;
-};
-
 }
 #endif //POLYHOOK_2_0_MISC_HPP

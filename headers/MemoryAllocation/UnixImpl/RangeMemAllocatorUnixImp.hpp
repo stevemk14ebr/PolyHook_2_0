@@ -30,8 +30,6 @@ namespace PLH {
 class RangeMemAllocatorUnixImp
 {
 public:
-    int TranslateProtection(const PLH::ProtFlag flags) const;
-
     PLH::Maybe<PLH::AllocatedMemoryBlock>
     AllocateMemory(const uint64_t MinAddress, const uint64_t MaxAddress,
                    const size_t Size, const PLH::ProtFlag Protections) const;
