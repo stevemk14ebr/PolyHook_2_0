@@ -7,6 +7,8 @@
 
 #include <boost/variant.hpp>
 
+#include <iostream>
+
 namespace PLH {
 /**An object that might contain a type T (the value), othewise
  * it will contain a type E (the error). This implementation
@@ -35,6 +37,11 @@ class Maybe
 {
 public:
     typedef std::string EType;
+
+    Maybe() : content(ExplicitMaybeError<EType>(""))
+    {
+
+    }
 
     Maybe(const ExplicitMaybeError<EType>& error) : content(error) {
 

@@ -17,29 +17,32 @@ template<typename Architecture>
 class MemoryProtector
 {
 public:
-    MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot) :
-            originalProtection(archImp.Protect(address, length, TranslateProtection(prot))) {
+    MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot) {
         m_Address = address;
         m_Length  = length;
+
+        m_origProtection = archImp.Protect(address, length, TranslateProtection(prot));
     }
 
-    PLH::Maybe<PLH::ProtFlag> origProtection() {
-        if (originalProtection)
-            return originalProtection.unwrap();
-        function_fail(originalProtection.unwrapError());
+    PLH::Maybe<PLH::ProtFlag> originalProt()
+    {
+        return m_origProtection;
     }
 
     ~MemoryProtector() {
-        if (originalProtection && originalProtection != PLH::ProtFlag::UNSET)
-            archImp.Protect(m_Address, m_Length, TranslateProtection(originalProtection.unwrap()));
+        if(!m_origProtection || m_origProtection.unwrap() == PLH::ProtFlag::UNSET)
+            return;
+
+        archImp.Protect(m_Address, m_Length, TranslateProtection(m_origProtection.unwrap()));
     }
 
 private:
     Architecture archImp;
 
-    PLH::Maybe<PLH::ProtFlag> originalProtection;
-    uint64_t                  m_Address;
-    uint64_t                  m_Length;
+    PLH::Maybe<PLH::ProtFlag> m_origProtection;
+
+    uint64_t m_Address;
+    uint64_t m_Length;
 };
 
 }

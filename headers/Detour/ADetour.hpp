@@ -127,10 +127,10 @@ bool Detour<Architecture, Disassembler>::Hook() {
                        jumpLength +
                        (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength()));
 
-    /* Copy instructions in the prologue to the trampoline. Also fixup the various types of
-       instructions that need to be fixed (RIP/EIP relative), excluding conditional jumps */
     std::int64_t trampolineDelta = ((uint64_t)&trampoline[0]) - fnAddress;
 
+    /* Copy instructions in the prologue to the trampoline. Also fixup the various types of
+       instructions that need to be fixed (RIP/EIP relative), excluding conditional jumps */
     for (auto inst : prologueInstructions) {
         inst->SetAddress(inst->GetAddress() + trampolineDelta);
 
@@ -153,24 +153,30 @@ bool Detour<Architecture, Disassembler>::Hook() {
 
         // Reset instructions address to it's original so we can find where it original jumped too
         inst->SetAddress(inst->GetAddress() - trampolineDelta);
-        InstructionVector intermediateJump = archImpl.makePreferredJump(intermediateJumpLoc,
+        InstructionVector intermediateJumpVec = archImpl.makePreferredJump(intermediateJumpLoc,
                                                                         inst->GetDestination());
         inst->SetAddress(inst->GetAddress() + trampolineDelta);
 
+        // Point the relative jmp to the long jump
         PLH::Instruction::Displacement disp = {0};
-        disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(inst->GetAddress(), intermediateJumpLoc, inst->Size());
+        disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(inst->GetAddress(),
+                                                                                   intermediateJumpLoc,
+                                                                                   inst->Size());
         inst->SetRelativeDisplacement(disp.Relative);
 
+        // Write the intermediate jump and the changed cond. jump
+        for(auto jmpInst : intermediateJumpVec)
+            disassembler.WriteEncoding(*jmpInst);
         disassembler.WriteEncoding(*inst);
     }
 
-    //TODO: this is incomplete and incorrect, works for testing tho
-    PLH::MemoryProtector<PLH::UnixMemProtImp> memoryProtector((uint64_t)PLH::AlignDownwards((uint8_t*)fnAddress, getpagesize()), getpagesize(), PLH::ProtFlag::R | PLH::ProtFlag::W | PLH::ProtFlag::X);
-    if(!memoryProtector.origProtection()) {
-        SendError(memoryProtector.origProtection().unwrapError());
+    // Make the fnAddress's memory page writeable
+    uint64_t fnAddressPage = (uint64_t)PLH::AlignDownwards((uint8_t*)fnAddress, getpagesize());
+    PLH::MemoryProtector<PLH::UnixMemProtImp> memoryProtector(fnAddressPage, getpagesize(), PLH::ProtFlag::R | PLH::ProtFlag::W | PLH::ProtFlag::X);
+    if(!memoryProtector.originalProt())
         return false;
-    }
 
+    // Overwrite the prologue with the jmp to the callback
     InstructionVector detourJump;
     if (doPreferredJmp) {
         detourJump = archImpl.makePreferredJump(fnAddress, fnCallback);
