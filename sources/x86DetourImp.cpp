@@ -3,8 +3,8 @@
 //
 #include "headers/Detour/x86DetourImp.hpp"
 
-PLH::Maybe<PLH::x86DetourImp::DetourBuffer> PLH::x86DetourImp::AllocateMemory(const uint64_t Hint) {
-    return DetourBuffer(); //any memory location will do for x86
+PLH::Maybe<std::unique_ptr<PLH::x86DetourImp::DetourBuffer>> PLH::x86DetourImp::AllocateMemory(const uint64_t Hint) {
+    return std::make_unique<DetourBuffer>(); //any memory location will do for x86
 }
 
 PLH::HookType PLH::x86DetourImp::GetType() const {
@@ -21,6 +21,19 @@ uint8_t PLH::x86DetourImp::preferredPrologueLength() const {
 
 uint8_t PLH::x86DetourImp::minimumPrologueLength() const {
     return 5;
+}
+
+PLH::JmpType PLH::x86DetourImp::minimumJumpType() const {
+    return PLH::JmpType::Absolute;
+}
+
+PLH::JmpType PLH::x86DetourImp::preferredJumpType() const {
+    return minimumJumpType();
+}
+
+void PLH::x86DetourImp::setIndirectHolder(const uint64_t holderAddress) {
+    //no-op for x86 since all jumps are absolute
+    assert(false); //infact you fucked up if it gets called
 }
 
 PLH::x86DetourImp::InstructionVector PLH::x86DetourImp::makeMinimumJump(const uint64_t address,

@@ -19,7 +19,7 @@ public:
     typedef std::vector<uint8_t> DetourBuffer;
     typedef std::vector<std::shared_ptr<PLH::Instruction>>      InstructionVector;
 
-    PLH::Maybe<DetourBuffer> AllocateMemory(const uint64_t Hint);
+    PLH::Maybe<std::unique_ptr<DetourBuffer>> AllocateMemory(const uint64_t Hint);
 
     PLH::HookType GetType() const;
 
@@ -28,6 +28,12 @@ public:
     uint8_t minimumPrologueLength() const;
 
     uint8_t preferredPrologueLength() const;
+
+    JmpType minimumJumpType() const;
+
+    JmpType preferredJumpType() const;
+
+    void setIndirectHolder(const uint64_t holderAddress);
 
     InstructionVector makeMinimumJump(const uint64_t address, const uint64_t destination) const;
 

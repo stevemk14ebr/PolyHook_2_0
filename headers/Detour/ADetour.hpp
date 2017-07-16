@@ -12,13 +12,19 @@
 #include "headers/Finally.hpp"
 #include "headers/Maybe.hpp"
 
-/**All of these methods must be transactional. That
+/**
+ * All of these methods must be transactional. That
  * is to say that if a function fails it will completely
  * restore any external and internal state to the same
  * it was when the function began.
  **/
+
 namespace PLH {
 
+/**
+ *  It is required that the Architectural implementation's preferredJump type be an absolute
+ *  jump, in order to simplify logic. The minimum jump type may be indirect
+ * **/
 template<typename Architecture, typename Disassembler = PLH::CapstoneDisassembler>
 class Detour : public PLH::IHook
 {
@@ -36,11 +42,14 @@ public:
     virtual PLH::HookType GetType() override;
 
     template<typename T>
-    T getOriginal()
-    {
+    T getOriginal() {
         return &trampoline[0];
     }
+
 private:
+    /*  These are shared_ptrs because the can point to each other. Internally PLH::Instruction's
+        store non-owning "child" pointers. If they lived on the stack the logic to do that would be
+        much more complicated.*/
     typedef std::vector<std::shared_ptr<PLH::Instruction>> InstructionVector;
 
     /**Walks the given prologue instructions and checks if the length is >= lengthWanted. If the prologue
@@ -56,7 +65,7 @@ private:
     uint64_t   fnAddress;
     uint64_t   fnCallback;
     bool       hooked;
-    ArchBuffer trampoline;
+    std::unique_ptr<ArchBuffer> trampoline; //so that we can delay instantiation
 
     Architecture archImpl;
     Disassembler disassembler;
@@ -97,15 +106,18 @@ bool Detour<Architecture, Disassembler>::Hook() {
 
     // Certain jump types are better than others, see if we have room for the better one, otherwise fallback
     bool    doPreferredJmp = true;
+    bool    jumpAbsolute   = archImpl.preferredJumpType() == PLH::JmpType::Absolute;
     uint8_t jumpLength     = archImpl.preferredPrologueLength();
     uint8_t prologueLength = jumpLength;
 
     auto maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
     if (!maybePrologueInstructions) {
-        jumpLength                = archImpl.minimumPrologueLength();
-        prologueLength            = jumpLength;
+        doPreferredJmp = false;
+        jumpAbsolute   = archImpl.minimumJumpType() == PLH::JmpType::Absolute;
+        jumpLength     = archImpl.minimumPrologueLength();
+        prologueLength = jumpLength;
+
         maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
-        doPreferredJmp            = false;
     }
 
     if (!maybePrologueInstructions)
@@ -114,22 +126,24 @@ bool Detour<Architecture, Disassembler>::Hook() {
 
     // Count # of entries that will be in the jump table
     InstructionVector conditionalJumpsToFix;
-    for (auto         inst : prologueInstructions) {
+    for (auto inst : prologueInstructions) {
         if (disassembler.isConditionalJump(*inst))
             conditionalJumpsToFix.push_back(inst);
     }
 
-    /* reserve space for relocated prologue + jmp to fnAddress.Body + N jump table entries.
+    /* reserve space for relocated prologue + jmp to fnAddress.Body + N jump table entries
+     * + optional indirect location if our jump type is an indirect style (!Absolute).
      * DO NOT remove this reservation, without it the underlying vector could relocate the
      * trampoline without letting us know on a push_back or insert, and all our precious
      * fixups are out the window.*/
-    trampoline.reserve(prologueLength +
+    trampoline->reserve(prologueLength +
                        jumpLength +
-                       (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength()));
+                       (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength())
+                       + jumpAbsolute ? 0 : 8);
 
-    std::int64_t trampolineDelta = ((uint64_t)&trampoline[0]) - fnAddress;
+    std::int64_t trampolineDelta = ((uint64_t)&trampoline.get()[0]) - fnAddress;
 
-    /* Copy instructions in the prologue to the trampoline. Also fixup the various types of
+    /* Copy (truly copy, original are untouched) instructions from the prologue to the trampoline. Also fixup the various types of
        instructions that need to be fixed (RIP/EIP relative), excluding conditional jumps */
     for (auto inst : prologueInstructions) {
         inst->SetAddress(inst->GetAddress() + trampolineDelta);
@@ -138,26 +152,26 @@ bool Detour<Architecture, Disassembler>::Hook() {
             inst->SetRelativeDisplacement(inst->GetDisplacement().Relative + trampolineDelta);
 
         // Copy instruction into the trampoline
-        trampoline.insert(trampoline.end(), inst->GetBytes().begin(), inst->GetBytes().end());
+        trampoline->insert(trampoline->end(), inst->GetBytes().begin(), inst->GetBytes().end());
     }
 
-    // Insert the jmp to fnAddress.Body
-    InstructionVector bodyJump = archImpl.makePreferredJump((uint64_t)&trampoline.front() + trampoline.size(), fnAddress + jumpLength);
-    for(auto inst : bodyJump)
-        trampoline.insert(trampoline.end(), inst->GetBytes().begin(), inst->GetBytes().end());
+    // Insert the jmp to fnAddress.Body from the trampoline
+    InstructionVector bodyJump = archImpl.makePreferredJump((uint64_t)&trampoline->front() + trampoline->size(),
+                                                            fnAddress + jumpLength);
+    for (auto         inst : bodyJump)
+        trampoline->insert(trampoline->end(), inst->GetBytes().begin(), inst->GetBytes().end());
 
     // Build the jump table
-    for(auto inst : conditionalJumpsToFix)
-    {
-        uint64_t intermediateJumpLoc = (uint64_t)&trampoline.front() + trampoline.size();
+    for (auto inst : conditionalJumpsToFix) {
+        uint64_t intermediateJumpLoc = (uint64_t)(&trampoline->front() + trampoline->size());
 
         // Reset instructions address to it's original so we can find where it original jumped too
         inst->SetAddress(inst->GetAddress() - trampolineDelta);
         InstructionVector intermediateJumpVec = archImpl.makePreferredJump(intermediateJumpLoc,
-                                                                        inst->GetDestination());
+                                                                           inst->GetDestination());
         inst->SetAddress(inst->GetAddress() + trampolineDelta);
 
-        // Point the relative jmp to the long jump
+        // Point the relative jmp to the intermediate long jump
         PLH::Instruction::Displacement disp = {0};
         disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(inst->GetAddress(),
                                                                                    intermediateJumpLoc,
@@ -165,35 +179,49 @@ bool Detour<Architecture, Disassembler>::Hook() {
         inst->SetRelativeDisplacement(disp.Relative);
 
         // Write the intermediate jump and the changed cond. jump
-        for(auto jmpInst : intermediateJumpVec)
+        for (auto jmpInst : intermediateJumpVec)
             disassembler.WriteEncoding(*jmpInst);
         disassembler.WriteEncoding(*inst);
     }
 
     // Make the fnAddress's memory page writeable
-    uint64_t fnAddressPage = (uint64_t)PLH::AlignDownwards((uint8_t*)fnAddress, getpagesize());
-    PLH::MemoryProtector<PLH::UnixMemProtImp> memoryProtector(fnAddressPage, getpagesize(), PLH::ProtFlag::R | PLH::ProtFlag::W | PLH::ProtFlag::X);
-    if(!memoryProtector.originalProt())
+    uint64_t                                  fnAddressPage = (uint64_t)PLH::AlignDownwards((uint8_t*)fnAddress,
+                                                                                            getpagesize());
+    PLH::MemoryProtector<PLH::UnixMemProtImp> memoryProtector(fnAddressPage,
+                                                              getpagesize(),
+                                                              PLH::ProtFlag::R | PLH::ProtFlag::W | PLH::ProtFlag::X);
+    if (!memoryProtector.originalProt())
         return false;
 
-    // Overwrite the prologue with the jmp to the callback
+    /* Overwrite the prologue with the jmp to the callback. We
+     * also check if the jmp type we want to write is absolute or
+     * indirect. If indirect the intermediate location is stored
+     * at the end of the trampoline (past jump table)*/
     InstructionVector detourJump;
     if (doPreferredJmp) {
         detourJump = archImpl.makePreferredJump(fnAddress, fnCallback);
-
-        for (auto inst : detourJump)
-            disassembler.WriteEncoding(*inst);
     } else {
-        //TODO: implement
+        if(jumpAbsolute) {
+            detourJump = archImpl.makeMinimumJump(fnAddress, fnCallback);
+        } else {
+            archImpl.setIndirectHolder((uint64_t)(&trampoline->front() + trampoline->size()));
+            detourJump = archImpl.makeMinimumJump(fnAddress, fnCallback);
+        }
     }
+
+    for (auto inst : detourJump)
+        disassembler.WriteEncoding(*inst);
+
+    // Nop the space between jmp and end of prologue
+    memset((void*)(fnAddress + jumpLength), 0x90, prologueLength - jumpLength);
     return true;
 
     /** Before Hook:                                                After hook:
      *
      * --------fnAddress--------                                    --------fnAddress--------
-     * |    prologue           |                                   |    jmp fnCallback      |
-     * |    ...body...         |      ----> Converted into ---->   |    ...body...          |
-     * |    ret                |                                   |    ret                 |
+     * |    prologue           |                                   |    jmp fnCallback      | <- this may be an indirect jmp
+     * |    ...body...         |      ----> Converted into ---->   |    ...body...          |  if it is, it reads the final
+     * |    ret                |                                   |    ret                 |  dest from end of trampoline (optional indirect loc)
      * -------------------------                                   --------------------------
      *
      *                               Created during hooking:
@@ -201,6 +229,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
      *                              |     prologue            | Executes fnAddress's prologue (we overwrote it with jmp)
      *                              |     jmp fnAddress.body  | Jmp back to first address after the overwritten prologue
      *                              |  ...jump table...       | Long jmp table that short jmps in prologue point to
+     *                              |  optional indirect loc  | may or may not exist depending on jmp type we used
      *                              --------------------------
      *
      *
@@ -235,7 +264,8 @@ Detour<Architecture, Disassembler>::calculatePrologueLength(const InstructionVec
                                                             uint8_t& lengthWanted) {
     std::size_t                                    prologueLength = 0;
     std::vector<std::shared_ptr<PLH::Instruction>> instructionsInRange;
-    for (auto                                      inst : functionInsts) {
+
+    for (auto inst : functionInsts) {
         if (prologueLength >= lengthWanted)
             break;
 

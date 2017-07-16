@@ -59,21 +59,31 @@ public:
 
     }
 
-    T unwrap() {
+    /** lvalue overload, copies content. Multiple visitation is
+     * allowed.**/
+    T unwrap() const& {
         assert(isOk());
         return boost::get<T>(content);
     }
 
-    EType unwrapError() {
+    /** rvalue overload, moves content. Multiple visitation is
+     * NOT allowed, and if you call this more than once you
+     * will receive garbage data (this is undefined behavior)**/
+    T&& unwrap() && {
+        assert(isOk());
+        return std::move(boost::get<T>(content));
+    }
+
+    EType unwrapError() const& {
         assert(!isOk());
         return boost::get<ExplicitMaybeError<EType>>(content).error();
     }
 
-    bool isOk() {
+    bool isOk() const {
         return content.which() == 0;
     }
 
-    operator bool()
+    operator bool() const
     {
         return isOk();
     }

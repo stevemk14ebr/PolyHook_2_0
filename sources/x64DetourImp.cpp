@@ -4,13 +4,12 @@
 #include "headers/Detour/x64DetourImp.hpp"
 #include "headers/Instruction.hpp"
 
-PLH::Maybe<PLH::x64DetourImp::DetourBuffer> PLH::x64DetourImp::AllocateMemory(const uint64_t Hint) {
+PLH::Maybe<std::unique_ptr<PLH::x64DetourImp::DetourBuffer>> PLH::x64DetourImp::AllocateMemory(const uint64_t Hint) {
     uint64_t MinAddress = Hint < 0x80000000 ? 0 : Hint - 0x80000000;            //Use 0 if would underflow
     uint64_t MaxAddress = Hint > std::numeric_limits<uint64_t>::max() - 0x80000000 ? //use max if would overflow
                           std::numeric_limits<uint64_t>::max() : Hint + 0x80000000;
 
-    DetourBuffer alloc_vec(LinuxAllocator(MinAddress, MaxAddress));
-    return alloc_vec;
+    return std::make_unique<DetourBuffer>(LinuxAllocator(MinAddress, MaxAddress));
 }
 
 PLH::HookType PLH::x64DetourImp::GetType() const {
@@ -29,13 +28,27 @@ uint8_t PLH::x64DetourImp::minimumPrologueLength() const {
     return 6;
 }
 
+PLH::JmpType PLH::x64DetourImp::minimumJumpType() const {
+    return PLH::JmpType::Indirect;
+}
+
+PLH::JmpType PLH::x64DetourImp::preferredJumpType() const {
+    return PLH::JmpType::Absolute;
+}
+
+void PLH::x64DetourImp::setIndirectHolder(const uint64_t holderAddress) {
+    indirectHolder = holderAddress;
+}
+
 /**Write an indirect style 6byte jump. Address is where the jmp instruction will be located, and
  * destHoldershould point to the memory location that *CONTAINS* the address to be jumped to.
  * Destination should be the value that is written into destHolder, and be the address of where
  * the jmp should land.**/
 PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makeMinimumJump(const uint64_t address,
-                                                                        const uint64_t destination,
-                                                                        const uint64_t destHolder) const {
+                                                                        const uint64_t destination) const {
+    assert(indirectHolder);
+    uint64_t destHolder = indirectHolder.unwrap();
+
     PLH::Instruction::Displacement disp;
     disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(address, destHolder, 5);
 
@@ -45,7 +58,7 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makeMinimumJump(const ui
     memcpy(&bytes[2], &disp.Relative, 4);
 
     std::stringstream ss;
-    ss << std::hex << "["<< destHolder << "]";
+    ss << std::hex << "["<< destHolder << "] ->" << destination ;
 
     memcpy((void*)&destHolder, &destination, 8);
 
@@ -82,5 +95,6 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const 
     auto ret = std::make_shared<PLH::Instruction>(curInstAddress, zeroDisp, 0, false, retBytes, "ret", "");
     curInstAddress += ret->Size(); //shush, symmetry is sexy
 
+    // #self_documenting_code #it_exists
     return {pushRax, movRax, xchgRspRax, ret};
 }

@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.6)
 project(PolyHook_2)
 
-set(BUILD32 true)
+set(BUILD32 false)
 
-if(BUILD32)
-    set(CMAKE_C_FLAGS -m32)
-    set(CMAKE_CXX_FLAGS -m32)
-endif()
+#if(BUILD32)
+#    set(CMAKE_C_FLAGS -m32)
+#    set(CMAKE_CXX_FLAGS -m32)
+#endif()
 
 set(CMAKE_CXX_STANDARD 14)
 

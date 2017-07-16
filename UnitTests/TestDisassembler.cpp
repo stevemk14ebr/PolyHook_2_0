@@ -99,75 +99,75 @@ std::vector<uint8_t> x86ASM = {
         0xe9, 0x00, 0xff, 0x00, 0x00        //7) 57b8edd5 jmp 57b9ecda
 };
 
-TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembler]") {
-    PLH::CapstoneDisassembler disasm(PLH::Mode::x86);
-    auto                      Instructions = disasm.Disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-                                                                (uint64_t)&x86ASM.front() + x86ASM.size());
-    REQUIRE(Instructions.size() == 8);
-
-    const uint8_t CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
-    const char* CorrectMnemonic[] = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp"};
-
-    SECTION("Check disassembler integrity") {
-        const bool                                           CorrectChildCount[] = {0, 0, 0, 1, 0, 1, 1, 0};
-        const std::vector<std::shared_ptr<PLH::Instruction>> CorrectChildren[]   = {{nullptr},
-                                                                                    {nullptr},
-                                                                                    {nullptr},
-                                                                                    {Instructions[6]},
-                                                                                    {nullptr},
-                                                                                    {Instructions[4]},
-                                                                                    {Instructions[3]},
-                                                                                    {nullptr},
-                                                                                    {nullptr}};
-
-        for (int i = 0; i < Instructions.size(); i++) {
-            INFO("Index: " << i);
-
-            auto Children = Instructions[i]->GetChildren();
-            REQUIRE(Children.size() == CorrectChildCount[i]);
-            if (Children.size() > 0) {
-                for (int j = 0; j < Children.size(); j++) {
-                    INFO("Instruction Index:" << i << " Child Index:" << j);
-                    REQUIRE(Instructions[i]->GetChildren().at(j) == CorrectChildren[i][j]);
-                }
-            }
-        }
-    }
-
-
-    SECTION("Check instruction re-encoding integrity") {
-        Instructions[3]->SetRelativeDisplacement(0x00);
-        disasm.WriteEncoding(*Instructions[3]);
-
-        Instructions[7]->SetRelativeDisplacement(0x00);
-        disasm.WriteEncoding(*Instructions[7]);
-
-        REQUIRE(Instructions[3]->GetDestination() == Instructions[3]->GetAddress() + Instructions[3]->Size());
-        REQUIRE(Instructions[7]->GetDestination() == Instructions[7]->GetAddress() + Instructions[7]->Size());
-
-        Instructions =
-                disasm.Disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-                                   (uint64_t)&x86ASM.front() + x86ASM.size());
-    }
-
-    uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
-    size_t   PrevInstSize    = 0;
-
-    for (int i = 0; i < Instructions.size(); i++) {
-        INFO("Index: " << i);
-        INFO("Correct Mnemonic:"
-                     << CorrectMnemonic[i]
-                     << " Mnemonic:"
-                     << Instructions[i]->GetMnemonic());
-
-        REQUIRE(Instructions[i]->GetMnemonic().compare(CorrectMnemonic[i]) == 0);
-
-        REQUIRE(Instructions[i]->Size() == CorrectSizes[i]);
-
-        REQUIRE(Instructions[i]->GetAddress() == (PrevInstAddress + PrevInstSize));
-        PrevInstAddress = Instructions[i]->GetAddress();
-        PrevInstSize    = Instructions[i]->Size();
-    }
-
-}
+//TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembler]") {
+//    PLH::CapstoneDisassembler disasm(PLH::Mode::x86);
+//    auto                      Instructions = disasm.Disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+//                                                                (uint64_t)&x86ASM.front() + x86ASM.size());
+//    REQUIRE(Instructions.size() == 8);
+//
+//    const uint8_t CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
+//    const char* CorrectMnemonic[] = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp"};
+//
+//    SECTION("Check disassembler integrity") {
+//        const bool                                           CorrectChildCount[] = {0, 0, 0, 1, 0, 1, 1, 0};
+//        const std::vector<std::shared_ptr<PLH::Instruction>> CorrectChildren[]   = {{nullptr},
+//                                                                                    {nullptr},
+//                                                                                    {nullptr},
+//                                                                                    {Instructions[6]},
+//                                                                                    {nullptr},
+//                                                                                    {Instructions[4]},
+//                                                                                    {Instructions[3]},
+//                                                                                    {nullptr},
+//                                                                                    {nullptr}};
+//
+//        for (int i = 0; i < Instructions.size(); i++) {
+//            INFO("Index: " << i);
+//
+//            auto Children = Instructions[i]->GetChildren();
+//            REQUIRE(Children.size() == CorrectChildCount[i]);
+//            if (Children.size() > 0) {
+//                for (int j = 0; j < Children.size(); j++) {
+//                    INFO("Instruction Index:" << i << " Child Index:" << j);
+//                    REQUIRE(Instructions[i]->GetChildren().at(j) == CorrectChildren[i][j]);
+//                }
+//            }
+//        }
+//    }
+//
+//
+//    SECTION("Check instruction re-encoding integrity") {
+//        Instructions[3]->SetRelativeDisplacement(0x00);
+//        disasm.WriteEncoding(*Instructions[3]);
+//
+//        Instructions[7]->SetRelativeDisplacement(0x00);
+//        disasm.WriteEncoding(*Instructions[7]);
+//
+//        REQUIRE(Instructions[3]->GetDestination() == Instructions[3]->GetAddress() + Instructions[3]->Size());
+//        REQUIRE(Instructions[7]->GetDestination() == Instructions[7]->GetAddress() + Instructions[7]->Size());
+//
+//        Instructions =
+//                disasm.Disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+//                                   (uint64_t)&x86ASM.front() + x86ASM.size());
+//    }
+//
+//    uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
+//    size_t   PrevInstSize    = 0;
+//
+//    for (int i = 0; i < Instructions.size(); i++) {
+//        INFO("Index: " << i);
+//        INFO("Correct Mnemonic:"
+//                     << CorrectMnemonic[i]
+//                     << " Mnemonic:"
+//                     << Instructions[i]->GetMnemonic());
+//
+//        REQUIRE(Instructions[i]->GetMnemonic().compare(CorrectMnemonic[i]) == 0);
+//
+//        REQUIRE(Instructions[i]->Size() == CorrectSizes[i]);
+//
+//        REQUIRE(Instructions[i]->GetAddress() == (PrevInstAddress + PrevInstSize));
+//        PrevInstAddress = Instructions[i]->GetAddress();
+//        PrevInstSize    = Instructions[i]->Size();
+//    }
+//
+//}
 
