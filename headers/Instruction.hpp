@@ -56,8 +56,7 @@ public:
         return m_Address;
     }
 
-    void SetAddress(const uint64_t address)
-    {
+    void SetAddress(const uint64_t address) {
         m_Address = address;
     }
 
@@ -110,7 +109,7 @@ public:
          * This doesn't actually write the changes to the executeable code, it writes to our
          * copy of the bytes**/
         m_Displacement.Relative = displacement;
-        m_IsRelative = true;
+        m_IsRelative      = true;
         m_HasDisplacement = true;
 
         memcpy(&m_Bytes[GetDisplacementOffset()], &m_Displacement.Relative, Size() - GetDisplacementOffset());
@@ -118,7 +117,7 @@ public:
 
     void SetAbsoluteDisplacement(const uint64_t displacement) {
         m_Displacement.Absolute = displacement;
-        m_IsRelative = false;
+        m_IsRelative      = false;
         m_HasDisplacement = true;
 
         /**Update our class' book-keeping of this stuff and then modify the byte array.
@@ -126,7 +125,6 @@ public:
          * copy of the bytes**/
         memcpy(&m_Bytes[GetDisplacementOffset()], &m_Displacement.Absolute, Size() - GetDisplacementOffset());
     }
-
 
 
 protected:
@@ -139,13 +137,13 @@ private:
               const std::vector<uint8_t>& Bytes,
               const std::string Mnemonic,
               const std::string OpStr) {
-        m_Address      = Address;
-        m_Displacement = displacement;
-        m_DispOffset   = DisplacementOffset;
-        m_IsRelative   = IsRelative;
-        m_Bytes        = Bytes;
-        m_Mnemonic     = Mnemonic;
-        m_OpStr        = OpStr;
+        m_Address         = Address;
+        m_Displacement    = displacement;
+        m_DispOffset      = DisplacementOffset;
+        m_IsRelative      = IsRelative;
+        m_Bytes           = Bytes;
+        m_Mnemonic        = Mnemonic;
+        m_OpStr           = OpStr;
         m_HasDisplacement = false;
     }
 
@@ -162,7 +160,7 @@ private:
 
 inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
     std::stringstream byteStream;
-    for(std::size_t i = 0; i < obj.Size(); i++)
+    for (std::size_t  i = 0; i < obj.Size(); i++)
         byteStream << std::hex << std::setfill('0') << std::setw(2) << (unsigned)obj.GetBytes()[i] << " ";
 
     os << std::hex << obj.GetAddress() << " [" << obj.Size() << "]: ";

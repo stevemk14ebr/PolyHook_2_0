@@ -52,6 +52,6 @@ PLH::x86DetourImp::InstructionVector PLH::x86DetourImp::makeMinimumJump(const ui
 }
 
 PLH::x86DetourImp::InstructionVector PLH::x86DetourImp::makePreferredJump(const uint64_t address,
-                                                                              const uint64_t destination) const {
+                                                                          const uint64_t destination) const {
     return makeMinimumJump(address, destination);
 }

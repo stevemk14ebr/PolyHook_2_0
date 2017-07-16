@@ -62,9 +62,9 @@ private:
 
     void dbgPrintInstructionVec(const std::string& name, const InstructionVector& instructionVector);
 
-    uint64_t   fnAddress;
-    uint64_t   fnCallback;
-    bool       hooked;
+    uint64_t                    fnAddress;
+    uint64_t                    fnCallback;
+    bool                        hooked;
     std::unique_ptr<ArchBuffer> trampoline; //so that we can delay instantiation
 
     Architecture archImpl;
@@ -129,7 +129,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
 
     // Count # of entries that will be in the jump table
     InstructionVector conditionalJumpsToFix;
-    for (auto inst : prologueInstructions) {
+    for (auto         inst : prologueInstructions) {
         if (disassembler.isConditionalJump(*inst))
             conditionalJumpsToFix.push_back(inst);
     }
@@ -140,9 +140,9 @@ bool Detour<Architecture, Disassembler>::Hook() {
      * trampoline without letting us know on a push_back or insert, and all our precious
      * fixups are out the window.*/
     trampoline->reserve(prologueLength +
-                       jumpLength +
-                       (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength())
-                       + jumpAbsolute ? 0 : 8);
+                        jumpLength +
+                        (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength())
+                        + jumpAbsolute ? 0 : 8);
 
     std::int64_t trampolineDelta = ((uint64_t)&trampoline->front()) - fnAddress;
 
@@ -204,7 +204,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
     if (doPreferredJmp) {
         detourJump = archImpl.makePreferredJump(fnAddress, fnCallback);
     } else {
-        if(jumpAbsolute) {
+        if (jumpAbsolute) {
             detourJump = archImpl.makeMinimumJump(fnAddress, fnCallback);
         } else {
             archImpl.setIndirectHolder((uint64_t)(&trampoline->front() + trampoline->size()));
@@ -218,15 +218,19 @@ bool Detour<Architecture, Disassembler>::Hook() {
     // Nop the space between jmp and end of prologue
     memset((void*)(fnAddress + jumpLength), 0x90, prologueLength - jumpLength);
 
-    if(m_debugSet)
-    {
+    if (m_debugSet) {
         std::cout << "fnAddress: " << std::hex << fnAddress << " fnCallback: " << fnCallback << std::dec << std::endl;
 
-        InstructionVector trampolineInst = disassembler.Disassemble((uint64_t)&trampoline->front(), (uint64_t)&trampoline->front(), (uint64_t)(&trampoline->front() + trampoline->size()));
+        InstructionVector trampolineInst = disassembler.Disassemble((uint64_t)&trampoline->front(),
+                                                                    (uint64_t)&trampoline->front(),
+                                                                    (uint64_t)(&trampoline->front() +
+                                                                               trampoline->size()));
         dbgPrintInstructionVec("Trampoline: ", trampolineInst);
 
         // Go a little past prologue to see if we corrupted anything
-        InstructionVector newPrologueInst = disassembler.Disassemble(fnAddress, fnAddress, fnAddress + prologueLength + 10);
+        InstructionVector newPrologueInst = disassembler.Disassemble(fnAddress,
+                                                                     fnAddress,
+                                                                     fnAddress + prologueLength + 10);
         dbgPrintInstructionVec("New Prologue: ", newPrologueInst);
     }
     return true;
@@ -309,12 +313,13 @@ PLH::HookType Detour<Architecture, Disassembler>::GetType() {
 }
 
 template<typename Architecture, typename Disassembler>
-void Detour<Architecture, Disassembler>::dbgPrintInstructionVec(const std::string& name, const InstructionVector& instructionVector) {
-    if(!m_debugSet)
+void Detour<Architecture, Disassembler>::dbgPrintInstructionVec(const std::string& name,
+                                                                const InstructionVector& instructionVector) {
+    if (!m_debugSet)
         return;
 
     std::cout << name << std::endl;
-    for(const auto& inst : instructionVector)
+    for (const auto& inst : instructionVector)
         std::cout << *inst << std::endl;
     std::cout << std::endl;
 }

@@ -50,7 +50,7 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makeMinimumJump(const ui
     uint64_t destHolder = indirectHolder.unwrap();
 
     PLH::Instruction::Displacement disp;
-    disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(address, destHolder, 5);
+    disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(address, destHolder, 6);
 
     std::vector<uint8_t> bytes(6);
     bytes[0] = 0xFF;
@@ -58,20 +58,26 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makeMinimumJump(const ui
     memcpy(&bytes[2], &disp.Relative, 4);
 
     std::stringstream ss;
-    ss << std::hex << "["<< destHolder << "] ->" << destination ;
+    ss << std::hex << "[" << destHolder << "] ->" << destination;
 
-    memcpy((void*)&destHolder, &destination, 8);
+    memcpy((void*)destHolder, &destination, 8);
 
     return {std::make_shared<PLH::Instruction>(address, disp, 2, true, bytes, "jmp", ss.str())};
 }
 
 PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const uint64_t address,
                                                                           const uint64_t destination) const {
-    PLH::Instruction::Displacement zeroDisp = {0};
-    uint64_t curInstAddress = address;
+    PLH::Instruction::Displacement zeroDisp       = {0};
+    uint64_t                       curInstAddress = address;
 
     std::vector<uint8_t> raxBytes = {0x50};
-    auto pushRax = std::make_shared<PLH::Instruction>(curInstAddress, zeroDisp, 0, false, raxBytes, "push", "rax");
+    auto                 pushRax  = std::make_shared<PLH::Instruction>(curInstAddress,
+                                                                       zeroDisp,
+                                                                       0,
+                                                                       false,
+                                                                       raxBytes,
+                                                                       "push",
+                                                                       "rax");
     curInstAddress += pushRax->Size();
 
     std::stringstream ss;
@@ -86,13 +92,19 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const 
                                                      movRaxBytes, "mov", "rax, " + ss.str());
     curInstAddress += movRax->Size();
 
-    std::vector<uint8_t> xchgBytes = { 0x48, 0x87, 0x04, 0x24 };
-    auto xchgRspRax = std::make_shared<PLH::Instruction>(curInstAddress, zeroDisp, 0, false,
-                                                         xchgBytes, "xchg", "QWORD PTR [rsp],rax");
+    std::vector<uint8_t> xchgBytes  = {0x48, 0x87, 0x04, 0x24};
+    auto                 xchgRspRax = std::make_shared<PLH::Instruction>(curInstAddress, zeroDisp, 0, false,
+                                                                         xchgBytes, "xchg", "QWORD PTR [rsp],rax");
     curInstAddress += xchgRspRax->Size();
 
     std::vector<uint8_t> retBytes = {0xC3};
-    auto ret = std::make_shared<PLH::Instruction>(curInstAddress, zeroDisp, 0, false, retBytes, "ret", "");
+    auto                 ret      = std::make_shared<PLH::Instruction>(curInstAddress,
+                                                                       zeroDisp,
+                                                                       0,
+                                                                       false,
+                                                                       retBytes,
+                                                                       "ret",
+                                                                       "");
     curInstAddress += ret->Size(); //shush, symmetry is sexy
 
     // #self_documenting_code #it_exists

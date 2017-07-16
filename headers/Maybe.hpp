@@ -38,8 +38,7 @@ class Maybe
 public:
     typedef std::string EType;
 
-    Maybe() : content(ExplicitMaybeError<EType>(""))
-    {
+    Maybe() : content(ExplicitMaybeError<EType>("")) {
 
     }
 
@@ -51,7 +50,7 @@ public:
 
     }
 
-    Maybe(const T& value) : content(value){
+    Maybe(const T& value) : content(value) {
 
     }
 
@@ -69,7 +68,7 @@ public:
     /** rvalue overload, moves content. Multiple visitation is
      * NOT allowed, and if you call this more than once you
      * will receive garbage data (this is undefined behavior)**/
-    T&& unwrap() && {
+    T&& unwrap()&& {
         assert(isOk());
         return std::move(boost::get<T>(content));
     }
@@ -83,10 +82,10 @@ public:
         return content.which() == 0;
     }
 
-    operator bool() const
-    {
+    operator bool() const {
         return isOk();
     }
+
 private:
     /*TODO: replace with std::variant when it is available. Or alternatively use std::aligned_storage + in-place new*/
     boost::variant<T, ExplicitMaybeError<EType>> content;

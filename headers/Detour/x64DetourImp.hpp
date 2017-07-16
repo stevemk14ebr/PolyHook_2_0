@@ -42,6 +42,7 @@ public:
     InstructionVector makeMinimumJump(const uint64_t address, const uint64_t destination) const;
 
     InstructionVector makePreferredJump(const uint64_t address, const uint64_t destination) const;
+
 private:
     PLH::Maybe<uint64_t> indirectHolder;
 };
