@@ -43,7 +43,7 @@ public:
 
     template<typename T>
     T getOriginal() {
-        return &trampoline[0];
+        return &trampoline->front();
     }
 
 private:
@@ -58,9 +58,9 @@ private:
      * size (in bytes) of the returned InstructionVector, this vector's size is the smallest prologue length that
      * is >= lengthWanted and doesn't split any instructions**/
     PLH::Maybe<InstructionVector>
-    calculatePrologueLength(const InstructionVector& functionInsts, uint8_t& lengthWanted);
+    calculatePrologueLength(const InstructionVector& functionInsts, size_t& lengthWanted);
 
-    void addJumpTableEntry(ArchBuffer& trampoline, PLH::Instruction& instruction);
+    void dbgPrintInstructionVec(const std::string& name, const InstructionVector& instructionVector);
 
     uint64_t   fnAddress;
     uint64_t   fnCallback;
@@ -104,11 +104,13 @@ bool Detour<Architecture, Disassembler>::Hook() {
     if (instructions.size() == 0)
         return false;
 
+    dbgPrintInstructionVec("Original function: ", instructions);
+
     // Certain jump types are better than others, see if we have room for the better one, otherwise fallback
     bool    doPreferredJmp = true;
     bool    jumpAbsolute   = archImpl.preferredJumpType() == PLH::JmpType::Absolute;
     uint8_t jumpLength     = archImpl.preferredPrologueLength();
-    uint8_t prologueLength = jumpLength;
+    size_t  prologueLength = jumpLength;
 
     auto maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
     if (!maybePrologueInstructions) {
@@ -123,6 +125,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
     if (!maybePrologueInstructions)
         return false;
     InstructionVector prologueInstructions = std::move(maybePrologueInstructions).unwrap();
+    dbgPrintInstructionVec("Prologue: ", prologueInstructions);
 
     // Count # of entries that will be in the jump table
     InstructionVector conditionalJumpsToFix;
@@ -141,7 +144,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
                        (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength())
                        + jumpAbsolute ? 0 : 8);
 
-    std::int64_t trampolineDelta = ((uint64_t)&trampoline.get()[0]) - fnAddress;
+    std::int64_t trampolineDelta = ((uint64_t)&trampoline->front()) - fnAddress;
 
     /* Copy (truly copy, original are untouched) instructions from the prologue to the trampoline. Also fixup the various types of
        instructions that need to be fixed (RIP/EIP relative), excluding conditional jumps */
@@ -214,6 +217,18 @@ bool Detour<Architecture, Disassembler>::Hook() {
 
     // Nop the space between jmp and end of prologue
     memset((void*)(fnAddress + jumpLength), 0x90, prologueLength - jumpLength);
+
+    if(m_debugSet)
+    {
+        std::cout << "fnAddress: " << std::hex << fnAddress << " fnCallback: " << fnCallback << std::dec << std::endl;
+
+        InstructionVector trampolineInst = disassembler.Disassemble((uint64_t)&trampoline->front(), (uint64_t)&trampoline->front(), (uint64_t)(&trampoline->front() + trampoline->size()));
+        dbgPrintInstructionVec("Trampoline: ", trampolineInst);
+
+        // Go a little past prologue to see if we corrupted anything
+        InstructionVector newPrologueInst = disassembler.Disassemble(fnAddress, fnAddress, fnAddress + prologueLength + 10);
+        dbgPrintInstructionVec("New Prologue: ", newPrologueInst);
+    }
     return true;
 
     /** Before Hook:                                                After hook:
@@ -261,7 +276,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
 template<typename Architecture, typename Disassembler>
 PLH::Maybe<typename PLH::Detour<Architecture, Disassembler>::InstructionVector>
 Detour<Architecture, Disassembler>::calculatePrologueLength(const InstructionVector& functionInsts,
-                                                            uint8_t& lengthWanted) {
+                                                            size_t& lengthWanted) {
     std::size_t                                    prologueLength = 0;
     std::vector<std::shared_ptr<PLH::Instruction>> instructionsInRange;
 
@@ -277,6 +292,7 @@ Detour<Architecture, Disassembler>::calculatePrologueLength(const InstructionVec
         instructionsInRange.push_back(inst);
     }
 
+    lengthWanted = prologueLength;
     if (prologueLength >= lengthWanted)
         return std::move(instructionsInRange);
     function_fail("Function too small, function is not of length >= " + std::to_string(lengthWanted));
@@ -293,8 +309,14 @@ PLH::HookType Detour<Architecture, Disassembler>::GetType() {
 }
 
 template<typename Architecture, typename Disassembler>
-void Detour<Architecture, Disassembler>::addJumpTableEntry(ArchBuffer& trampoline, PLH::Instruction& instruction) {
+void Detour<Architecture, Disassembler>::dbgPrintInstructionVec(const std::string& name, const InstructionVector& instructionVector) {
+    if(!m_debugSet)
+        return;
 
+    std::cout << name << std::endl;
+    for(const auto& inst : instructionVector)
+        std::cout << *inst << std::endl;
+    std::cout << std::endl;
 }
 }
 #endif //POLYHOOK_2_0_ADETOUR_HPP

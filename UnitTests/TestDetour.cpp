@@ -19,6 +19,7 @@ volatile int hookMeCallback()
 TEST_CASE("Testing x86 detours", "[ADetour]")
 {
     PLH::Detour<PLH::x64DetourImp> detour((uint8_t*)&hookMe, (uint8_t*)&hookMeCallback);
+    detour.setDebug(true);
 
     REQUIRE(detour.Hook() == true);
 

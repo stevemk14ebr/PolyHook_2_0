@@ -39,6 +39,13 @@ public:
     virtual bool UnHook() = 0;
 
     virtual HookType GetType() = 0;
+
+    virtual void setDebug(const bool state)
+    {
+        m_debugSet = state;
+    }
+protected:
+    bool m_debugSet;
 };
 }
 #endif //POLYHOOK_2_0_IHOOK_HPP

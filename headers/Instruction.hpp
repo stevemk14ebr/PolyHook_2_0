@@ -166,8 +166,8 @@ inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
         byteStream << std::hex << std::setfill('0') << std::setw(2) << (unsigned)obj.GetBytes()[i] << " ";
 
     os << std::hex << obj.GetAddress() << " [" << obj.Size() << "]: ";
-    os << std::setfill(' ') << std::setw(20) << std::left << byteStream.str();
-    os << obj.GetFullName() << std::dec << std::endl;
+    os << std::setfill(' ') << std::setw(30) << std::left << byteStream.str();
+    os << obj.GetFullName() << std::dec;
     return os;
 }
 
