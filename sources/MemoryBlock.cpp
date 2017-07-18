@@ -66,7 +66,7 @@ PLH::MemoryBlock::GetAlignedNearestDown(const uint64_t Address, const size_t Ali
     assert(Size > 0);
     assert(Alignment > 0);
 
-    uint64_t NearestDown = (uint64_t)PLH::AlignDownwards((uint8_t*)Address, Alignment);
+    uint64_t NearestDown = (uint64_t)PLH::AlignDownwards((char*)Address, Alignment);
     if (!InRange(NearestDown, Size))
         function_fail("Address not in range after alignment");
 
@@ -81,7 +81,7 @@ PLH::MemoryBlock::GetAlignedNearestUp(const uint64_t Address, const size_t Align
     assert(Size > 0);
     assert(Alignment > 0);
 
-    uint64_t NearestUp = (uint64_t)PLH::AlignUpwards((uint8_t*)Address, Alignment);
+    uint64_t NearestUp = (uint64_t)PLH::AlignUpwards((char*)Address, Alignment);
     if (!InRange(NearestUp, Size))
         function_fail("Address not in range after alignment");
 

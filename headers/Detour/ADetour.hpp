@@ -33,7 +33,7 @@ public:
 
     Detour(const uint64_t fnAddress, const uint64_t fnCallback);
 
-    Detour(const uint8_t* fnAddress, const uint8_t* fnCallback);
+    Detour(const char* fnAddress, const char* fnCallback);
 
     virtual bool Hook() override;
 
@@ -43,7 +43,7 @@ public:
 
     template<typename T>
     T getOriginal() {
-        return &trampoline->front();
+        return (T)&trampoline->front();
     }
 
 private:
@@ -81,7 +81,7 @@ Detour<Architecture, Disassembler>::Detour(const uint64_t hookAddress, const uin
 }
 
 template<typename Architecture, typename Disassembler>
-Detour<Architecture, Disassembler>::Detour(const uint8_t* hookAddress, const uint8_t* callbackAddress) :
+Detour<Architecture, Disassembler>::Detour(const char* hookAddress, const char* callbackAddress) :
         archImpl(), disassembler(archImpl.GetArchType()) {
 
     fnAddress  = (uint64_t)hookAddress;
@@ -139,34 +139,39 @@ bool Detour<Architecture, Disassembler>::Hook() {
      * DO NOT remove this reservation, without it the underlying vector could relocate the
      * trampoline without letting us know on a push_back or insert, and all our precious
      * fixups are out the window.*/
-    trampoline->reserve(prologueLength +
-                        jumpLength +
-                        (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength())
-                        + jumpAbsolute ? 0 : 8);
+    size_t reserveSize = prologueLength +
+                         jumpLength +
+                         (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength())
+                         + 8; //8 for the optional destination holder
 
-    std::int64_t trampolineDelta = ((uint64_t)&trampoline->front()) - fnAddress;
+    trampoline->reserve(reserveSize);
+    int64_t trampolineDelta = 0;
 
     /* Copy (truly copy, original are untouched) instructions from the prologue to the trampoline. Also fixup the various types of
        instructions that need to be fixed (RIP/EIP relative), excluding conditional jumps */
-    for (auto inst : prologueInstructions) {
+    for (auto& inst : prologueInstructions) {
+        // Copy instruction into the trampoline (they will be malformed)
+        trampoline->insert(trampoline->end(), inst->GetBytes().begin(), inst->GetBytes().end());
+
+        // sadly we must do this in a loop, UB if we access data() before vector has any elements
+        trampolineDelta = (int64_t)(trampoline->data() - fnAddress);
         inst->SetAddress(inst->GetAddress() + trampolineDelta);
 
         if (inst->HasDisplacement() && inst->IsDisplacementRelative() && !disassembler.isConditionalJump(*inst))
-            inst->SetRelativeDisplacement(inst->GetDisplacement().Relative + trampolineDelta);
-
-        // Copy instruction into the trampoline
-        trampoline->insert(trampoline->end(), inst->GetBytes().begin(), inst->GetBytes().end());
+            inst->SetRelativeDisplacement(inst->GetDisplacement().Relative - trampolineDelta);
+        disassembler.WriteEncoding(*inst);
     }
 
     // Insert the jmp to fnAddress.Body from the trampoline
-    InstructionVector bodyJump = archImpl.makePreferredJump((uint64_t)&trampoline->front() + trampoline->size(),
+    InstructionVector bodyJump = archImpl.makePreferredJump((uint64_t)trampoline->data() + trampoline->size(),
                                                             fnAddress + jumpLength);
-    for (auto         inst : bodyJump)
+
+    for (auto inst : bodyJump)
         trampoline->insert(trampoline->end(), inst->GetBytes().begin(), inst->GetBytes().end());
 
     // Build the jump table
-    for (auto inst : conditionalJumpsToFix) {
-        uint64_t intermediateJumpLoc = (uint64_t)(&trampoline->front() + trampoline->size());
+    for (auto& inst : conditionalJumpsToFix) {
+        uint64_t intermediateJumpLoc = (uint64_t)trampoline->data() + trampoline->size();
 
         // Reset instructions address to it's original so we can find where it original jumped too
         inst->SetAddress(inst->GetAddress() - trampolineDelta);
@@ -188,12 +193,12 @@ bool Detour<Architecture, Disassembler>::Hook() {
     }
 
     // Make the fnAddress's memory page writeable
-    uint64_t                                  fnAddressPage = (uint64_t)PLH::AlignDownwards((uint8_t*)fnAddress,
-                                                                                            getpagesize());
-    PLH::MemoryProtector<PLH::UnixMemProtImp> memoryProtector(fnAddressPage,
-                                                              getpagesize(),
-                                                              PLH::ProtFlag::R | PLH::ProtFlag::W | PLH::ProtFlag::X);
-    if (!memoryProtector.originalProt())
+    uint64_t fnAddressPage = (uint64_t)PLH::AlignDownwards((char*)fnAddress, getpagesize());
+
+    PLH::MemoryProtector<PLH::UnixMemProtImp> memoryProtectorFn(fnAddressPage,
+                                                                getpagesize(),
+                                                                PLH::ProtFlag::R | PLH::ProtFlag::W | PLH::ProtFlag::X);
+    if (!memoryProtectorFn.originalProt())
         return false;
 
     /* Overwrite the prologue with the jmp to the callback. We
@@ -207,7 +212,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
         if (jumpAbsolute) {
             detourJump = archImpl.makeMinimumJump(fnAddress, fnCallback);
         } else {
-            archImpl.setIndirectHolder((uint64_t)(&trampoline->front() + trampoline->size()));
+            archImpl.setIndirectHolder((uint64_t)trampoline->data() + trampoline->size());
             detourJump = archImpl.makeMinimumJump(fnAddress, fnCallback);
         }
     }
@@ -216,15 +221,16 @@ bool Detour<Architecture, Disassembler>::Hook() {
         disassembler.WriteEncoding(*inst);
 
     // Nop the space between jmp and end of prologue
-    memset((void*)(fnAddress + jumpLength), 0x90, prologueLength - jumpLength);
+    std::memset((char*)(fnAddress + jumpLength), 0x90, prologueLength - jumpLength);
 
     if (m_debugSet) {
-        std::cout << "fnAddress: " << std::hex << fnAddress << " fnCallback: " << fnCallback << std::dec << std::endl;
+        std::cout << "fnAddress: " << std::hex << fnAddress << " fnCallback: " << fnCallback <<
+                  " trampoline: " << (uint64_t)trampoline->data() << " delta: "
+                  << trampolineDelta << std::dec << std::endl;
 
-        InstructionVector trampolineInst = disassembler.Disassemble((uint64_t)&trampoline->front(),
-                                                                    (uint64_t)&trampoline->front(),
-                                                                    (uint64_t)(&trampoline->front() +
-                                                                               trampoline->size()));
+        InstructionVector trampolineInst = disassembler.Disassemble((uint64_t)trampoline->data(),
+                                                                    (uint64_t)trampoline->data(),
+                                                                    (uint64_t)trampoline->data()+ trampoline->size());
         dbgPrintInstructionVec("Trampoline: ", trampolineInst);
 
         // Go a little past prologue to see if we corrupted anything
@@ -233,6 +239,17 @@ bool Detour<Architecture, Disassembler>::Hook() {
                                                                      fnAddress + prologueLength + 10);
         dbgPrintInstructionVec("New Prologue: ", newPrologueInst);
     }
+
+    /* If this happen the vector was somehow resized.
+     * This would be very bad for us, since we manually
+     * mutate instruction displacements. Therefore
+     * moving the trampoline makes our fixups invalid.
+     * Figure out why this happened or stuff blows up*/
+    if(trampoline->capacity() != reserveSize) {
+        assert(false);
+        return false;
+    }
+
     return true;
 
     /** Before Hook:                                                After hook:

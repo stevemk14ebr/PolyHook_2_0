@@ -101,7 +101,7 @@ public:
             //Allocate a new memory page "parent" block and add it to the map, give it no children yet
             auto NewParent = m_AllocImp.AllocateMemory(m_AllowedRegion.GetStart(), m_AllowedRegion.GetEnd(),
                                                            m_AllocImp.QueryPreferedAllocSize(),
-                                                           PLH::ProtFlag::R | PLH::ProtFlag::W);
+                                                           PLH::ProtFlag::R | PLH::ProtFlag::W | PLH::ProtFlag::X);
             if (!NewParent) {
                 throw AllocationFailure();
             }
@@ -154,7 +154,7 @@ public:
              * C/C++ guarantees object size is multiple of alignment:
              * https://stackoverflow.com/questions/4637774/is-the-size-of-a-struct-required-to-be-an-exact-multiple-of-the-alignment-of-tha
              * Range checks for possibly rounding up occur in ChildBlockEnd calculations.*/
-            ChildBlockStart = (uint64_t)PLH::AlignUpwards((uint8_t*)ChildBlockStart, RequiredAlignment);
+            ChildBlockStart = (uint64_t)PLH::AlignUpwards((char*)ChildBlockStart, RequiredAlignment);
             assert(ChildBlockStart % RequiredAlignment == 0);
 
             uint64_t ChildBlockEnd = 0;

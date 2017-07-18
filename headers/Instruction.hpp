@@ -112,7 +112,7 @@ public:
         m_IsRelative      = true;
         m_HasDisplacement = true;
 
-        memcpy(&m_Bytes[GetDisplacementOffset()], &m_Displacement.Relative, Size() - GetDisplacementOffset());
+        std::memcpy(&m_Bytes[GetDisplacementOffset()], &m_Displacement.Relative, Size() - GetDisplacementOffset());
     }
 
     void SetAbsoluteDisplacement(const uint64_t displacement) {
@@ -123,7 +123,7 @@ public:
         /**Update our class' book-keeping of this stuff and then modify the byte array.
          * This doesn't actually write the changes to the executeable code, it writes to our
          * copy of the bytes**/
-        memcpy(&m_Bytes[GetDisplacementOffset()], &m_Displacement.Absolute, Size() - GetDisplacementOffset());
+        std::memcpy(&m_Bytes[GetDisplacementOffset()], &m_Displacement.Absolute, Size() - GetDisplacementOffset());
     }
 
 
@@ -165,7 +165,11 @@ inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
 
     os << std::hex << obj.GetAddress() << " [" << obj.Size() << "]: ";
     os << std::setfill(' ') << std::setw(30) << std::left << byteStream.str();
-    os << obj.GetFullName() << std::dec;
+    os << obj.GetFullName();
+
+    if(obj.HasDisplacement() && obj.IsDisplacementRelative())
+        os << " -> " << obj.GetDestination();
+    os << std::dec;
     return os;
 }
 

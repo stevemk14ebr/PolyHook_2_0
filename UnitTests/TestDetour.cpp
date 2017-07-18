@@ -4,21 +4,24 @@
 #include <Catch.hpp>
 #include "headers/Detour/ADetour.hpp"
 
-volatile int hookMe() {
+int hookMe() {
     std::cout << "Hook Me says hi" << std::endl;
     return 0;
 }
+decltype(&hookMe) oHookMe;
 
-volatile int hookMeCallback() {
+int hookMeCallback() {
     std::cout << "Callback says hi first" << std::endl;
-    return 1;
+    return oHookMe();
 }
 
 TEST_CASE("Testing x86 detours", "[ADetour]") {
-    PLH::Detour<PLH::x64DetourImp> detour((uint8_t*)&hookMe, (uint8_t*)&hookMeCallback);
+    PLH::Detour<PLH::x64DetourImp> detour((char*)&hookMe, (char*)&hookMeCallback);
     detour.setDebug(true);
 
     REQUIRE(detour.Hook() == true);
+
+    oHookMe = detour.getOriginal<decltype(&hookMe)>();
 
     hookMe();
 }
