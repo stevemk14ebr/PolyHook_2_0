@@ -172,7 +172,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
     // Build the jump table
     for (auto& inst : conditionalJumpsToFix) {
         uint64_t intermediateJumpLoc = (uint64_t)trampoline->data() + trampoline->size();
-
+        
         // Reset instructions address to it's original so we can find where it original jumped too
         inst->SetAddress(inst->GetAddress() - trampolineDelta);
         InstructionVector intermediateJumpVec = archImpl.makePreferredJump(intermediateJumpLoc,
@@ -187,8 +187,9 @@ bool Detour<Architecture, Disassembler>::Hook() {
         inst->SetRelativeDisplacement(disp.Relative);
 
         // Write the intermediate jump and the changed cond. jump
-        for (auto jmpInst : intermediateJumpVec)
-            disassembler.WriteEncoding(*jmpInst);
+        for (auto jmpInst : intermediateJumpVec) {
+            trampoline->insert(trampoline->end(), jmpInst->GetBytes().begin(), jmpInst->GetBytes().end());
+        }
         disassembler.WriteEncoding(*inst);
     }
 
@@ -230,7 +231,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
 
         InstructionVector trampolineInst = disassembler.Disassemble((uint64_t)trampoline->data(),
                                                                     (uint64_t)trampoline->data(),
-                                                                    (uint64_t)trampoline->data()+ trampoline->size());
+                                                                    (uint64_t)trampoline->data() + trampoline->size());
         dbgPrintInstructionVec("Trampoline: ", trampolineInst);
 
         // Go a little past prologue to see if we corrupted anything

@@ -4,15 +4,17 @@
 #include <Catch.hpp>
 #include "headers/Detour/ADetour.hpp"
 
-int hookMe() {
+int hookMe(int param) {
+    if(param > 0)
+        return 1;
     std::cout << "Hook Me says hi" << std::endl;
     return 0;
 }
 decltype(&hookMe) oHookMe;
 
-int hookMeCallback() {
+int hookMeCallback(int param) {
     std::cout << "Callback says hi first" << std::endl;
-    return oHookMe();
+    return oHookMe(param);
 }
 
 TEST_CASE("Testing x86 detours", "[ADetour]") {
@@ -23,5 +25,5 @@ TEST_CASE("Testing x86 detours", "[ADetour]") {
 
     oHookMe = detour.getOriginal<decltype(&hookMe)>();
 
-    hookMe();
+    hookMe(1);
 }
