@@ -172,7 +172,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
     // Build the jump table
     for (auto& inst : conditionalJumpsToFix) {
         uint64_t intermediateJumpLoc = (uint64_t)trampoline->data() + trampoline->size();
-        
+
         // Reset instructions address to it's original so we can find where it original jumped too
         inst->SetAddress(inst->GetAddress() - trampolineDelta);
         InstructionVector intermediateJumpVec = archImpl.makePreferredJump(intermediateJumpLoc,

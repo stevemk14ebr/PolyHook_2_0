@@ -26,7 +26,10 @@ enum class HookType
 class IHook : public PLH::Errant
 {
 public:
-    IHook() = default;
+    IHook()
+    {
+        m_debugSet = false;
+    }
 
     IHook(IHook&& other) = default; //move
     IHook& operator=(IHook&& other) = default;//move assignment

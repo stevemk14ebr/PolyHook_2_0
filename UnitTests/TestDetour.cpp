@@ -19,7 +19,7 @@ int hookMeCallback(int param) {
 
 TEST_CASE("Testing x86 detours", "[ADetour]") {
     PLH::Detour<PLH::x64DetourImp> detour((char*)&hookMe, (char*)&hookMeCallback);
-    detour.setDebug(true);
+    //detour.setDebug(true);
 
     REQUIRE(detour.Hook() == true);
 
