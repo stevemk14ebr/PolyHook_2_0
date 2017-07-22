@@ -8,7 +8,7 @@ PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start
     cs_insn* InsInfo = cs_malloc(m_CapHandle);
     std::vector<std::shared_ptr<PLH::Instruction>> InsVec;
 
-    size_t Size = End - Start;
+    uint64_t Size = End - Start;
     while (cs_disasm_iter(m_CapHandle, (const uint8_t**)(&Start), &Size, &FirstInstruction, InsInfo)) {
         //Set later by 'SetDisplacementFields'
         PLH::Instruction::Displacement displacement;

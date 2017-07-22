@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
-#include <string.h>
 #include <vector>
 namespace PLH {
 /******************************************************************************************************************
@@ -37,7 +36,7 @@ public:
     size_t QueryPreferedAllocSize() const;
 
 protected:
-    void Deallocate(uint8_t* Buffer, const size_t Length) const;
+    void Deallocate(char* Buffer, const size_t Length) const;
 
     PLH::Maybe<PLH::AllocatedMemoryBlock>
     AllocateImp(const uint64_t AddressOfPage, const size_t Size, const int MapFlags,

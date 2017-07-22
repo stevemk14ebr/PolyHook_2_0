@@ -7,6 +7,7 @@
 int hookMe(int param) {
     if(param > 0)
         return 1;
+
     std::cout << "Hook Me says hi" << std::endl;
     return 0;
 }

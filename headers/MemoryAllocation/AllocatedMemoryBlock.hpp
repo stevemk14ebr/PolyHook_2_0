@@ -22,23 +22,24 @@ namespace PLH {
 class AllocatedMemoryBlock
 {
 public:
-    AllocatedMemoryBlock(std::shared_ptr<uint8_t> ParentBlock, PLH::MemoryBlock OurDesc) : m_ParentBlock(ParentBlock),
-                                                                                           m_OurDesc(OurDesc) {
+    AllocatedMemoryBlock(std::shared_ptr<char> ParentBlock, PLH::MemoryBlock OurDesc) : m_ParentBlock(std::move(
+            ParentBlock)),
+                                                                                        m_OurDesc(OurDesc) {
 
     }
 
     //delegate constructors allowed in c++11
-    AllocatedMemoryBlock(std::shared_ptr<uint8_t> ParentBlock, uint64_t Start, uint64_t End, PLH::ProtFlag Protection) :
-            AllocatedMemoryBlock(ParentBlock, PLH::MemoryBlock(Start, End, Protection)) {
+    AllocatedMemoryBlock(std::shared_ptr<char> ParentBlock, uint64_t Start, uint64_t End, PLH::ProtFlag Protection) :
+            AllocatedMemoryBlock(std::move(ParentBlock), PLH::MemoryBlock(Start, End, Protection)) {
 
     }
 
-    AllocatedMemoryBlock() : m_ParentBlock(std::shared_ptr<uint8_t>()),
+    AllocatedMemoryBlock() : m_ParentBlock(std::shared_ptr<char>()),
                              m_OurDesc(PLH::MemoryBlock()) {
 
     }
 
-    std::shared_ptr<uint8_t> GetParentBlock() const {
+    std::shared_ptr<char> GetParentBlock() const {
         return m_ParentBlock;
     }
 
@@ -73,10 +74,9 @@ public:
     bool operator<=(const AllocatedMemoryBlock* other) const;
 
 private:
-    //TO-DO: Determine if ParentBlockDesc is necessary info to store
-    std::shared_ptr<uint8_t> m_ParentBlock;
-    PLH::MemoryBlock         m_OurDesc;
-    UID                      uid;
+    std::shared_ptr<char> m_ParentBlock;
+    PLH::MemoryBlock      m_OurDesc;
+    UID                   uid;
 };
 }
 #endif

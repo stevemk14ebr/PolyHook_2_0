@@ -12,10 +12,10 @@ PLH::RangeMemAllocatorUnixImp::AllocateImp(const uint64_t AddressOfPage, const s
                                            const int MapFlags, const PLH::ProtFlag Protections) const {
 
     assert(Size > 0 && "Size must be >0");
-    uint8_t* Buffer = (uint8_t*)mmap((void*)AddressOfPage, Size, TranslateProtection(Protections), MapFlags, 0, 0);
+    auto Buffer = (char*)mmap((char*)AddressOfPage, Size, TranslateProtection(Protections), MapFlags, 0, 0);
     if (Buffer != MAP_FAILED && Buffer != nullptr) {
         //Custom deleter
-        std::shared_ptr<uint8_t> BufferSp(Buffer, [=](uint8_t* ptr) {
+        std::shared_ptr<char> BufferSp(Buffer, [=](char* ptr) {
             Deallocate(ptr, Size);
         });
 
@@ -37,7 +37,7 @@ PLH::RangeMemAllocatorUnixImp::AllocateMemory(const uint64_t MinAddress,
                 MAP_FIXED; //TO-DO make use of MAP_32Bit for x64?
     std::vector<PLH::MemoryBlock> FreeBlocks = GetFreeVABlocks();
 
-    size_t PageSize = (size_t)getpagesize();
+    auto PageSize = (size_t)getpagesize();
     size_t Alignment = PageSize;
     for (PLH::MemoryBlock FreeBlock : FreeBlocks) {
         //Check acceptable ranges of block size within our Min-Max params
@@ -76,7 +76,7 @@ PLH::RangeMemAllocatorUnixImp::AllocateMemory(const uint64_t MinAddress,
     function_fail("Failed to find block within range");
 }
 
-void PLH::RangeMemAllocatorUnixImp::Deallocate(uint8_t* Buffer, const size_t Length) const {
+void PLH::RangeMemAllocatorUnixImp::Deallocate(char* Buffer, const size_t Length) const {
     munmap(Buffer, Length);
 }
 
@@ -119,7 +119,7 @@ std::vector<PLH::MemoryBlock> PLH::RangeMemAllocatorUnixImp::GetAllocatedVABlock
         if (p == 's')
             protFlag = protFlag | PLH::ProtFlag::S;
 
-        allocatedPages.push_back(PLH::MemoryBlock(Start, End, protFlag));
+        allocatedPages.emplace_back(Start, End, protFlag);
     }
     return allocatedPages;
 }
@@ -130,7 +130,7 @@ std::vector<PLH::MemoryBlock> PLH::RangeMemAllocatorUnixImp::GetFreeVABlocks() c
     for (auto prev = AllocatedPages.begin(), cur = AllocatedPages.begin() + 1;
          cur < AllocatedPages.end(); prev = cur, std::advance(cur, 1)) {
         if (prev->GetEnd() - cur->GetStart() > 0) {
-            FreePages.push_back(PLH::MemoryBlock(prev->GetEnd(), cur->GetStart(), PLH::ProtFlag::UNSET));
+            FreePages.emplace_back(prev->GetEnd(), cur->GetStart(), PLH::ProtFlag::UNSET);
         }
     }
     return FreePages;

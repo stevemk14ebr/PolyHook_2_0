@@ -3,7 +3,6 @@
 //
 #include "Catch.hpp"
 #include "headers/MemoryAllocation/RangeAllocator.hpp"
-#include <inttypes.h>
 
 volatile void PlaceHolderFunction() {
     printf("Not useful, ignore me totally");
@@ -87,7 +86,7 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
         for (int i = 0; i < 100; i++) {
             auto AllocBlock = allocator.AllocateMemory(MinAddress, MaxAddress, PageSize, (X | W | R));
             REQUIRE(AllocBlock.isOk());
-            std::shared_ptr<uint8_t> Buffer = AllocBlock.unwrap().GetParentBlock();
+            std::shared_ptr<char> Buffer = AllocBlock.unwrap().GetParentBlock();
             REQUIRE(Buffer != nullptr);
 
             //std::cout << std::hex << "Allocated At: " << (uint64_t)Buffer.get() << std::endl;
