@@ -22,42 +22,41 @@ namespace PLH {
 class AllocatedMemoryBlock
 {
 public:
-    AllocatedMemoryBlock(std::shared_ptr<char> ParentBlock, PLH::MemoryBlock OurDesc) : m_ParentBlock(std::move(
-            ParentBlock)),
-                                                                                        m_OurDesc(OurDesc) {
+    AllocatedMemoryBlock(std::shared_ptr<char> parentBlock, PLH::MemoryBlock ourDesc) :
+            m_parentBlock(std::move(parentBlock)), m_ourDesc(ourDesc) {
 
     }
 
     //delegate constructors allowed in c++11
-    AllocatedMemoryBlock(std::shared_ptr<char> ParentBlock, uint64_t Start, uint64_t End, PLH::ProtFlag Protection) :
-            AllocatedMemoryBlock(std::move(ParentBlock), PLH::MemoryBlock(Start, End, Protection)) {
+    AllocatedMemoryBlock(std::shared_ptr<char> parentBlock, uint64_t start, uint64_t end, PLH::ProtFlag protection) :
+            AllocatedMemoryBlock(std::move(parentBlock), PLH::MemoryBlock(start, end, protection)) {
 
     }
 
-    AllocatedMemoryBlock() : m_ParentBlock(std::shared_ptr<char>()),
-                             m_OurDesc(PLH::MemoryBlock()) {
+    AllocatedMemoryBlock() : m_parentBlock(std::shared_ptr<char>()),
+                             m_ourDesc(PLH::MemoryBlock()) {
 
     }
 
-    std::shared_ptr<char> GetParentBlock() const {
-        return m_ParentBlock;
+    std::shared_ptr<char> getParentBlock() const {
+        return m_parentBlock;
     }
 
-    uint64_t GetSize() const {
-        return m_OurDesc.GetSize();
+    uint64_t getSize() const {
+        return m_ourDesc.getSize();
     }
 
-    PLH::MemoryBlock GetDescription() const {
-        return m_OurDesc;
+    PLH::MemoryBlock getDescription() const {
+        return m_ourDesc;
     }
 
     UID id() const {
-        return uid;
+        return m_uid;
     }
 
-    bool ContainsBlock(const PLH::MemoryBlock& other) const;
+    bool containsBlock(const PLH::MemoryBlock& other) const;
 
-    bool ContainsBlock(const PLH::AllocatedMemoryBlock& other) const;
+    bool containsBlock(const PLH::AllocatedMemoryBlock& other) const;
 
     explicit operator PLH::MemoryBlock() const;
 
@@ -74,9 +73,9 @@ public:
     bool operator<=(const AllocatedMemoryBlock* other) const;
 
 private:
-    std::shared_ptr<char> m_ParentBlock;
-    PLH::MemoryBlock      m_OurDesc;
-    UID                   uid;
+    std::shared_ptr<char> m_parentBlock;
+    PLH::MemoryBlock      m_ourDesc;
+    UID                   m_uid;
 };
 }
 #endif

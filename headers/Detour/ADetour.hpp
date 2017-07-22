@@ -35,15 +35,15 @@ public:
 
     Detour(const char* fnAddress, const char* fnCallback);
 
-    virtual bool Hook() override;
+    virtual bool hook() override;
 
-    virtual bool UnHook() override;
+    virtual bool unHook() override;
 
-    virtual PLH::HookType GetType() override;
+    virtual PLH::HookType getType() override;
 
     template<typename T>
     T getOriginal() {
-        return (T)&trampoline->front();
+        return (T)&m_trampoline->front();
     }
 
 private:
@@ -62,45 +62,45 @@ private:
 
     void dbgPrintInstructionVec(const std::string& name, const InstructionVector& instructionVector);
 
-    uint64_t                    fnAddress;
-    uint64_t                    fnCallback;
-    bool                        hooked;
-    std::unique_ptr<ArchBuffer> trampoline; //so that we can delay instantiation
+    uint64_t                    m_fnAddress;
+    uint64_t                    m_fnCallback;
+    bool                        m_hooked;
+    std::unique_ptr<ArchBuffer> m_trampoline; //so that we can delay instantiation
 
-    Architecture archImpl;
-    Disassembler disassembler;
+    Architecture m_archImpl;
+    Disassembler m_disassembler;
 };
 
 
 template<typename Architecture, typename Disassembler>
 Detour<Architecture, Disassembler>::Detour(const uint64_t hookAddress, const uint64_t callbackAddress) :
-        archImpl(), disassembler(archImpl.GetArchType()) {
-    fnAddress  = hookAddress;
-    fnCallback = callbackAddress;
-    hooked     = false;
+        m_archImpl(), m_disassembler(m_archImpl.GetArchType()) {
+    m_fnAddress  = hookAddress;
+    m_fnCallback = callbackAddress;
+    m_hooked     = false;
 }
 
 template<typename Architecture, typename Disassembler>
 Detour<Architecture, Disassembler>::Detour(const char* hookAddress, const char* callbackAddress) :
-        archImpl(), disassembler(archImpl.GetArchType()) {
+        m_archImpl(), m_disassembler(m_archImpl.getArchType()) {
 
-    fnAddress  = (uint64_t)hookAddress;
-    fnCallback = (uint64_t)callbackAddress;
-    hooked     = false;
+    m_fnAddress  = (uint64_t)hookAddress;
+    m_fnCallback = (uint64_t)callbackAddress;
+    m_hooked     = false;
 }
 
 template<typename Architecture, typename Disassembler>
-bool Detour<Architecture, Disassembler>::Hook() {
+bool Detour<Architecture, Disassembler>::hook() {
 
     // Allocate some memory near the callback for the trampoline
-    auto bufMaybe = archImpl.AllocateMemory(fnCallback);
+    auto bufMaybe = m_archImpl.allocateMemory(m_fnCallback);
     if (!bufMaybe)
         return false;
-    trampoline = std::move(bufMaybe).unwrap();
+    m_trampoline = std::move(bufMaybe).unwrap();
 
     /* Disassemble the prologue and find the instructions that will be overwritten by our jump.
      * Also simultaneously check that the function prologue is big enough for our jump*/
-    InstructionVector instructions = disassembler.Disassemble(fnAddress, fnAddress, fnAddress + 100);
+    InstructionVector instructions = m_disassembler.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100);
     if (instructions.size() == 0)
         return false;
 
@@ -108,15 +108,15 @@ bool Detour<Architecture, Disassembler>::Hook() {
 
     // Certain jump types are better than others, see if we have room for the better one, otherwise fallback
     bool    doPreferredJmp = true;
-    bool    jumpAbsolute   = archImpl.preferredJumpType() == PLH::JmpType::Absolute;
-    uint8_t jumpLength     = archImpl.preferredPrologueLength();
+    bool    jumpAbsolute   = m_archImpl.preferredJumpType() == PLH::JmpType::Absolute;
+    uint8_t jumpLength     = m_archImpl.preferredPrologueLength();
     size_t  prologueLength = jumpLength;
 
     auto maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
     if (!maybePrologueInstructions) {
         doPreferredJmp = false;
-        jumpAbsolute   = archImpl.minimumJumpType() == PLH::JmpType::Absolute;
-        jumpLength     = archImpl.minimumPrologueLength();
+        jumpAbsolute   = m_archImpl.minimumJumpType() == PLH::JmpType::Absolute;
+        jumpLength     = m_archImpl.minimumPrologueLength();
         prologueLength = jumpLength;
 
         maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
@@ -130,7 +130,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
     // Count # of entries that will be in the jump table
     InstructionVector conditionalJumpsToFix;
     for (auto         inst : prologueInstructions) {
-        if (disassembler.isConditionalJump(*inst))
+        if (m_disassembler.isConditionalJump(*inst))
             conditionalJumpsToFix.push_back(inst);
     }
 
@@ -141,60 +141,60 @@ bool Detour<Architecture, Disassembler>::Hook() {
      * fixups are out the window.*/
     size_t reserveSize = prologueLength +
                          jumpLength +
-                         (conditionalJumpsToFix.size() * archImpl.preferredPrologueLength())
+                         (conditionalJumpsToFix.size() * m_archImpl.preferredPrologueLength())
                          + 8; //8 for the optional destination holder
 
-    trampoline->reserve(reserveSize);
+    m_trampoline->reserve(reserveSize);
     int64_t trampolineDelta = 0;
 
     /* Copy (truly copy, original are untouched) instructions from the prologue to the trampoline. Also fixup the various types of
        instructions that need to be fixed (RIP/EIP relative), excluding conditional jumps */
     for (auto& inst : prologueInstructions) {
         // Copy instruction into the trampoline (they will be malformed)
-        trampoline->insert(trampoline->end(), inst->GetBytes().begin(), inst->GetBytes().end());
+        m_trampoline->insert(m_trampoline->end(), inst->getBytes().begin(), inst->getBytes().end());
 
         // sadly we must do this in a loop, UB if we access data() before vector has any elements
-        trampolineDelta = (int64_t)(trampoline->data() - fnAddress);
-        inst->SetAddress(inst->GetAddress() + trampolineDelta);
+        trampolineDelta = (int64_t)(m_trampoline->data() - m_fnAddress);
+        inst->setAddress(inst->getAddress() + trampolineDelta);
 
-        if (inst->HasDisplacement() && inst->IsDisplacementRelative() && !disassembler.isConditionalJump(*inst))
-            inst->SetRelativeDisplacement(inst->GetDisplacement().Relative - trampolineDelta);
-        disassembler.WriteEncoding(*inst);
+        if (inst->hasDisplacement() && inst->isDisplacementRelative() && !m_disassembler.isConditionalJump(*inst))
+            inst->setRelativeDisplacement(inst->getDisplacement().Relative - trampolineDelta);
+        m_disassembler.writeEncoding(*inst);
     }
 
     // Insert the jmp to fnAddress.Body from the trampoline
-    InstructionVector bodyJump = archImpl.makePreferredJump((uint64_t)trampoline->data() + trampoline->size(),
-                                                            fnAddress + jumpLength);
+    InstructionVector bodyJump = m_archImpl.makePreferredJump((uint64_t)m_trampoline->data() + m_trampoline->size(),
+                                                              m_fnAddress + jumpLength);
 
     for (auto inst : bodyJump)
-        trampoline->insert(trampoline->end(), inst->GetBytes().begin(), inst->GetBytes().end());
+        m_trampoline->insert(m_trampoline->end(), inst->getBytes().begin(), inst->getBytes().end());
 
     // Build the jump table
     for (auto& inst : conditionalJumpsToFix) {
-        uint64_t intermediateJumpLoc = (uint64_t)trampoline->data() + trampoline->size();
+        uint64_t intermediateJumpLoc = (uint64_t)m_trampoline->data() + m_trampoline->size();
 
         // Reset instructions address to it's original so we can find where it original jumped too
-        inst->SetAddress(inst->GetAddress() - trampolineDelta);
-        InstructionVector intermediateJumpVec = archImpl.makePreferredJump(intermediateJumpLoc,
-                                                                           inst->GetDestination());
-        inst->SetAddress(inst->GetAddress() + trampolineDelta);
+        inst->setAddress(inst->getAddress() - trampolineDelta);
+        InstructionVector intermediateJumpVec = m_archImpl.makePreferredJump(intermediateJumpLoc,
+                                                                             inst->getDestination());
+        inst->setAddress(inst->getAddress() + trampolineDelta);
 
         // Point the relative jmp to the intermediate long jump
         PLH::Instruction::Displacement disp = {0};
-        disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(inst->GetAddress(),
+        disp.Relative = PLH::ADisassembler::calculateRelativeDisplacement<int32_t>(inst->getAddress(),
                                                                                    intermediateJumpLoc,
-                                                                                   inst->Size());
-        inst->SetRelativeDisplacement(disp.Relative);
+                                                                                   inst->size());
+        inst->setRelativeDisplacement(disp.Relative);
 
         // Write the intermediate jump and the changed cond. jump
         for (auto jmpInst : intermediateJumpVec) {
-            trampoline->insert(trampoline->end(), jmpInst->GetBytes().begin(), jmpInst->GetBytes().end());
+            m_trampoline->insert(m_trampoline->end(), jmpInst->getBytes().begin(), jmpInst->getBytes().end());
         }
-        disassembler.WriteEncoding(*inst);
+        m_disassembler.writeEncoding(*inst);
     }
 
     // Make the fnAddress's memory page writeable
-    uint64_t fnAddressPage = (uint64_t)PLH::AlignDownwards((char*)fnAddress, getpagesize());
+    uint64_t fnAddressPage = (uint64_t)PLH::AlignDownwards((char*)m_fnAddress, getpagesize());
 
     PLH::MemoryProtector<PLH::UnixMemProtImp> memoryProtectorFn(fnAddressPage,
                                                                 getpagesize(),
@@ -208,36 +208,37 @@ bool Detour<Architecture, Disassembler>::Hook() {
      * at the end of the trampoline (past jump table)*/
     InstructionVector detourJump;
     if (doPreferredJmp) {
-        detourJump = archImpl.makePreferredJump(fnAddress, fnCallback);
+        detourJump = m_archImpl.makePreferredJump(m_fnAddress, m_fnCallback);
     } else {
         if (jumpAbsolute) {
-            detourJump = archImpl.makeMinimumJump(fnAddress, fnCallback);
+            detourJump = m_archImpl.makeMinimumJump(m_fnAddress, m_fnCallback);
         } else {
-            archImpl.setIndirectHolder((uint64_t)trampoline->data() + trampoline->size());
-            detourJump = archImpl.makeMinimumJump(fnAddress, fnCallback);
+            m_archImpl.setIndirectHolder((uint64_t)m_trampoline->data() + m_trampoline->size());
+            detourJump = m_archImpl.makeMinimumJump(m_fnAddress, m_fnCallback);
         }
     }
 
     for (auto inst : detourJump)
-        disassembler.WriteEncoding(*inst);
+        m_disassembler.writeEncoding(*inst);
 
     // Nop the space between jmp and end of prologue
-    std::memset((char*)(fnAddress + jumpLength), 0x90, prologueLength - jumpLength);
+    std::memset((char*)(m_fnAddress + jumpLength), 0x90, prologueLength - jumpLength);
 
     if (m_debugSet) {
-        std::cout << "fnAddress: " << std::hex << fnAddress << " fnCallback: " << fnCallback <<
-                  " trampoline: " << (uint64_t)trampoline->data() << " delta: "
+        std::cout << "fnAddress: " << std::hex << m_fnAddress << " fnCallback: " << m_fnCallback <<
+                  " trampoline: " << (uint64_t)m_trampoline->data() << " delta: "
                   << trampolineDelta << std::dec << std::endl;
 
-        InstructionVector trampolineInst = disassembler.Disassemble((uint64_t)trampoline->data(),
-                                                                    (uint64_t)trampoline->data(),
-                                                                    (uint64_t)trampoline->data() + trampoline->size());
+        InstructionVector trampolineInst = m_disassembler.disassemble((uint64_t)m_trampoline->data(),
+                                                                      (uint64_t)m_trampoline->data(),
+                                                                      (uint64_t)m_trampoline->data() +
+                                                                      m_trampoline->size());
         dbgPrintInstructionVec("Trampoline: ", trampolineInst);
 
         // Go a little past prologue to see if we corrupted anything
-        InstructionVector newPrologueInst = disassembler.Disassemble(fnAddress,
-                                                                     fnAddress,
-                                                                     fnAddress + prologueLength + 10);
+        InstructionVector newPrologueInst = m_disassembler.disassemble(m_fnAddress,
+                                                                       m_fnAddress,
+                                                                       m_fnAddress + prologueLength + 10);
         dbgPrintInstructionVec("New Prologue: ", newPrologueInst);
     }
 
@@ -246,7 +247,7 @@ bool Detour<Architecture, Disassembler>::Hook() {
      * mutate instruction displacements. Therefore
      * moving the trampoline makes our fixups invalid.
      * Figure out why this happened or stuff blows up*/
-    if(trampoline->capacity() != reserveSize) {
+    if (m_trampoline->capacity() != reserveSize) {
         assert(false);
         return false;
     }
@@ -307,10 +308,10 @@ Detour<Architecture, Disassembler>::calculatePrologueLength(const InstructionVec
             break;
 
         //TODO: detect end of function better
-        if (inst->GetMnemonic() == "ret")
+        if (inst->getMnemonic() == "ret")
             break;
 
-        prologueLength += inst->Size();
+        prologueLength += inst->size();
         instructionsInRange.push_back(inst);
     }
 
@@ -321,13 +322,13 @@ Detour<Architecture, Disassembler>::calculatePrologueLength(const InstructionVec
 }
 
 template<typename Architecture, typename Disassembler>
-bool Detour<Architecture, Disassembler>::UnHook() {
+bool Detour<Architecture, Disassembler>::unHook() {
 
 }
 
 template<typename Architecture, typename Disassembler>
-PLH::HookType Detour<Architecture, Disassembler>::GetType() {
-    return archImpl.GetType();
+PLH::HookType Detour<Architecture, Disassembler>::getType() {
+    return m_archImpl.getType();
 }
 
 template<typename Architecture, typename Disassembler>

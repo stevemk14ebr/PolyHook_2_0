@@ -4,12 +4,12 @@
 #include "headers/CapstoneDisassembler.hpp"
 
 std::vector<std::shared_ptr<PLH::Instruction>>
-PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start, uint64_t End) {
-    cs_insn* InsInfo = cs_malloc(m_CapHandle);
+PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
+    cs_insn* InsInfo = cs_malloc(m_capHandle);
     std::vector<std::shared_ptr<PLH::Instruction>> InsVec;
 
-    uint64_t Size = End - Start;
-    while (cs_disasm_iter(m_CapHandle, (const uint8_t**)(&Start), &Size, &FirstInstruction, InsInfo)) {
+    uint64_t Size = End - start;
+    while (cs_disasm_iter(m_capHandle, (const uint8_t**)(&start), &Size, &firstInstruction, InsInfo)) {
         //Set later by 'SetDisplacementFields'
         PLH::Instruction::Displacement displacement;
         displacement.Absolute = 0;
@@ -23,8 +23,8 @@ PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start
                                                        InsInfo->mnemonic,
                                                        InsInfo->op_str);
 
-        SetDisplacementFields(Inst.get(), InsInfo);
-        ModifyParentIndices(InsVec, Inst);
+        setDisplacementFields(Inst.get(), InsInfo);
+        modifyParentIndices(InsVec, Inst);
 
         InsVec.push_back(std::move(Inst));
     }
@@ -39,8 +39,8 @@ PLH::CapstoneDisassembler::Disassemble(uint64_t FirstInstruction, uint64_t Start
  * first modify the byte array, and then call write encoding, proper order to relocate
  * an instruction should be disasm instructions -> set relative/abolsute displacement() ->
  * writeEncoding(). It is done this way so that these operations can be made transactional**/
-void PLH::CapstoneDisassembler::WriteEncoding(const PLH::Instruction& instruction) {
-    memcpy((void*)instruction.GetAddress(), &instruction.GetBytes()[0], instruction.Size());
+void PLH::CapstoneDisassembler::writeEncoding(const PLH::Instruction& instruction) {
+    memcpy((void*)instruction.getAddress(), &instruction.getBytes()[0], instruction.size());
 }
 
 /**If an instruction is a jmp/call variant type this will set it's displacement fields to the
@@ -48,35 +48,38 @@ void PLH::CapstoneDisassembler::WriteEncoding(const PLH::Instruction& instructio
  * this determines if an instruction is a jmp/call variant, and then further if it is is jumping via
  * memory or immediate, and then finally if that mem/imm is encoded via a displacement relative to
  * the instruction pointer, or directly to an absolute address**/
-void PLH::CapstoneDisassembler::SetDisplacementFields(PLH::Instruction* Inst, const cs_insn* CapInst) const {
-    cs_x86* x86 = &(CapInst->detail->x86);
+void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction* inst, const cs_insn* capInst) const {
+    cs_x86* x86 = &(capInst->detail->x86);
 
     for (uint_fast32_t j = 0; j < x86->op_count; j++) {
         cs_x86_op* op = &(x86->operands[j]);
         if (op->type == X86_OP_MEM) {
             //Are we relative to instruction pointer?
             //mem are types like jmp [rip + 0x4] where location is dereference-d
-            if (op->mem.base != GetIpReg())
+            if (op->mem.base != getIpReg())
                 continue;
 
             const uint8_t Offset = x86->encoding.disp_offset;
             const uint8_t Size   = x86->encoding.disp_size;
-            CopyAndSExtendDisp(Inst, Offset, Size, std::numeric_limits<int64_t>::max());
+            copyAndSExtendDisp(inst, Offset, Size, std::numeric_limits<int64_t>::max());
         } else if (op->type == X86_OP_IMM) {
             //IMM types are like call 0xdeadbeef where they jmp straight to some location
-            if (!HasGroup(CapInst, x86_insn_group::X86_GRP_JUMP) &&
-                !HasGroup(CapInst, x86_insn_group::X86_GRP_CALL))
+            if (!hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) &&
+                !hasGroup(capInst, x86_insn_group::X86_GRP_CALL))
                 continue;
 
             const uint8_t Offset = x86->encoding.imm_offset;
             const uint8_t Size   = x86->encoding.imm_size;
-            CopyAndSExtendDisp(Inst, Offset, Size, op->imm);
+            copyAndSExtendDisp(inst, Offset, Size, op->imm);
         }
     }
 }
 
 /**Copies the displacement bytes from memory, and sign extends these values if necessary**/
-void PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const uint8_t Offset, const uint8_t Size, const int64_t immDestination) const {
+void PLH::CapstoneDisassembler::copyAndSExtendDisp(PLH::Instruction* inst,
+                                                   const uint8_t offset,
+                                                   const uint8_t size,
+                                                   const int64_t immDestination) const {
     /* Sign extension necessary because we are storing numbers (possibly) smaller than int64_t that may be negative.
      * If we did not do this, then the sign bit would be in the incorrect place for an int64_t.
      * 1 << (Size*8-1) dynamically calculates the position of the sign bit (furthest left) (our byte mask)
@@ -85,38 +88,38 @@ void PLH::CapstoneDisassembler::CopyAndSExtendDisp(PLH::Instruction* Inst, const
      * the result will be positive if sign bit is set (negative displacement)
      * and 0 when sign bit not set (positive displacement)*/
     int64_t displacement = 0;
-    memcpy(&displacement, &Inst->GetBytes()[Offset], Size);
+    memcpy(&displacement, &inst->getBytes()[offset], size);
 
-    uint64_t mask = (1U << (Size * 8 - 1));
-    if (displacement & (1U << (Size * 8 - 1))) {
+    uint64_t mask = (1U << (size * 8 - 1));
+    if (displacement & (1U << (size * 8 - 1))) {
         /* sign extend if negative, requires that bits above Size*8 are zero,
          * if bits are not zero use x = x & ((1U << b) - 1) where x is a temp for displacement
          * and b is Size*8*/
-        displacement = (displacement ^ mask) - mask; //xor clears sign bit, subtraction makes number negative again but in the int64 range
+        displacement = (displacement ^ mask) -
+                       mask; //xor clears sign bit, subtraction makes number negative again but in the int64 range
     }
 
-    Inst->SetDisplacementOffset(Offset);
+    inst->setDisplacementOffset(offset);
 
     /* When the retrieved displacement is < immDestination we know that the base address is included
      * in the destinations calculation. By definition this means it is relative. Otherwise it is absolute*/
-    if(displacement < immDestination) {
-        if(immDestination != std::numeric_limits<int64_t>::max())
-            assert(displacement + Inst->GetAddress() + Inst->Size() == immDestination);
-        Inst->SetRelativeDisplacement(displacement);
-    }else {
+    if (displacement < immDestination) {
+        if (immDestination != std::numeric_limits<int64_t>::max())
+            assert(displacement + inst->getAddress() + inst->size() == immDestination);
+        inst->setRelativeDisplacement(displacement);
+    } else {
         assert(((uint64_t)displacement) == ((uint64_t)immDestination));
-        Inst->SetAbsoluteDisplacement((uint64_t)displacement);
+        inst->setAbsoluteDisplacement((uint64_t)displacement);
     }
 }
 
 bool PLH::CapstoneDisassembler::isConditionalJump(const PLH::Instruction& instruction) const {
     //http://unixwiz.net/techtips/x86-jumps.html
-    if (instruction.Size() < 1)
+    if (instruction.size() < 1)
         return false;
 
-    std::vector<uint8_t> bytes = instruction.GetBytes();
-    if (bytes[0] == 0x0F && instruction.Size() > 1)
-    {
+    std::vector<uint8_t> bytes = instruction.getBytes();
+    if (bytes[0] == 0x0F && instruction.size() > 1) {
         if (bytes[1] >= 0x80 && bytes[1] <= 0x8F)
             return true;
     }

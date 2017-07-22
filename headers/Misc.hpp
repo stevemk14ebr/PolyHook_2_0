@@ -40,22 +40,22 @@ public:
 };
 
 //http://stackoverflow.com/questions/4840410/how-to-align-a-pointer-in-c
-static inline char* AlignUpwards(char* stack, size_t align) {
+static inline char* AlignUpwards(const char* stack, size_t align) {
     assert(align > 0 && (align & (align - 1)) == 0); /* Power of 2 */
     assert(stack != 0);
 
-    uintptr_t addr = reinterpret_cast<uintptr_t>(stack);
+    auto addr = reinterpret_cast<uintptr_t>(stack);
     if (addr % align != 0)
         addr += align - addr % align;
     assert(addr >= reinterpret_cast<uintptr_t>(stack));
     return reinterpret_cast<char*>(addr);
 }
 
-static inline char* AlignDownwards(char* stack, size_t align) {
+static inline char* AlignDownwards(const char* stack, size_t align) {
     assert(align > 0 && (align & (align - 1)) == 0); /* Power of 2 */
     assert(stack != 0);
 
-    uintptr_t addr = reinterpret_cast<uintptr_t>(stack);
+    auto addr = reinterpret_cast<uintptr_t>(stack);
     addr -= addr % align;
     assert(addr <= reinterpret_cast<uintptr_t>(stack));
     return reinterpret_cast<char*>(addr);

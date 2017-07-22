@@ -26,8 +26,7 @@ enum class HookType
 class IHook : public PLH::Errant
 {
 public:
-    IHook()
-    {
+    IHook() {
         m_debugSet = false;
     }
 
@@ -37,16 +36,16 @@ public:
     IHook& operator=(const IHook& other) = delete; //copy assignment
     virtual ~IHook() = default;
 
-    virtual bool Hook() = 0;
+    virtual bool hook() = 0;
 
-    virtual bool UnHook() = 0;
+    virtual bool unHook() = 0;
 
-    virtual HookType GetType() = 0;
+    virtual HookType getType() = 0;
 
-    virtual void setDebug(const bool state)
-    {
+    virtual void setDebug(const bool state) {
         m_debugSet = state;
     }
+
 protected:
     bool m_debugSet;
 };

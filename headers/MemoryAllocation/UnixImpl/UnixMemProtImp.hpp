@@ -10,14 +10,15 @@
 
 #include <sys/mman.h>
 
-namespace PLH{
+namespace PLH {
 
-class UnixMemProtImp{
+class UnixMemProtImp
+{
 public:
-    PLH::Maybe<PLH::ProtFlag> Protect(const uint64_t address, const uint64_t length, const int flags) {
+    PLH::Maybe<PLH::ProtFlag> protect(const uint64_t address, const uint64_t length, const int flags) {
         assert(address % getpagesize() == 0);
 
-        if(mprotect((void*)address, length, flags) == 0)
+        if (mprotect((void*)address, length, flags) == 0)
             return PLH::ProtFlag::UNSET; //TODO: use RangeMemAllocator's to walk protections
         function_fail(std::string(strerror(errno)));
     }

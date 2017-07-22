@@ -18,22 +18,21 @@ class MemoryProtector
 {
 public:
     MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot) {
-        m_Address = address;
-        m_Length  = length;
+        m_address = address;
+        m_length  = length;
 
-        m_origProtection = archImp.Protect(address, length, TranslateProtection(prot));
+        m_origProtection = archImp.protect(address, length, TranslateProtection(prot));
     }
 
-    PLH::Maybe<PLH::ProtFlag> originalProt()
-    {
+    PLH::Maybe<PLH::ProtFlag> originalProt() {
         return m_origProtection;
     }
 
     ~MemoryProtector() {
-        if(!m_origProtection || m_origProtection.unwrap() == PLH::ProtFlag::UNSET)
+        if (!m_origProtection || m_origProtection.unwrap() == PLH::ProtFlag::UNSET)
             return;
 
-        archImp.Protect(m_Address, m_Length, TranslateProtection(m_origProtection.unwrap()));
+        archImp.protect(m_address, m_length, TranslateProtection(m_origProtection.unwrap()));
     }
 
 private:
@@ -41,8 +40,8 @@ private:
 
     PLH::Maybe<PLH::ProtFlag> m_origProtection;
 
-    uint64_t m_Address;
-    uint64_t m_Length;
+    uint64_t m_address;
+    uint64_t m_length;
 };
 
 }

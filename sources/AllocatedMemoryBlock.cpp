@@ -4,8 +4,8 @@
 #include "headers/MemoryAllocation/AllocatedMemoryBlock.hpp"
 
 bool PLH::AllocatedMemoryBlock::operator==(const PLH::AllocatedMemoryBlock& other) const {
-    return this->GetParentBlock().get() == other.GetParentBlock().get() &&
-           this->GetDescription() == other.GetDescription();
+    return this->getParentBlock().get() == other.getParentBlock().get() &&
+            this->getDescription() == other.getDescription();
 }
 
 bool PLH::AllocatedMemoryBlock::operator!=(const PLH::AllocatedMemoryBlock& other) const {
@@ -13,34 +13,34 @@ bool PLH::AllocatedMemoryBlock::operator!=(const PLH::AllocatedMemoryBlock& othe
 }
 
 bool PLH::AllocatedMemoryBlock::operator<(const PLH::AllocatedMemoryBlock& other) const {
-    return this->GetDescription() < other.GetDescription();
+    return this->getDescription() < other.getDescription();
 }
 
 bool PLH::AllocatedMemoryBlock::operator>(const PLH::AllocatedMemoryBlock& other) const {
-    return this->GetDescription() > other.GetDescription();
+    return this->getDescription() > other.getDescription();
 }
 
-bool PLH::AllocatedMemoryBlock::ContainsBlock(const PLH::MemoryBlock& other) const {
-    return this->GetDescription().ContainsBlock(other);
+bool PLH::AllocatedMemoryBlock::containsBlock(const PLH::MemoryBlock& other) const {
+    return this->getDescription().containsBlock(other);
 }
 
-bool PLH::AllocatedMemoryBlock::ContainsBlock(const PLH::AllocatedMemoryBlock& other) const {
-    return this->GetDescription().ContainsBlock(other.GetDescription());
+bool PLH::AllocatedMemoryBlock::containsBlock(const PLH::AllocatedMemoryBlock& other) const {
+    return this->getDescription().containsBlock(other.getDescription());
 }
 
 bool PLH::AllocatedMemoryBlock::operator>=(const PLH::AllocatedMemoryBlock& other) const {
-    return this->GetDescription() >= other.GetDescription();
+    return this->getDescription() >= other.getDescription();
 }
 
 bool PLH::AllocatedMemoryBlock::operator<=(const PLH::AllocatedMemoryBlock* other) const {
-    return this->GetDescription() <= other->GetDescription();
+    return this->getDescription() <= other->getDescription();
 }
 
 PLH::AllocatedMemoryBlock::operator PLH::MemoryBlock() const {
-    return this->GetDescription();
+    return this->getDescription();
 }
 
 inline std::ostream& operator<<(std::ostream& os, const PLH::AllocatedMemoryBlock& obj) {
-    os << std::hex << "{Parent:" << (uint64_t)obj.GetParentBlock().get() << std::dec << obj.GetDescription() << "}";
+    os << std::hex << "{Parent:" << (uint64_t)obj.getParentBlock().get() << std::dec << obj.getDescription() << "}";
     return os;
 }

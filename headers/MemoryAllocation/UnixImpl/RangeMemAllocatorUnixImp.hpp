@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+
 namespace PLH {
 /******************************************************************************************************************
  ** This is the unix implementation for the ARangeMemoryAllocator class. It reads the maps file of the current
@@ -30,21 +31,21 @@ class RangeMemAllocatorUnixImp
 {
 public:
     PLH::Maybe<PLH::AllocatedMemoryBlock>
-    AllocateMemory(const uint64_t MinAddress, const uint64_t MaxAddress,
-                   const size_t Size, const PLH::ProtFlag Protections) const;
+    allocateMemory(const uint64_t minAddress, const uint64_t maxAddress,
+                   const size_t size, const PLH::ProtFlag protections) const;
 
-    size_t QueryPreferedAllocSize() const;
+    size_t queryPrefferedAllocSize() const;
 
 protected:
-    void Deallocate(char* Buffer, const size_t Length) const;
+    void deallocate(char* buffer, const size_t length) const;
 
     PLH::Maybe<PLH::AllocatedMemoryBlock>
-    AllocateImp(const uint64_t AddressOfPage, const size_t Size, const int MapFlags,
-                const PLH::ProtFlag Protections) const;
+    allocateImp(const uint64_t addressOfPage, const size_t size, const int mapFlags,
+                const PLH::ProtFlag protections) const;
 
-    std::vector<PLH::MemoryBlock> GetAllocatedVABlocks() const;
+    std::vector<PLH::MemoryBlock> getAllocatedVABlocks() const;
 
-    std::vector<PLH::MemoryBlock> GetFreeVABlocks() const;
+    std::vector<PLH::MemoryBlock> getFreeVABlocks() const;
 };
 }
 #endif //POLYHOOK_2_0_MEMALLOCATORUNIX_HPP

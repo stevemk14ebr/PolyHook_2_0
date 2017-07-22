@@ -3,15 +3,15 @@
 //
 #include "headers/Detour/x86DetourImp.hpp"
 
-PLH::Maybe<std::unique_ptr<PLH::x86DetourImp::DetourBuffer>> PLH::x86DetourImp::AllocateMemory(const uint64_t Hint) {
+PLH::Maybe<std::unique_ptr<PLH::x86DetourImp::DetourBuffer>> PLH::x86DetourImp::allocateMemory(const uint64_t hint) {
     return std::make_unique<DetourBuffer>(); //any memory location will do for x86
 }
 
-PLH::HookType PLH::x86DetourImp::GetType() const {
+PLH::HookType PLH::x86DetourImp::getType() const {
     return PLH::HookType::X86Detour;
 }
 
-PLH::Mode PLH::x86DetourImp::GetArchType() const {
+PLH::Mode PLH::x86DetourImp::getArchType() const {
     return PLH::Mode::x86;
 }
 
@@ -39,7 +39,7 @@ void PLH::x86DetourImp::setIndirectHolder(const uint64_t holderAddress) {
 PLH::x86DetourImp::InstructionVector PLH::x86DetourImp::makeMinimumJump(const uint64_t address,
                                                                         const uint64_t destination) const {
     PLH::Instruction::Displacement disp;
-    disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(address, destination, 5);
+    disp.Relative = PLH::ADisassembler::calculateRelativeDisplacement<int32_t>(address, destination, 5);
 
     std::vector<uint8_t> bytes(5);
     bytes[0] = 0xE9;

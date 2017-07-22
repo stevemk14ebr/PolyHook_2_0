@@ -19,11 +19,11 @@ public:
     typedef std::vector<uint8_t>                           DetourBuffer;
     typedef std::vector<std::shared_ptr<PLH::Instruction>> InstructionVector;
 
-    PLH::Maybe<std::unique_ptr<DetourBuffer>> AllocateMemory(const uint64_t Hint);
+    PLH::Maybe<std::unique_ptr<DetourBuffer>> allocateMemory(const uint64_t hint);
 
-    PLH::HookType GetType() const;
+    PLH::HookType getType() const;
 
-    PLH::Mode GetArchType() const;
+    PLH::Mode getArchType() const;
 
     uint8_t minimumPrologueLength() const;
 

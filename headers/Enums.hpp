@@ -83,6 +83,7 @@ inline std::string ProtFlagToString(PLH::ProtFlag flags) {
 
 // TODO: add if-def for windows
 #include <sys/mman.h>
+
 inline int TranslateProtection(const PLH::ProtFlag flags) {
     int NativeFlag = 0;
     if (flags & PLH::ProtFlag::X)

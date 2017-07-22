@@ -11,15 +11,15 @@ public:
 
     }
 
-    virtual bool Hook() {
+    virtual bool hook() override {
 
     }
 
-    virtual bool UnHook(){
+    virtual bool unHook() override {
 
     }
 
-    virtual PLH::HookType GetType(){
+    virtual PLH::HookType getType() override {
         return PLH::HookType::UNKNOWN;
     }
 };
@@ -28,7 +28,7 @@ bool GotEvent = false;
 void fOnError(const PLH::Message& Err)
 {
     INFO("Received Error")
-    REQUIRE(Err.GetMessage().compare("Testing 123, 1.2.3") == 0);
+    REQUIRE(Err.getMessage().compare("Testing 123, 1.2.3") == 0);
     GotEvent = true;
 }
 
@@ -38,17 +38,17 @@ TEST_CASE("Tests Message interface of IHook","[Message, EventDispatcher, IHook::
     SECTION("Registering Handler and Sending Errors")
     {
         REQUIRE(GotEvent == false);
-        Derived->OnError() += fOnError;
-        Derived->SendError("Testing 123, 1.2.3");
+        Derived->onError() += fOnError;
+        Derived->sendError("Testing 123, 1.2.3");
         REQUIRE(GotEvent == true);
     }
 
     SECTION("Un-Registering Handler")
     {
-        Derived->OnError()--;
+        Derived->onError()--;
         GotEvent = false;
         REQUIRE(GotEvent == false);
-        Derived->SendError("Testing 123, 1.2.3");
+        Derived->sendError("Testing 123, 1.2.3");
         REQUIRE(GotEvent == false);
     }
 }

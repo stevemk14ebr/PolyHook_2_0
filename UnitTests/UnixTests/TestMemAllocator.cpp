@@ -84,9 +84,9 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
 
         //Try to allocate a few pages
         for (int i = 0; i < 100; i++) {
-            auto AllocBlock = allocator.AllocateMemory(MinAddress, MaxAddress, PageSize, (X | W | R));
+            auto AllocBlock = allocator.allocateMemory(MinAddress, MaxAddress, PageSize, (X | W | R));
             REQUIRE(AllocBlock.isOk());
-            std::shared_ptr<char> Buffer = AllocBlock.unwrap().GetParentBlock();
+            std::shared_ptr<char> Buffer = AllocBlock.unwrap().getParentBlock();
             REQUIRE(Buffer != nullptr);
 
             //std::cout << std::hex << "Allocated At: " << (uint64_t)Buffer.get() << std::endl;
@@ -109,16 +109,16 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
 
 TEST_CASE("Test MemoryBlock", "[MemoryBlock]") {
     PLH::MemoryBlock block(0x7896, 0x9876, PLH::ProtFlag::UNSET);
-    REQUIRE(block.GetStart() == 0x7896);
-    REQUIRE(block.GetEnd() == 0x9876);
-    REQUIRE(block.GetSize() == 0x1FE0);
+    REQUIRE(block.getSize() == 0x7896);
+    REQUIRE(block.getEnd() == 0x9876);
+    REQUIRE(block.getSize() == 0x1FE0);
 
     size_t Alignment = 4;
-    auto first = block.GetAlignedFirst(Alignment, 8);
+    auto first = block.getAlignedFirst(Alignment, 8);
     REQUIRE(first.isOk());
     REQUIRE(first.unwrap() == 0x7898);
 
-    auto next = block.GetAlignedNext(first.unwrap(), Alignment, 8);
+    auto next = block.getAlignedNext(first.unwrap(), Alignment, 8);
     REQUIRE(next.isOk());
     REQUIRE(next.unwrap() == 0x78A0);
 }

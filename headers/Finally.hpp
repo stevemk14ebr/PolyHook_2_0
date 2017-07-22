@@ -15,17 +15,18 @@ template<typename Lambda>
 class FinallyClass
 {
 public:
-    FinallyClass(Lambda&& event) : lambda(std::move(event)) {
+    FinallyClass(Lambda&& event) : m_lambda(std::move(event)) {
     }
 
-    FinallyClass(const Lambda& event) : lambda(event) {
+    FinallyClass(const Lambda& event) : m_lambda(event) {
     }
 
     ~FinallyClass() {
-        lambda();
+        m_lambda();
     }
+
 private:
-    Lambda lambda;
+    Lambda m_lambda;
 };
 
 template<typename Event>

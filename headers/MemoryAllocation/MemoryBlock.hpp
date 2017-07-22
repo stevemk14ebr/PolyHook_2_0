@@ -21,20 +21,20 @@ namespace PLH {
 class MemoryBlock
 {
 public:
-    MemoryBlock(const uint64_t Start, const uint64_t End, const PLH::ProtFlag Prot);
+    MemoryBlock(const uint64_t start, const uint64_t End, const PLH::ProtFlag Prot);
 
     MemoryBlock();
 
-    uint64_t GetStart() const;
+    uint64_t getStart() const;
 
-    uint64_t GetEnd() const;
+    uint64_t getEnd() const;
 
-    uint64_t GetSize() const;
+    uint64_t getSize() const;
 
-    PLH::ProtFlag GetProtection() const;
+    PLH::ProtFlag getProtection() const;
 
     UID id() const {
-        return uid;
+        return m_uid;
     }
 
     /**Alignment helpers that always return in range [Start, End) of MemoryBlock. Return Value is the
@@ -42,19 +42,19 @@ public:
      * to be aligned. For example if we want to find the nearest memory page to an address with an alignment
      * of 4 bytes, and we also what to ensure the aligned page address is > Address:
      * GetAlignedNearestUp(Address, 4, 4096) where 4096 is the size of a single page.**/
-    PLH::Maybe<uint64_t> GetAlignedFirst(const size_t Alignment, const size_t Size) const;
+    PLH::Maybe<uint64_t> getAlignedFirst(const size_t alignment, const size_t size) const;
 
-    PLH::Maybe<uint64_t> GetAlignedNext(const uint64_t Address, const size_t Alignment, const size_t Size) const;
-
-    PLH::Maybe<uint64_t>
-    GetAlignedNearestUp(const uint64_t Address, const size_t Alignment, const size_t Size) const;
+    PLH::Maybe<uint64_t> getAlignedNext(const uint64_t address, const size_t alignment, const size_t size) const;
 
     PLH::Maybe<uint64_t>
-    GetAlignedNearestDown(const uint64_t Address, const size_t Alignment, const size_t Size) const;
+    getAlignedNearestUp(const uint64_t address, const size_t alignment, const size_t size) const;
 
-    bool ContainsBlock(const PLH::MemoryBlock& other) const;
+    PLH::Maybe<uint64_t>
+    getAlignedNearestDown(const uint64_t address, const size_t alignment, const size_t size) const;
 
-    bool ContainsAddress(const uint64_t Address) const;
+    bool containsBlock(const PLH::MemoryBlock& other) const;
+
+    bool containsAddress(const uint64_t address) const;
 
     bool operator==(const PLH::MemoryBlock& other) const;
 
@@ -67,18 +67,19 @@ public:
     bool operator<=(const PLH::MemoryBlock& other) const;
 
     bool operator>=(const PLH::MemoryBlock& other) const;
-private:
-    bool InRange(const uint64_t Address, const size_t Size) const;
 
-    uint64_t      m_Start;
-    uint64_t      m_End;
-    PLH::ProtFlag m_Protection;
-    UID           uid;
+private:
+    bool inRange(const uint64_t address, const size_t size) const;
+
+    uint64_t      m_start;
+    uint64_t      m_end;
+    PLH::ProtFlag m_protection;
+    UID           m_uid; //makes debugging easier
 };
 
 inline std::ostream& operator<<(std::ostream& os, const PLH::MemoryBlock& obj) {
-    os << std::hex << "[" << obj.GetStart() << "-" << obj.GetEnd() << ")" << std::dec
-       << PLH::ProtFlagToString(obj.GetProtection());
+    os << std::hex << "[" << obj.getStart() << "-" << obj.getEnd() << ")" << std::dec
+       << PLH::ProtFlagToString(obj.getProtection());
     return os;
 }
 }

@@ -17,7 +17,7 @@ public:
         m_Msg = msg;
     }
 
-    std::string GetMessage() const {
+    std::string getMessage() const {
         return m_Msg;
     }
 
@@ -36,9 +36,9 @@ public:
     EventDispatcher<T> operator--(int);
 
     template<typename... Args>
-    void Invoke(Args&& ...Params) {
+    void invoke(Args&& ...params) {
         for (auto&& event : m_Events) {
-            event(std::forward<Args>(Params)...);
+            event(std::forward<Args>(params)...);
         }
     }
 
@@ -65,12 +65,12 @@ class Errant
 public:
     typedef PLH::EventDispatcher<void(const PLH::Message&)> tErrorHandler;
 
-    virtual tErrorHandler& OnError() {
+    virtual tErrorHandler& onError() {
         return m_ErrorCallback;
     }
 
-    virtual void SendError(std::string Msg) {
-        m_ErrorCallback.Invoke(Msg);
+    virtual void sendError(std::string msg) {
+        m_ErrorCallback.invoke(msg);
     }
 
 protected:

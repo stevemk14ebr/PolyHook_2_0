@@ -30,52 +30,46 @@ class ARangAllocator : private PlatformImp
 {
 public:
     PLH::Maybe<PLH::AllocatedMemoryBlock>
-    AllocateMemory(uint64_t MinAddress, uint64_t MaxAddress, size_t Size, ProtFlag Protections) {
+    allocateMemory(uint64_t minAddress, uint64_t maxAddress, size_t size, ProtFlag protections) {
         //TO-DO: Add call to Verify Mem in range
-        auto Block = PlatformImp::AllocateMemory(MinAddress, MaxAddress, Size, Protections);
+        auto Block = PlatformImp::allocateMemory(minAddress, maxAddress, size, protections);
         if (Block &&
-            VerifyMemInRange(MinAddress, MaxAddress, Block.unwrap().GetDescription().GetStart()) &&
-            VerifyMemInRange(MinAddress, MaxAddress, Block.unwrap().GetDescription().GetEnd())) {
-            m_AllocatedBlocks.push_back(Block.unwrap());
+            verifyMemInRange(minAddress, maxAddress, Block.unwrap().getDescription().getStart()) &&
+            verifyMemInRange(minAddress, maxAddress, Block.unwrap().getDescription().getEnd())) {
+            m_allocatedBlocks.push_back(Block.unwrap());
         }
         return Block;
     }
 
-    void DeallocateMemory(const AllocatedMemoryBlock& Block) {
-        m_AllocatedBlocks.erase(std::remove(m_AllocatedBlocks.begin(), m_AllocatedBlocks.end(),
-                                            Block), m_AllocatedBlocks.end());
-    }
-
-    int TranslateProtection(const ProtFlag flags) const {
-        return TranslateProtection(flags);
+    void deallocateMemory(const AllocatedMemoryBlock& block) {
+        m_allocatedBlocks.erase(std::remove(m_allocatedBlocks.begin(), m_allocatedBlocks.end(),
+                                            block), m_allocatedBlocks.end());
     }
 
     //MemoryBlock because it's not an allocated region 'we' allocated
-    std::vector<PLH::MemoryBlock> GetAllocatedVABlocks() const {
-        return PlatformImp::GetAllocatedVABlocks();
+    std::vector<PLH::MemoryBlock> getAllocatedVABlocks() const {
+        return PlatformImp::getAllocatedVABlocks();
     }
 
-    std::vector<PLH::MemoryBlock> GetFreeVABlocks() const {
-        return PlatformImp::GetFreeVABlocks();
+    std::vector<PLH::MemoryBlock> getFreeVABlocks() const {
+        return PlatformImp::getFreeVABlocks();
     }
 
-    std::vector<PLH::AllocatedMemoryBlock> GetAllocatedBlocks() {
-        return m_AllocatedBlocks;
+    std::vector<PLH::AllocatedMemoryBlock> getAllocatedBlocks() {
+        return m_allocatedBlocks;
     }
 
-    size_t QueryPreferedAllocSize() {
-        return PlatformImp::QueryPreferedAllocSize();
+    size_t queryPrefferedAllocSize() {
+        return PlatformImp::queryPrefferedAllocSize();
     }
 
 protected:
     //[MinAddress, MaxAddress)
-    bool VerifyMemInRange(uint64_t MinAddress, uint64_t MaxAddress, uint64_t Needle) const {
-        if (Needle >= MinAddress && Needle < MaxAddress)
-            return true;
-        return false;
+    bool verifyMemInRange(uint64_t minAddress, uint64_t maxAddress, uint64_t needle) const {
+        return needle >= minAddress && needle < maxAddress;
     }
 
-    std::vector<PLH::AllocatedMemoryBlock> m_AllocatedBlocks;
+    std::vector<PLH::AllocatedMemoryBlock> m_allocatedBlocks;
 };
 }
 

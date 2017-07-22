@@ -24,7 +24,7 @@ std::vector<uint8_t> x64ASM = {
 
 TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembler]") {
     PLH::CapstoneDisassembler disasm(PLH::Mode::x64);
-    auto                      Instructions = disasm.Disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
+    auto                      Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
                                                                 (uint64_t)&x64ASM.front() + x64ASM.size());
 
     uint64_t PrevInstAddress = (uint64_t)&x64ASM.front();
@@ -42,28 +42,28 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
         for (int i = 0; i < Instructions.size(); i++) {
             INFO("Index: " << i);
 
-            auto Children = Instructions[i]->GetChildren();
+            auto Children = Instructions[i]->getChildren();
             REQUIRE(Children.size() == CorrectChildCount[i]);
             if (Children.size() > 0) {
                 for (int j = 0; j < Children.size(); j++) {
                     INFO("Instruction Index:" << i << " Child Index:" << j);
-                    REQUIRE(Instructions[i]->GetChildren().at(j) == CorrectChildren[i][j]);
+                    REQUIRE(Instructions[i]->getChildren().at(j) == CorrectChildren[i][j]);
                 }
             }
         }
     }
 
     SECTION("Check instruction re-encoding integrity") {
-        Instructions[8]->SetRelativeDisplacement(0x00);
-        disasm.WriteEncoding(*Instructions[8]);
+        Instructions[8]->setRelativeDisplacement(0x00);
+        disasm.writeEncoding(*Instructions[8]);
 
-        Instructions[9]->SetRelativeDisplacement(0x00);
-        disasm.WriteEncoding(*Instructions[9]);
+        Instructions[9]->setRelativeDisplacement(0x00);
+        disasm.writeEncoding(*Instructions[9]);
 
-        REQUIRE(Instructions[8]->GetDestination() == Instructions[8]->GetAddress() + Instructions[8]->Size());
-        REQUIRE(Instructions[9]->GetDestination() == Instructions[9]->GetAddress() + Instructions[9]->Size());
+        REQUIRE(Instructions[8]->getDestination() == Instructions[8]->getAddress() + Instructions[8]->size());
+        REQUIRE(Instructions[9]->getDestination() == Instructions[9]->getAddress() + Instructions[9]->size());
         Instructions =
-                disasm.Disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
+                disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
                                    (uint64_t)&x64ASM.front() + x64ASM.size());
     }
 
@@ -72,15 +72,15 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
                        << " Correct Mnemonic:"
                        << CorrectMnemonic[i]
                        << " Mnemonic:"
-                       << Instructions[i]->GetMnemonic());
+                       << Instructions[i]->getMnemonic());
 
-        REQUIRE(Instructions[i]->GetMnemonic().compare(CorrectMnemonic[i]) == 0);
+        REQUIRE(Instructions[i]->getMnemonic().compare(CorrectMnemonic[i]) == 0);
 
-        REQUIRE(Instructions[i]->Size() == CorrectSizes[i]);
+        REQUIRE(Instructions[i]->size() == CorrectSizes[i]);
 
-        REQUIRE(Instructions[i]->GetAddress() == (PrevInstAddress + PrevInstSize));
-        PrevInstAddress = Instructions[i]->GetAddress();
-        PrevInstSize    = Instructions[i]->Size();
+        REQUIRE(Instructions[i]->getAddress() == (PrevInstAddress + PrevInstSize));
+        PrevInstAddress = Instructions[i]->getAddress();
+        PrevInstSize    = Instructions[i]->size();
     }
 }
 

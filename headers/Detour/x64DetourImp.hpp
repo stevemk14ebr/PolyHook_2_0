@@ -23,11 +23,11 @@ public:
     typedef std::vector<uint8_t, LinuxAllocator>                DetourBuffer;
     typedef std::vector<std::shared_ptr<PLH::Instruction>>      InstructionVector;
 
-    PLH::Maybe<std::unique_ptr<DetourBuffer>> AllocateMemory(const uint64_t Hint);
+    PLH::Maybe<std::unique_ptr<DetourBuffer>> allocateMemory(const uint64_t hint);
 
-    PLH::HookType GetType() const;
+    PLH::HookType getType() const;
 
-    PLH::Mode GetArchType() const;
+    PLH::Mode getArchType() const;
 
     uint8_t minimumPrologueLength() const;
 
@@ -44,7 +44,9 @@ public:
     InstructionVector makePreferredJump(const uint64_t address, const uint64_t destination) const;
 
 private:
-    PLH::Maybe<uint64_t> indirectHolder;
+    /* Holds the address of the chunk of memory that stores
+     * the value of where the indirect jump points too*/
+    PLH::Maybe<uint64_t> m_indirectHolder;
 };
 }
 #endif //POLYHOOK_2_X64DETOURIMPL_HPP

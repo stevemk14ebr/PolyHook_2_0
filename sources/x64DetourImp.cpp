@@ -4,19 +4,19 @@
 #include "headers/Detour/x64DetourImp.hpp"
 #include "headers/Instruction.hpp"
 
-PLH::Maybe<std::unique_ptr<PLH::x64DetourImp::DetourBuffer>> PLH::x64DetourImp::AllocateMemory(const uint64_t Hint) {
-    uint64_t MinAddress = Hint < 0x80000000 ? 0 : Hint - 0x80000000;            //Use 0 if would underflow
-    uint64_t MaxAddress = Hint > std::numeric_limits<uint64_t>::max() - 0x80000000 ? //use max if would overflow
-                          std::numeric_limits<uint64_t>::max() : Hint + 0x80000000;
+PLH::Maybe<std::unique_ptr<PLH::x64DetourImp::DetourBuffer>> PLH::x64DetourImp::allocateMemory(const uint64_t hint) {
+    uint64_t MinAddress = hint < 0x80000000 ? 0 : hint - 0x80000000;            //Use 0 if would underflow
+    uint64_t MaxAddress = hint > std::numeric_limits<uint64_t>::max() - 0x80000000 ? //use max if would overflow
+                          std::numeric_limits<uint64_t>::max() : hint + 0x80000000;
 
     return std::make_unique<DetourBuffer>(LinuxAllocator(MinAddress, MaxAddress));
 }
 
-PLH::HookType PLH::x64DetourImp::GetType() const {
+PLH::HookType PLH::x64DetourImp::getType() const {
     return PLH::HookType::X64Detour;
 }
 
-PLH::Mode PLH::x64DetourImp::GetArchType() const {
+PLH::Mode PLH::x64DetourImp::getArchType() const {
     return PLH::Mode::x64;
 }
 
@@ -37,7 +37,7 @@ PLH::JmpType PLH::x64DetourImp::preferredJumpType() const {
 }
 
 void PLH::x64DetourImp::setIndirectHolder(const uint64_t holderAddress) {
-    indirectHolder = holderAddress;
+    m_indirectHolder = holderAddress;
 }
 
 /**Write an indirect style 6byte jump. Address is where the jmp instruction will be located, and
@@ -46,11 +46,11 @@ void PLH::x64DetourImp::setIndirectHolder(const uint64_t holderAddress) {
  * the jmp should land.**/
 PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makeMinimumJump(const uint64_t address,
                                                                         const uint64_t destination) const {
-    assert(indirectHolder);
-    uint64_t destHolder = indirectHolder.unwrap();
+    assert(m_indirectHolder);
+    uint64_t destHolder = m_indirectHolder.unwrap();
 
-    PLH::Instruction::Displacement disp;
-    disp.Relative = PLH::ADisassembler::CalculateRelativeDisplacement<int32_t>(address, destHolder, 6);
+    PLH::Instruction::Displacement disp = {0};
+    disp.Relative = PLH::ADisassembler::calculateRelativeDisplacement<int32_t>(address, destHolder, 6);
 
     std::vector<uint8_t> bytes(6);
     bytes[0] = 0xFF;
@@ -78,7 +78,7 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const 
                                                                        raxBytes,
                                                                        "push",
                                                                        "rax");
-    curInstAddress += pushRax->Size();
+    curInstAddress += pushRax->size();
 
     std::stringstream ss;
     ss << std::hex << destination;
@@ -90,12 +90,12 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const 
 
     auto movRax = std::make_shared<PLH::Instruction>(curInstAddress, zeroDisp, 0, false,
                                                      movRaxBytes, "mov", "rax, " + ss.str());
-    curInstAddress += movRax->Size();
+    curInstAddress += movRax->size();
 
     std::vector<uint8_t> xchgBytes  = {0x48, 0x87, 0x04, 0x24};
     auto                 xchgRspRax = std::make_shared<PLH::Instruction>(curInstAddress, zeroDisp, 0, false,
                                                                          xchgBytes, "xchg", "QWORD PTR [rsp],rax");
-    curInstAddress += xchgRspRax->Size();
+    curInstAddress += xchgRspRax->size();
 
     std::vector<uint8_t> retBytes = {0xC3};
     auto                 ret      = std::make_shared<PLH::Instruction>(curInstAddress,
@@ -105,7 +105,7 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const 
                                                                        retBytes,
                                                                        "ret",
                                                                        "");
-    curInstAddress += ret->Size(); //shush, symmetry is sexy
+    curInstAddress += ret->size(); //shush, symmetry is sexy
 
     // #self_documenting_code #it_exists
     return {pushRax, movRax, xchgRspRax, ret};

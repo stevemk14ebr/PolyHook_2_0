@@ -38,23 +38,23 @@ class Maybe
 public:
     typedef std::string EType;
 
-    Maybe() : content(ExplicitMaybeError<EType>("")) {
+    Maybe() : m_content(ExplicitMaybeError<EType>("")) {
 
     }
 
-    Maybe(const ExplicitMaybeError<EType>& error) : content(error) {
+    Maybe(const ExplicitMaybeError<EType>& error) : m_content(error) {
 
     }
 
-    Maybe(ExplicitMaybeError<EType>&& error) : content(std::move(error)) {
+    Maybe(ExplicitMaybeError<EType>&& error) : m_content(std::move(error)) {
 
     }
 
-    Maybe(const T& value) : content(value) {
+    Maybe(const T& value) : m_content(value) {
 
     }
 
-    Maybe(T&& value) : content(std::move(value)) {
+    Maybe(T&& value) : m_content(std::move(value)) {
 
     }
 
@@ -62,7 +62,7 @@ public:
      * allowed.**/
     T unwrap() const& {
         assert(isOk());
-        return boost::get<T>(content);
+        return boost::get<T>(m_content);
     }
 
     /** rvalue overload, moves content. Multiple visitation is
@@ -70,16 +70,16 @@ public:
      * will receive garbage data (this is undefined behavior)**/
     T&& unwrap()&& {
         assert(isOk());
-        return std::move(boost::get<T>(content));
+        return std::move(boost::get<T>(m_content));
     }
 
     EType unwrapError() const& {
         assert(!isOk());
-        return boost::get<ExplicitMaybeError<EType>>(content).error();
+        return boost::get<ExplicitMaybeError<EType>>(m_content).error();
     }
 
     bool isOk() const {
-        return content.which() == 0;
+        return m_content.which() == 0;
     }
 
     operator bool() const {
@@ -88,7 +88,7 @@ public:
 
 private:
     /*TODO: replace with std::variant when it is available. Or alternatively use std::aligned_storage + in-place new*/
-    boost::variant<T, ExplicitMaybeError<EType>> content;
+    boost::variant<T, ExplicitMaybeError<EType>> m_content;
 };
 }
 #define function_fail(error) return PLH::ExplicitMaybeError<std::string>(error);
