@@ -109,7 +109,7 @@ TEST_CASE("Test Unix allocator implementation", "[RangeMemAllocatorUnixImp]") {
 
 TEST_CASE("Test MemoryBlock", "[MemoryBlock]") {
     PLH::MemoryBlock block(0x7896, 0x9876, PLH::ProtFlag::UNSET);
-    REQUIRE(block.getSize() == 0x7896);
+    REQUIRE(block.getStart() == 0x7896);
     REQUIRE(block.getEnd() == 0x9876);
     REQUIRE(block.getSize() == 0x1FE0);
 

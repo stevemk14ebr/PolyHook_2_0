@@ -27,8 +27,8 @@ public:
                 const uint8_t displacementOffset,
                 const bool isRelative,
                 const std::vector<uint8_t>& bytes,
-                const std::string mnemonic,
-                const std::string opStr) {
+                const std::string& mnemonic,
+                const std::string& opStr) {
         Init(address, displacement, displacementOffset, isRelative, bytes, mnemonic, opStr);
     }
 
@@ -38,8 +38,8 @@ public:
                 bool isRelative,
                 uint8_t bytes[],
                 size_t arrLen,
-                const std::string mnemonic,
-                const std::string opStr) {
+                const std::string& mnemonic,
+                const std::string& opStr) {
         std::vector<uint8_t> Arr(bytes, bytes + arrLen);
         Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr);
     }
@@ -134,8 +134,8 @@ private:
               const uint8_t displacementOffset,
               const bool isRelative,
               const std::vector<uint8_t>& bytes,
-              const std::string mnemonic,
-              const std::string opStr) {
+              const std::string& mnemonic,
+              const std::string& opStr) {
         m_address         = address;
         m_displacement    = displacement;
         m_dispOffset      = displacementOffset;
