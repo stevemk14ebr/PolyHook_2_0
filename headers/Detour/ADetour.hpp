@@ -106,24 +106,15 @@ bool Detour<Architecture, Disassembler>::hook() {
 
     dbgPrintInstructionVec("Original function: ", instructions);
 
-    // Certain jump types are better than others, see if we have room for the better one, otherwise fallback
-    bool    doPreferredJmp = true;
-    bool    jumpAbsolute   = m_archImpl.preferredJumpType() == PLH::JmpType::Absolute;
-    uint8_t jumpLength     = m_archImpl.preferredPrologueLength();
-    size_t  prologueLength = jumpLength;
+    // Always do the smallest jump to avoid extra complexities
+    bool jumpAbsolute   = m_archImpl.minimumJumpType() == PLH::JmpType::Absolute;
+    uint8_t jumpLength     = m_archImpl.minimumPrologueLength();
+    size_t prologueLength = jumpLength;
 
     auto maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
-    if (!maybePrologueInstructions) {
-        doPreferredJmp = false;
-        jumpAbsolute   = m_archImpl.minimumJumpType() == PLH::JmpType::Absolute;
-        jumpLength     = m_archImpl.minimumPrologueLength();
-        prologueLength = jumpLength;
-
-        maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
-    }
-
     if (!maybePrologueInstructions)
         return false;
+
     InstructionVector prologueInstructions = std::move(maybePrologueInstructions).unwrap();
     dbgPrintInstructionVec("Prologue: ", prologueInstructions);
 
@@ -140,9 +131,9 @@ bool Detour<Architecture, Disassembler>::hook() {
      * trampoline without letting us know on a push_back or insert, and all our precious
      * fixups are out the window.*/
     size_t reserveSize = prologueLength +
-                         jumpLength +
+                         m_archImpl.preferredPrologueLength() +
                          (conditionalJumpsToFix.size() * m_archImpl.preferredPrologueLength())
-                         + 8; //8 for the optional destination holder
+                         + (jumpAbsolute ? 0 : 8);
 
     m_trampoline->reserve(reserveSize);
     int64_t trampolineDelta = 0;
@@ -202,20 +193,18 @@ bool Detour<Architecture, Disassembler>::hook() {
     if (!memoryProtectorFn.originalProt())
         return false;
 
-    /* Overwrite the prologue with the jmp to the callback. We
-     * also check if the jmp type we want to write is absolute or
-     * indirect. If indirect the intermediate location is stored
-     * at the end of the trampoline (past jump table)*/
+    /* Overwrite the prologue with the jmp to the callback. Always
+     * use the smallest jump type we can, otherwise we can get into
+     * complex cases where condition branches point back to parts of
+     * our prologue that were overwritten. This simplifiest it if
+     * the jump is always small*/
     InstructionVector detourJump;
-    if (doPreferredJmp) {
-        detourJump = m_archImpl.makePreferredJump(m_fnAddress, m_fnCallback);
+
+    if (jumpAbsolute) {
+        detourJump = m_archImpl.makeMinimumJump(m_fnAddress, m_fnCallback);
     } else {
-        if (jumpAbsolute) {
-            detourJump = m_archImpl.makeMinimumJump(m_fnAddress, m_fnCallback);
-        } else {
-            m_archImpl.setIndirectHolder((uint64_t)m_trampoline->data() + m_trampoline->size());
-            detourJump = m_archImpl.makeMinimumJump(m_fnAddress, m_fnCallback);
-        }
+        m_archImpl.setIndirectHolder((uint64_t)m_trampoline->data() + m_trampoline->size());
+        detourJump = m_archImpl.makeMinimumJump(m_fnAddress, m_fnCallback);
     }
 
     for (auto inst : detourJump)
@@ -240,6 +229,11 @@ bool Detour<Architecture, Disassembler>::hook() {
                                                                        m_fnAddress,
                                                                        m_fnAddress + prologueLength + 10);
         dbgPrintInstructionVec("New Prologue: ", newPrologueInst);
+
+        InstructionVector callbackInst = m_disassembler.disassemble(m_fnCallback,
+                                                                       m_fnCallback,
+                                                                       m_fnCallback + 100);
+        dbgPrintInstructionVec("Callback: ", callbackInst);
     }
 
     /* If this happen the vector was somehow resized.
