@@ -2,6 +2,7 @@
 // Created by steve on 7/4/17.
 //
 #include <Catch.hpp>
+#include <functional>
 #include "headers/Detour/ADetour.hpp"
 
 __attribute_noinline__ int branch(int param) {
@@ -13,7 +14,7 @@ __attribute_noinline__ int branch(int param) {
 decltype(&branch) oBranch;
 
 __attribute_noinline__ int branchCallback(int param) {
-    return oBranch(param);
+    return oBranch(param + 5);
 }
 
 __attribute_noinline__ int loop(int param) {
@@ -27,7 +28,23 @@ __attribute_noinline__ int loop(int param) {
 decltype(&loop) oLoop;
 
 __attribute_noinline__ int loopCallback(int param) {
-    return oLoop(param);
+    return oLoop(10);
+}
+
+struct MemberFnClass
+{
+    void foo(){
+        std::cout << "original foo" << std::endl;
+    }
+};
+
+MemberFnClass c;
+typedef void(*tMemberFn)(void*);
+tMemberFn oMemberFn;
+
+void fooCallback(void* thisptr){
+    std::cout << "callback" << std::endl;
+    return oMemberFn(thisptr);
 }
 
 TEST_CASE("Testing detours", "[ADetour]") {
@@ -40,8 +57,8 @@ TEST_CASE("Testing detours", "[ADetour]") {
         REQUIRE(detour.hook() == true);
         oBranch = detour.getOriginal<decltype(&branch)>();
 
-        REQUIRE(branch(0) == 0);
-        REQUIRE(branch(1) == 15);
+        REQUIRE(branch(-5) == 0);
+        REQUIRE(branch(0) == 15);
     }
 
     /* This is not fully implemented. Cyclic jumps usually don't happen since we
@@ -51,11 +68,22 @@ TEST_CASE("Testing detours", "[ADetour]") {
     {
         PLH::Detour<PLH::x64DetourImp> detour((char*)&loop, (char*)&loopCallback);
 
-        detour.setDebug(true);
+        //detour.setDebug(true);
         REQUIRE(detour.hook() == true);
         oLoop = detour.getOriginal<decltype(&loop)>();
 
-        int retVal = loop(5);
-        std::cout << retVal << std::endl;
+        REQUIRE(loop(5) == 10);
+    }
+
+    SECTION("Verify member function pointer hooks work")
+    {
+        char* ptr = PLH::memberFnPointer(&MemberFnClass::foo);
+
+        PLH::Detour<PLH::x64DetourImp> detour(ptr, (char*)&fooCallback);
+
+        REQUIRE(detour.hook() == true);
+        oMemberFn = detour.getOriginal<tMemberFn>();
+
+        c.foo();
     }
 }

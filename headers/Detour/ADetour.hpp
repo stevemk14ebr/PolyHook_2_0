@@ -236,7 +236,7 @@ bool Detour<Architecture, Disassembler>::hook() {
         dbgPrintInstructionVec("Callback: ", callbackInst);
     }
 
-    /* If this happen the vector was somehow resized.
+    /* If this happened the vector was somehow resized.
      * This would be very bad for us, since we manually
      * mutate instruction displacements. Therefore
      * moving the trampoline makes our fixups invalid.
@@ -265,7 +265,7 @@ bool Detour<Architecture, Disassembler>::hook() {
      *                              --------------------------
      *
      *
-     *                      Example jmp table (with an example prologue):
+     *                      Example jmp table (with an example prologue, this prologue lives in trampoline):
      *
      *        Prologue before fix:          Prologue after fix:
      *        ------prologue-----           ------prologue----          ----jmp table----

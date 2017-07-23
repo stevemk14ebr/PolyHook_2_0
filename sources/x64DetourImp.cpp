@@ -65,6 +65,8 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makeMinimumJump(const ui
     return {std::make_shared<PLH::Instruction>(address, disp, 2, true, bytes, "jmp", ss.str())};
 }
 
+/**Write a 25 byte absolute jump. This is preferred since it doesn't require an indirect memory holder.
+ * We first sub rsp by 128 bytes to avoid the red-zone stack space. This is specific to unix only afaik.**/
 PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const uint64_t address,
                                                                           const uint64_t destination) const {
     PLH::Instruction::Displacement zeroDisp       = {0};
@@ -109,7 +111,7 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const 
                                                                        false,
                                                                        retBytes,
                                                                        "ret",
-                                                                       "");
+                                                                       "0x80");
     curInstAddress += ret->size(); //shush, symmetry is sexy
 
     // #self_documenting_code #it_exists
