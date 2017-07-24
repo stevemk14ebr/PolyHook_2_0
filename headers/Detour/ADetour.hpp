@@ -69,6 +69,9 @@ private:
 
     Architecture m_archImpl;
     Disassembler m_disassembler;
+
+    void insertTrampolineJumpTable(const InstructionVector& conditionalJumpsToFix,const int64_t trampolineDelta);
+    int64_t insertTrampolinePrologue(const InstructionVector& prologueInstructions);
 };
 
 
@@ -94,15 +97,19 @@ bool Detour<Architecture, Disassembler>::hook() {
 
     // Allocate some memory near the callback for the trampoline
     auto bufMaybe = m_archImpl.allocateMemory(m_fnCallback);
-    if (!bufMaybe)
+    if (!bufMaybe) {
+        sendError("Failed to allocate trampoline");
         return false;
+    }
+
     m_trampoline = std::move(bufMaybe).unwrap();
 
-    /* Disassemble the prologue and find the instructions that will be overwritten by our jump.
-     * Also simultaneously check that the function prologue is big enough for our jump*/
+    // disassemble the function to hook
     InstructionVector instructions = m_disassembler.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100);
-    if (instructions.size() == 0)
+    if (instructions.size() == 0) {
+        sendError("Disassembler unable to decode any valid instructions for given fnAddress");
         return false;
+    }
 
     dbgPrintInstructionVec("Original function: ", instructions);
 
@@ -112,15 +119,17 @@ bool Detour<Architecture, Disassembler>::hook() {
     size_t prologueLength = jumpLength;
 
     auto maybePrologueInstructions = calculatePrologueLength(instructions, prologueLength);
-    if (!maybePrologueInstructions)
+    if (!maybePrologueInstructions) {
+        sendError(maybePrologueInstructions.unwrapError());
         return false;
+    }
 
     InstructionVector prologueInstructions = std::move(maybePrologueInstructions).unwrap();
     dbgPrintInstructionVec("Prologue: ", prologueInstructions);
 
     // Count # of entries that will be in the jump table
     InstructionVector conditionalJumpsToFix;
-    for (auto         inst : prologueInstructions) {
+    for (const auto& inst : prologueInstructions) {
         if (m_disassembler.isConditionalJump(*inst))
             conditionalJumpsToFix.push_back(inst);
     }
@@ -134,55 +143,18 @@ bool Detour<Architecture, Disassembler>::hook() {
                          m_archImpl.preferredPrologueLength() +
                          (conditionalJumpsToFix.size() * m_archImpl.preferredPrologueLength())
                          + (jumpAbsolute ? 0 : 8);
-
     m_trampoline->reserve(reserveSize);
-    int64_t trampolineDelta = 0;
 
-    /* Copy (truly copy, original are untouched) instructions from the prologue to the trampoline. Also fixup the various types of
-       instructions that need to be fixed (RIP/EIP relative), excluding conditional jumps */
-    for (auto& inst : prologueInstructions) {
-        // Copy instruction into the trampoline (they will be malformed)
-        m_trampoline->insert(m_trampoline->end(), inst->getBytes().begin(), inst->getBytes().end());
-
-        // sadly we must do this in a loop, UB if we access data() before vector has any elements
-        trampolineDelta = (int64_t)(m_trampoline->data() - m_fnAddress);
-        inst->setAddress(inst->getAddress() + trampolineDelta);
-
-        if (inst->hasDisplacement() && inst->isDisplacementRelative() && !m_disassembler.isConditionalJump(*inst))
-            inst->setRelativeDisplacement(inst->getDisplacement().Relative - trampolineDelta);
-        m_disassembler.writeEncoding(*inst);
-    }
+    int64_t trampolineDelta = insertTrampolinePrologue(prologueInstructions);
 
     // Insert the jmp to fnAddress.Body from the trampoline
     InstructionVector bodyJump = m_archImpl.makePreferredJump((uint64_t)m_trampoline->data() + m_trampoline->size(),
                                                               m_fnAddress + jumpLength);
 
-    for (auto inst : bodyJump)
+    for (const auto& inst : bodyJump)
         m_trampoline->insert(m_trampoline->end(), inst->getBytes().begin(), inst->getBytes().end());
 
-    // Build the jump table
-    for (auto& inst : conditionalJumpsToFix) {
-        uint64_t intermediateJumpLoc = (uint64_t)m_trampoline->data() + m_trampoline->size();
-
-        // Reset instructions address to it's original so we can find where it original jumped too
-        inst->setAddress(inst->getAddress() - trampolineDelta);
-        InstructionVector intermediateJumpVec = m_archImpl.makePreferredJump(intermediateJumpLoc,
-                                                                             inst->getDestination());
-        inst->setAddress(inst->getAddress() + trampolineDelta);
-
-        // Point the relative jmp to the intermediate long jump
-        PLH::Instruction::Displacement disp = {0};
-        disp.Relative = PLH::ADisassembler::calculateRelativeDisplacement<int32_t>(inst->getAddress(),
-                                                                                   intermediateJumpLoc,
-                                                                                   inst->size());
-        inst->setRelativeDisplacement(disp.Relative);
-
-        // Write the intermediate jump and the changed cond. jump
-        for (auto jmpInst : intermediateJumpVec) {
-            m_trampoline->insert(m_trampoline->end(), jmpInst->getBytes().begin(), jmpInst->getBytes().end());
-        }
-        m_disassembler.writeEncoding(*inst);
-    }
+    insertTrampolineJumpTable(conditionalJumpsToFix, trampolineDelta);
 
     // Make the fnAddress's memory page writeable
     uint64_t fnAddressPage = (uint64_t)PLH::AlignDownwards((char*)m_fnAddress, getpagesize());
@@ -190,8 +162,10 @@ bool Detour<Architecture, Disassembler>::hook() {
     PLH::MemoryProtector<PLH::UnixMemProtImp> memoryProtectorFn(fnAddressPage,
                                                                 getpagesize(),
                                                                 PLH::ProtFlag::R | PLH::ProtFlag::W | PLH::ProtFlag::X);
-    if (!memoryProtectorFn.originalProt())
+    if (!memoryProtectorFn.originalProt()) {
+        sendError("Failed to make fnAddress' memory page writable");
         return false;
+    }
 
     /* Overwrite the prologue with the jmp to the callback. Always
      * use the smallest jump type we can, otherwise we can get into
@@ -207,7 +181,7 @@ bool Detour<Architecture, Disassembler>::hook() {
         detourJump = m_archImpl.makeMinimumJump(m_fnAddress, m_fnCallback);
     }
 
-    for (auto inst : detourJump)
+    for (const auto& inst : detourJump)
         m_disassembler.writeEncoding(*inst);
 
     // Nop the space between jmp and end of prologue
@@ -243,6 +217,7 @@ bool Detour<Architecture, Disassembler>::hook() {
      * Figure out why this happened or stuff blows up*/
     if (m_trampoline->capacity() != reserveSize) {
         assert(false);
+        sendError("Internal Error: Trampoline vector unexpectedly relocated");
         return false;
     }
 
@@ -288,6 +263,62 @@ bool Detour<Architecture, Disassembler>::hook() {
      *                              |                         |
      *                              --------------------------
      * **/
+}
+
+/* Copy instructions from the fnAddress' prologue to the trampoline, original prologue is left untouched.
+ * Relocation of RIP/EIP relative instructions in the trampoline's copy is performed, excluding conditional jumps.
+ * Conditional jumps are fixed later via the jump table. This returns how far away the first instruction in
+ * the trampolines prologue is from the first instruction of fnAddress' prologue - in bytes.*/
+template<typename Architecture, typename Disassembler>
+int64_t Detour<Architecture, Disassembler>::insertTrampolinePrologue(
+        const typename Detour<Architecture, Disassembler>::InstructionVector& prologueInstructions) {
+
+    int64_t trampolineDelta = 0;
+    for (auto& inst : prologueInstructions) {
+        // Copy instruction into the trampoline (they will be malformed)
+        m_trampoline->insert(m_trampoline->end(), inst->getBytes().begin(), inst->getBytes().end());
+
+        // U.B. if we access data() before vector has any elements
+        trampolineDelta = (int64_t)(m_trampoline->data() - m_fnAddress);
+        inst->setAddress(inst->getAddress() + trampolineDelta);
+
+        if (inst->hasDisplacement() && inst->isDisplacementRelative() && !m_disassembler.isConditionalJump(*inst))
+            inst->setRelativeDisplacement(inst->getDisplacement().Relative - trampolineDelta);
+        m_disassembler.writeEncoding(*inst);
+    }
+    return trampolineDelta;
+}
+
+/**Builds a jump table given a vector of condition jump instructions. The jump table is
+ * placed at the end of the trampoline and each jump table entry points to where the
+ * condition jump did before it was moved to the trampoline.**/
+template<typename Architecture, typename Disassembler>
+void Detour<Architecture, Disassembler>::insertTrampolineJumpTable(
+        const typename Detour<Architecture, Disassembler>::InstructionVector& conditionalJumpsToFix,
+        const int64_t trampolineDelta){
+
+    for (auto& inst : conditionalJumpsToFix) {
+        uint64_t intermediateJumpLoc = (uint64_t)m_trampoline->data() + m_trampoline->size();
+
+        // Reset instructions address to it's original so we can find where it original jumped too
+        inst->setAddress(inst->getAddress() - trampolineDelta);
+        InstructionVector intermediateJumpVec = m_archImpl.makePreferredJump(intermediateJumpLoc,
+                                                                                   inst->getDestination());
+        inst->setAddress(inst->getAddress() + trampolineDelta);
+
+        // Point the relative jmp to the intermediate long jump
+        Instruction::Displacement disp = {0};
+        disp.Relative = PLH::ADisassembler::calculateRelativeDisplacement<int32_t>(inst->getAddress(),
+                                                                                   intermediateJumpLoc,
+                                                                                   inst->size());
+        inst->setRelativeDisplacement(disp.Relative);
+
+        // Write the intermediate jump and the changed cond. jump
+        for (auto jmpInst : intermediateJumpVec) {
+            m_trampoline->insert(m_trampoline->end(), jmpInst->getBytes().begin(), jmpInst->getBytes().end());
+        }
+        m_disassembler.writeEncoding(*inst);
+    }
 }
 
 template<typename Architecture, typename Disassembler>

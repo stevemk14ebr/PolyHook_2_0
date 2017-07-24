@@ -21,7 +21,7 @@ PLH::Mode PLH::x64DetourImp::getArchType() const {
 }
 
 uint8_t PLH::x64DetourImp::preferredPrologueLength() const {
-    return 25;
+    return 23;
 }
 
 uint8_t PLH::x64DetourImp::minimumPrologueLength() const {
@@ -72,9 +72,9 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const 
     PLH::Instruction::Displacement zeroDisp       = {0};
     uint64_t                       curInstAddress = address;
 
-    std::vector<uint8_t> rspBytes = { 0x48, 0x81, 0xEC, 0x80, 0x00, 0x00, 0x00 };
-    auto subRsp = std::make_shared<PLH::Instruction>(curInstAddress,zeroDisp,0,false,rspBytes,
-                                                    "sub","rsp, 0x80");
+    std::vector<uint8_t> rspBytes = { 0x48, 0x8D, 0x64, 0x24, 0x80};
+    auto leaRsp = std::make_shared<PLH::Instruction>(curInstAddress,zeroDisp,0,false,rspBytes,
+                                                    "lea","rsp, [rsp - 0x80]");
     curInstAddress += rspBytes.size();
 
     std::vector<uint8_t> raxBytes = {0x50};
@@ -115,5 +115,5 @@ PLH::x64DetourImp::InstructionVector PLH::x64DetourImp::makePreferredJump(const 
     curInstAddress += ret->size(); //shush, symmetry is sexy
 
     // #self_documenting_code #it_exists
-    return {subRsp, pushRax, movRax, xchgRspRax, ret};
+    return {leaRsp, pushRax, movRax, xchgRspRax, ret};
 }

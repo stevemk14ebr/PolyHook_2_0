@@ -31,7 +31,7 @@ public:
     virtual std::vector<std::shared_ptr<PLH::Instruction>>
     disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end) override;
 
-    virtual void writeEncoding(const PLH::Instruction& instruction) override;
+    virtual void writeEncoding(const PLH::Instruction& instruction) const override;
 
     virtual bool isConditionalJump(const PLH::Instruction& instruction) const override;
 

@@ -31,6 +31,20 @@ __attribute_noinline__ int loopCallback(int param) {
     return oLoop(10);
 }
 
+__attribute_noinline__ void prologueCycle() {
+    bool cycled = false;
+    cycle:
+        if(!cycled) {
+            cycled = true;
+            goto cycle;
+        }
+}
+decltype(&prologueCycle) oCycle;
+
+__attribute_noinline__ void proCycleCallback(){
+    return oCycle();
+}
+
 struct MemberFnClass
 {
     void foo(){
@@ -42,7 +56,7 @@ MemberFnClass c;
 typedef void(*tMemberFn)(void*);
 tMemberFn oMemberFn;
 
-void fooCallback(void* thisptr){
+__attribute_noinline__ void fooCallback(void* thisptr){
     std::cout << "callback" << std::endl;
     return oMemberFn(thisptr);
 }
@@ -64,7 +78,7 @@ TEST_CASE("Testing detours", "[ADetour]") {
     /* This is not fully implemented. Cyclic jumps usually don't happen since we
      * took care to use the smallest jump type, but they are possible. We
      * should check*/
-    SECTION("Verify functions with cyclic jumps are resolved")
+    SECTION("Verify functions with loop are resolved")
     {
         PLH::Detour<PLH::x64DetourImp> detour((char*)&loop, (char*)&loopCallback);
 
@@ -74,6 +88,16 @@ TEST_CASE("Testing detours", "[ADetour]") {
 
         REQUIRE(loop(5) == 10);
     }
+
+//    SECTION("Another cycle check with goto"){
+//        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueCycle, (char*)&proCycleCallback);
+//
+//        detour.setDebug(true);
+//        REQUIRE(detour.hook() == true);
+//        oCycle = detour.getOriginal<decltype(&prologueCycle)>();
+//
+//        //prologueCycle();
+//    }
 
     SECTION("Verify member function pointer hooks work")
     {

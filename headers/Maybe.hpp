@@ -73,7 +73,7 @@ public:
         return std::move(boost::get<T>(m_content));
     }
 
-    EType unwrapError() const& {
+    EType unwrapError() {
         assert(!isOk());
         return boost::get<ExplicitMaybeError<EType>>(m_content).error();
     }

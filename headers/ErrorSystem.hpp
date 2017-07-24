@@ -59,7 +59,7 @@ EventDispatcher<T> EventDispatcher<T>::operator--(int) {
     return tmp;
 }
 
-//Should be implemented when a process can be "errant" or "may throw errors"
+//Should be implemented when a process can be "errant" or "may throw errors". An alternative to c++ exceptions
 class Errant
 {
 public:

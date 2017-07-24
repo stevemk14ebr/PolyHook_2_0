@@ -37,9 +37,9 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
  * since the time it was decoded this will copy the instruction to a new memory address.
  * This will not automatically do any code relocation, all relocation logic should
  * first modify the byte array, and then call write encoding, proper order to relocate
- * an instruction should be disasm instructions -> set relative/abolsute displacement() ->
+ * an instruction should be disasm instructions -> set relative/absolute displacement() ->
  * writeEncoding(). It is done this way so that these operations can be made transactional**/
-void PLH::CapstoneDisassembler::writeEncoding(const PLH::Instruction& instruction) {
+void PLH::CapstoneDisassembler::writeEncoding(const PLH::Instruction& instruction) const {
     memcpy((void*)instruction.getAddress(), &instruction.getBytes()[0], instruction.size());
 }
 
