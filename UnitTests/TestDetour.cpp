@@ -50,15 +50,19 @@ struct MemberFnClass
     void foo(){
         std::cout << "original foo" << std::endl;
     }
+
+    int bar(int param)
+    {
+        std::cout << "original bar " << param << std::endl;
+    }
 };
 
 MemberFnClass c;
-typedef void(*tMemberFn)(void*);
+typedef void(*tMemberFn)();
 tMemberFn oMemberFn;
 
-__attribute_noinline__ void fooCallback(void* thisptr){
+__attribute_noinline__ void fooCallback(){
     std::cout << "callback" << std::endl;
-    return oMemberFn(thisptr);
 }
 
 TEST_CASE("Testing detours", "[ADetour]") {
@@ -101,13 +105,12 @@ TEST_CASE("Testing detours", "[ADetour]") {
 
     SECTION("Verify member function pointer hooks work")
     {
-        char* ptr = PLH::memberFnPointer(&MemberFnClass::foo);
-
-        PLH::Detour<PLH::x64DetourImp> detour(ptr, (char*)&fooCallback);
+        typedef PLH::proxy<int(MemberFnClass::*)(int), &MemberFnClass::bar> proxy;
+        PLH::Detour<PLH::x64DetourImp> detour((char*)&proxy::call, (char*)&fooCallback);
+        //detour.setDebug(true);
 
         REQUIRE(detour.hook() == true);
-        oMemberFn = detour.getOriginal<tMemberFn>();
 
-        c.foo();
+        proxy::call(c,1);
     }
 }

@@ -61,15 +61,15 @@ static inline char* AlignDownwards(const char* stack, size_t align) {
     return reinterpret_cast<char*>(addr);
 }
 
-/**Retreives a raw pointer to the member function. This is NOT safe, like at all. Member
- * function pointers are not normal pointers, if stuff goes wrong with your member
- * function pointer hook, look here first.**/
-template<typename T, typename Class>
-char* memberFnPointer(T Class::* pMemFn) noexcept
-{
-    static_assert(std::is_member_function_pointer<T Class::*>::value,"Must be member fn pointer");
-    return (char*&)pMemFn;
-}
+template <typename T, T> struct proxy;
 
+template <typename T, typename R, typename ...Args, R (T::*mf)(Args...)>
+struct proxy<R (T::*)(Args...), mf>
+{
+    static R call(T & obj, Args &&... args)
+    {
+        return (obj.*mf)(std::forward<Args>(args)...);
+    }
+};
 }
 #endif //POLYHOOK_2_0_MISC_HPP
