@@ -45,26 +45,6 @@ __attribute_noinline__ void proCycleCallback(){
     return oCycle();
 }
 
-struct MemberFnClass
-{
-    void foo(){
-        std::cout << "original foo" << std::endl;
-    }
-
-    int bar(int param)
-    {
-        std::cout << "original bar " << param << std::endl;
-    }
-};
-
-MemberFnClass c;
-typedef void(*tMemberFn)();
-tMemberFn oMemberFn;
-
-__attribute_noinline__ void fooCallback(){
-    std::cout << "callback" << std::endl;
-}
-
 TEST_CASE("Testing detours", "[ADetour]") {
 
     // On gcc in linux this also tests that the red-zone isn't touched
@@ -102,15 +82,4 @@ TEST_CASE("Testing detours", "[ADetour]") {
 //
 //        //prologueCycle();
 //    }
-
-    SECTION("Verify member function pointer hooks work")
-    {
-        typedef PLH::proxy<int(MemberFnClass::*)(int), &MemberFnClass::bar> proxy;
-        PLH::Detour<PLH::x64DetourImp> detour((char*)&proxy::call, (char*)&fooCallback);
-        //detour.setDebug(true);
-
-        REQUIRE(detour.hook() == true);
-
-        proxy::call(c,1);
-    }
 }

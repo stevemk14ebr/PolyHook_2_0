@@ -63,12 +63,13 @@ static inline char* AlignDownwards(const char* stack, size_t align) {
 
 template <typename T, T> struct proxy;
 
-template <typename T, typename R, typename ...Args, R (T::*mf)(Args...)>
+template <typename T, typename R, typename... Args, R (T::*mf)(Args...)>
 struct proxy<R (T::*)(Args...), mf>
 {
-    static R call(T & obj, Args &&... args)
+    typedef R (*TCallback)(Args...);
+    __attribute_noinline__ static R call(T* obj, Args&&... args)
     {
-        return (obj.*mf)(std::forward<Args>(args)...);
+        return (*obj.*mf)(std::forward<Args>(args)...);
     }
 };
 }
