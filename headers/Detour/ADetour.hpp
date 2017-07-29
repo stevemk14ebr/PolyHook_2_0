@@ -78,6 +78,7 @@ private:
 template<typename Architecture, typename Disassembler>
 Detour<Architecture, Disassembler>::Detour(const uint64_t hookAddress, const uint64_t callbackAddress) :
         m_archImpl(), m_disassembler(m_archImpl.GetArchType()) {
+    assert(hookAddress != NULL && callbackAddress != NULL);
     m_fnAddress  = hookAddress;
     m_fnCallback = callbackAddress;
     m_hooked     = false;
@@ -86,7 +87,7 @@ Detour<Architecture, Disassembler>::Detour(const uint64_t hookAddress, const uin
 template<typename Architecture, typename Disassembler>
 Detour<Architecture, Disassembler>::Detour(const char* hookAddress, const char* callbackAddress) :
         m_archImpl(), m_disassembler(m_archImpl.getArchType()) {
-
+    assert(hookAddress != nullptr && callbackAddress != nullptr);
     m_fnAddress  = (uint64_t)hookAddress;
     m_fnCallback = (uint64_t)callbackAddress;
     m_hooked     = false;
@@ -123,6 +124,7 @@ bool Detour<Architecture, Disassembler>::hook() {
         sendError(maybePrologueInstructions.unwrapError());
         return false;
     }
+    assert(prologueLength >= jumpLength);
 
     InstructionVector prologueInstructions = std::move(maybePrologueInstructions).unwrap();
     dbgPrintInstructionVec("Prologue: ", prologueInstructions);
@@ -340,9 +342,10 @@ Detour<Architecture, Disassembler>::calculatePrologueLength(const InstructionVec
         instructionsInRange.push_back(inst);
     }
 
-    lengthWanted = prologueLength;
-    if (prologueLength >= lengthWanted)
+    if (prologueLength >= lengthWanted) {
+        lengthWanted = prologueLength;
         return std::move(instructionsInRange);
+    }
     function_fail("Function too small, function is not of length >= " + std::to_string(lengthWanted));
 }
 

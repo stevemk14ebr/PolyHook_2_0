@@ -31,18 +31,12 @@ __attribute_noinline__ int loopCallback(int param) {
     return oLoop(10);
 }
 
-__attribute_noinline__ void prologueCycle() {
-    bool cycled = false;
-    cycle:
-        if(!cycled) {
-            cycled = true;
-            goto cycle;
-        }
+__attribute_noinline__ void toSmall() {
+    return;
 }
-decltype(&prologueCycle) oCycle;
 
-__attribute_noinline__ void proCycleCallback(){
-    return oCycle();
+__attribute_noinline__ void toSmallCallback(){
+    //not used;
 }
 
 TEST_CASE("Testing detours", "[ADetour]") {
@@ -73,13 +67,10 @@ TEST_CASE("Testing detours", "[ADetour]") {
         REQUIRE(loop(5) == 10);
     }
 
-//    SECTION("Another cycle check with goto"){
-//        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueCycle, (char*)&proCycleCallback);
-//
-//        detour.setDebug(true);
-//        REQUIRE(detour.hook() == true);
-//        oCycle = detour.getOriginal<decltype(&prologueCycle)>();
-//
-//        //prologueCycle();
-//    }
+    SECTION("Another cycle check with goto"){
+        PLH::Detour<PLH::x64DetourImp> detour((char*)&toSmall, (char*)&toSmallCallback);
+
+        //Should fail because function is to small
+        REQUIRE(!detour.hook());
+    }
 }
