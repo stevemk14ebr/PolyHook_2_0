@@ -2,8 +2,9 @@
 // Created by steve on 7/5/17.
 //
 #include "headers/Detour/x86DetourImp.hpp"
+#include <cassert>
 
-PLH::Maybe<std::unique_ptr<PLH::x86DetourImp::DetourBuffer>> PLH::x86DetourImp::allocateMemory(const uint64_t hint) {
+std::unique_ptr<PLH::x86DetourImp::DetourBuffer> PLH::x86DetourImp::makeMemoryBuffer(const uint64_t hint) {
     return std::make_unique<DetourBuffer>(); //any memory location will do for x86
 }
 

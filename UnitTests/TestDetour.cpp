@@ -31,12 +31,17 @@ __attribute_noinline__ int loopCallback(int param) {
     return oLoop(10);
 }
 
-__attribute_noinline__ void toSmall() {
-    return;
+uint8_t toSmall[1] = {0xC3};
+
+__attribute_noinline__ void prologueLoop(){
+    int i = 0;
+    while(i++ < 5){
+        std::cout << "looping" << std::endl;
+    }
 }
 
-__attribute_noinline__ void toSmallCallback(){
-    //not used;
+__attribute_noinline__ void prologueLoopCallback(){
+    return;
 }
 
 TEST_CASE("Testing detours", "[ADetour]") {
@@ -45,7 +50,7 @@ TEST_CASE("Testing detours", "[ADetour]") {
     SECTION("Verify jump table works for functions that branch") {
         PLH::Detour<PLH::x64DetourImp> detour((char*)&branch, (char*)&branchCallback);
 
-        //detour.setDebug(true);
+        detour.setDebug(true);
         REQUIRE(detour.hook() == true);
         oBranch = detour.getOriginal<decltype(&branch)>();
 
@@ -67,10 +72,14 @@ TEST_CASE("Testing detours", "[ADetour]") {
         REQUIRE(loop(5) == 10);
     }
 
-    SECTION("Another cycle check with goto"){
-        PLH::Detour<PLH::x64DetourImp> detour((char*)&toSmall, (char*)&toSmallCallback);
+    SECTION("Make sure small functions fail"){
+        PLH::Detour<PLH::x64DetourImp> detour((char*)&toSmall, (char*)&toSmall);
 
         //Should fail because function is to small
         REQUIRE(!detour.hook());
+    }
+
+    SECTION("Check functions that jump back into prologue"){
+        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueLoop, (char*)&prologueLoopCallback);
     }
 }

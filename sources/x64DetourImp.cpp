@@ -4,7 +4,7 @@
 #include "headers/Detour/x64DetourImp.hpp"
 #include "headers/Instruction.hpp"
 
-PLH::Maybe<std::unique_ptr<PLH::x64DetourImp::DetourBuffer>> PLH::x64DetourImp::allocateMemory(const uint64_t hint) {
+std::unique_ptr<PLH::x64DetourImp::DetourBuffer> PLH::x64DetourImp::makeMemoryBuffer(const uint64_t hint) {
     uint64_t MinAddress = hint < 0x80000000 ? 0 : hint - 0x80000000;            //Use 0 if would underflow
     uint64_t MaxAddress = hint > std::numeric_limits<uint64_t>::max() - 0x80000000 ? //use max if would overflow
                           std::numeric_limits<uint64_t>::max() : hint + 0x80000000;

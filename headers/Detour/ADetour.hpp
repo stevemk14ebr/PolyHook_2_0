@@ -97,13 +97,7 @@ template<typename Architecture, typename Disassembler>
 bool Detour<Architecture, Disassembler>::hook() {
 
     // Allocate some memory near the callback for the trampoline
-    auto bufMaybe = m_archImpl.allocateMemory(m_fnCallback);
-    if (!bufMaybe) {
-        sendError("Failed to allocate trampoline");
-        return false;
-    }
-
-    m_trampoline = std::move(bufMaybe).unwrap();
+    m_trampoline = m_archImpl.makeMemoryBuffer(m_fnCallback);
 
     // disassemble the function to hook
     InstructionVector instructions = m_disassembler.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100);
@@ -145,8 +139,12 @@ bool Detour<Architecture, Disassembler>::hook() {
                          m_archImpl.preferredPrologueLength() +
                          (conditionalJumpsToFix.size() * m_archImpl.preferredPrologueLength())
                          + (jumpAbsolute ? 0 : 8);
-    m_trampoline->reserve(reserveSize);
-
+    try {
+        m_trampoline->reserve(reserveSize);
+    } catch (const PLH::AllocationFailure& ex) {
+        sendError("Failed to allocate trampoline buffer");
+        return false;
+    }
     int64_t trampolineDelta = insertTrampolinePrologue(prologueInstructions);
 
     // Insert the jmp to fnAddress.Body from the trampoline

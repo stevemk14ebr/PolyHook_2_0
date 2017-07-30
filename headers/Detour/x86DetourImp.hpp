@@ -5,7 +5,6 @@
 #ifndef POLYHOOK_2_X86DETOUR_HPP
 #define POLYHOOK_2_X86DETOUR_HPP
 
-#include "headers/Maybe.hpp"
 #include "headers/IHook.hpp"
 
 #include <memory>
@@ -19,7 +18,7 @@ public:
     typedef std::vector<uint8_t>                           DetourBuffer;
     typedef std::vector<std::shared_ptr<PLH::Instruction>> InstructionVector;
 
-    PLH::Maybe<std::unique_ptr<DetourBuffer>> allocateMemory(const uint64_t hint);
+    std::unique_ptr<DetourBuffer> makeMemoryBuffer(const uint64_t hint);
 
     PLH::HookType getType() const;
 
