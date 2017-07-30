@@ -5,8 +5,6 @@
 #ifndef POLYHOOK_2_MONAD_HPP
 #define POLYHOOK_2_MONAD_HPP
 
-#include <boost/variant.hpp>
-
 #include <iostream>
 
 namespace PLH {
@@ -38,31 +36,36 @@ class Maybe
 public:
     typedef std::string EType;
 
-    Maybe() : m_content(ExplicitMaybeError<EType>("")) {
+    Maybe() : m_error(ExplicitMaybeError<EType>("")),
+              m_isError(true) {
 
     }
 
-    Maybe(const ExplicitMaybeError<EType>& error) : m_content(error) {
+    Maybe(const ExplicitMaybeError<EType>& error) : m_error(error),
+                                                    m_isError(true) {
 
     }
 
-    Maybe(ExplicitMaybeError<EType>&& error) : m_content(std::move(error)) {
+    Maybe(ExplicitMaybeError<EType>&& error) : m_error(std::move(error)),
+                                               m_isError(true) {
 
     }
 
-    Maybe(const T& value) : m_content(value) {
-
+    Maybe(const T& value) : m_error(ExplicitMaybeError<EType>("")),
+                            m_isError(false) {
+        new(m_content) T(value);
     }
 
-    Maybe(T&& value) : m_content(std::move(value)) {
-
+    Maybe(T&& value) : m_error(ExplicitMaybeError<EType>("")),
+                       m_isError(false) {
+        new(m_content) T(std::move(value));
     }
 
     /** lvalue overload, copies content. Multiple visitation is
      * allowed.**/
     T unwrap() const& {
         assert(isOk());
-        return boost::get<T>(m_content);
+        return *reinterpret_cast<const T*>(m_content);
     }
 
     /** rvalue overload, moves content. Multiple visitation is
@@ -70,16 +73,16 @@ public:
      * will receive garbage data (this is undefined behavior)**/
     T&& unwrap()&& {
         assert(isOk());
-        return std::move(boost::get<T>(m_content));
+        return std::move(*reinterpret_cast<T*>(m_content));
     }
 
     EType unwrapError() {
         assert(!isOk());
-        return boost::get<ExplicitMaybeError<EType>>(m_content).error();
+        return m_error.error();
     }
 
     bool isOk() const {
-        return m_content.which() == 0;
+        return !m_isError;
     }
 
     operator bool() const {
@@ -87,8 +90,9 @@ public:
     }
 
 private:
-    /*TODO: replace with std::variant when it is available. Or alternatively use std::aligned_storage + in-place new*/
-    boost::variant<T, ExplicitMaybeError<EType>> m_content;
+    typename std::aligned_storage<sizeof(T), alignof(T)>::type m_content[1];
+    ExplicitMaybeError<EType> m_error;
+    bool m_isError;
 };
 }
 #define function_fail(error) return PLH::ExplicitMaybeError<std::string>(error);
