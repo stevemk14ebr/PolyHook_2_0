@@ -33,12 +33,11 @@ __attribute_noinline__ int loopCallback(int param) {
 
 uint8_t toSmall[1] = {0xC3};
 
-__attribute_noinline__ void prologueLoop(){
-    int i = 0;
-    while(i++ < 5){
-        std::cout << "looping" << std::endl;
-    }
-}
+//bunch of nops then a jump back into the second nop. Then some nops at the end for jump table to go into
+uint8_t prologueCyclicJump[] = { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                                 0xEB, 0xF8,
+                                 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                                 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
 
 __attribute_noinline__ void prologueLoopCallback(){
     return;
@@ -50,7 +49,7 @@ TEST_CASE("Testing detours", "[ADetour]") {
     SECTION("Verify jump table works for functions that branch") {
         PLH::Detour<PLH::x64DetourImp> detour((char*)&branch, (char*)&branchCallback);
 
-        detour.setDebug(true);
+        //detour.setDebug(true);
         REQUIRE(detour.hook() == true);
         oBranch = detour.getOriginal<decltype(&branch)>();
 
@@ -80,6 +79,9 @@ TEST_CASE("Testing detours", "[ADetour]") {
     }
 
     SECTION("Check functions that jump back into prologue"){
-        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueLoop, (char*)&prologueLoopCallback);
+        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueCyclicJump, (char*)&prologueLoopCallback);
+
+        detour.setDebug(true);
+        detour.hook();
     }
 }

@@ -14,6 +14,8 @@
 #include <string.h>
 #include <memory>   //memset on linux
 #include <iostream> //for debug printing
+#include <limits>
+#include <cassert>
 
 namespace PLH {
 

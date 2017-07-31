@@ -6,6 +6,7 @@
 #define POLYHOOK_2_MONAD_HPP
 
 #include <iostream>
+#include <cassert>
 
 namespace PLH {
 /**An object that might contain a type T (the value), othewise
@@ -61,11 +62,18 @@ public:
         new(m_content) T(std::move(value));
     }
 
-    /** lvalue overload, copies content. Multiple visitation is
-     * allowed.**/
-    T unwrap() const& {
+    /** const lvalue overload, copies content. Multiple visitation is
+     * allowed. Not safe to call non-const member functions on T**/
+    const T unwrap() const& {
         assert(isOk());
         return *reinterpret_cast<const T*>(m_content);
+    }
+
+    /** lvalue overload, ref to content. Multiple mutable visiation
+     * is allowed. May call non-const member functions on T**/
+    T& unwrap() &{
+        assert(isOk());
+        return *reinterpret_cast<T*>(m_content);
     }
 
     /** rvalue overload, moves content. Multiple visitation is

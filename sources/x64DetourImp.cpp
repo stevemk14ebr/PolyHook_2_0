@@ -4,12 +4,12 @@
 #include "headers/Detour/x64DetourImp.hpp"
 #include "headers/Instruction.hpp"
 
-std::unique_ptr<PLH::x64DetourImp::DetourBuffer> PLH::x64DetourImp::makeMemoryBuffer(const uint64_t hint) {
+PLH::x64DetourImp::DetourBuffer PLH::x64DetourImp::makeMemoryBuffer(const uint64_t hint) {
     uint64_t MinAddress = hint < 0x80000000 ? 0 : hint - 0x80000000;            //Use 0 if would underflow
     uint64_t MaxAddress = hint > std::numeric_limits<uint64_t>::max() - 0x80000000 ? //use max if would overflow
                           std::numeric_limits<uint64_t>::max() : hint + 0x80000000;
 
-    return std::make_unique<DetourBuffer>(LinuxAllocator(MinAddress, MaxAddress));
+    return DetourBuffer(LinuxAllocator(MinAddress, MaxAddress));
 }
 
 PLH::HookType PLH::x64DetourImp::getType() const {

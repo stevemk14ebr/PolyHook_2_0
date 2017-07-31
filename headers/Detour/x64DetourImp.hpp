@@ -23,7 +23,7 @@ public:
     typedef std::vector<uint8_t, LinuxAllocator>                DetourBuffer;
     typedef std::vector<std::shared_ptr<PLH::Instruction>>      InstructionVector;
 
-    std::unique_ptr<DetourBuffer> makeMemoryBuffer(const uint64_t hint);
+    DetourBuffer makeMemoryBuffer(const uint64_t hint);
 
     PLH::HookType getType() const;
 
