@@ -44,7 +44,7 @@ public:
         Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr);
     }
 
-    int64_t getDestination() const {
+    uint64_t getDestination() const {
         if (m_isRelative) {
             return m_address + m_displacement.Relative + size();
         }

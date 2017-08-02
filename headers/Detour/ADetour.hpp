@@ -56,23 +56,26 @@ private:
         store non-owning "child" pointers. If they lived on the stack the logic to do that would be
         much more complicated.*/
 
-    /**Walks the given vector of instructions and rounds up to the smallest byte count that won't split
-     * any instructions. If the given instruction vector rounded up is >= lengthWanted then the lengthWanted
-     * parameter is set to the rounded up length in bytes. If the roundedUp length is smaller than lengthWanted
-     * then lengthWanted is untouched and the functions returns a failed Maybe. Prologue walking will stop
-     * if function end is detected (currently searches for ret).**/
-    PLH::Maybe<InstructionVector> calcPrologueMinLength(const InstructionVector& functionInsts, size_t& lengthWanted);
+    /**Walks the given vector of instructions and rounds up the prolEndOffset to smallest offset that won't split any
+     * instructions that is also >= prolStartOffset. If end of function is encountered before this condition a failed
+     * maybe is returned. Otherwise the instructions in the region functionInsts[0] to the adjusted prolEndOffset
+     * are returned.**/
+    PLH::Maybe<InstructionVector>
+    calcPrologueMinLength(const InstructionVector& functionInsts, const size_t prolOvrwStartOffset,
+                          size_t& prolOvrwEndOffset);
 
     /**Walks the prologue for instructions in the functions body that jump back into the prologue section that will
      * be overwritten by the jump to the callback. This overwritten section is calculated to be the address of the first
      * instruction given in the instruction vector to that address + an offset. I.E. [firstAddr, firstAddr + firstUnusedInst).
-     * If it is detected that any instructions jump back into the prologue the a jump table is built and those instructions
-     * pointed to an entry in the jump tables. Room for this jump table is made by expanding the prologue area copied
-     * over to the callback. The return value is a vector of instructions that should overwrite the originally prologue**/
+     * If it is detected that any instructions jump back into the prologue then a jump table is built and those instructions
+     * pointed to an entry in the jump table. Room for this jump table is made by expanding the prologue area copied
+     * over to the callback. The return value is a vector of instructions that should overwrite the originally prologue.
+     * This doesn't actually overwrite any prologue instructions, just returns instructions that should be written to
+     * memory later**/
     PLH::Maybe<InstructionVector>
-    insertPrologueJumpTable(const InstructionVector& functionInsts, size_t& overWrittenBytes);
-
-    bool shouldMakePrologueJmpTable(const InstructionVector& functionInsts, size_t& overWrittenBytes);
+    insertPrologueJumpTable(const InstructionVector& functionInsts,
+                            size_t& prolOvrwStartOffset,
+                            size_t& prologueOvrwEndOffset);
 
     void dbgPrintInstructionVec(const std::string& name, const InstructionVector& instructionVector);
 
@@ -128,24 +131,26 @@ bool Detour<Architecture, Disassembler>::hook() {
     dbgPrintInstructionVec("Original function: ", instructions);
 
     // Always do the smallest jump to avoid extra complexities
-    bool    jumpAbsolute   = m_archImpl.minimumJumpType() == PLH::JmpType::Absolute;
-    uint8_t jumpLength     = m_archImpl.minimumPrologueLength();
-    size_t  prologueLength = jumpLength;
+    bool   jumpAbsolute            = m_archImpl.minimumJumpType() == PLH::JmpType::Absolute;
+    size_t prologueOvrwStartOffset = m_archImpl.minimumPrologueLength();
+    size_t prologueOvrwEndOffset   = prologueOvrwStartOffset;
 
-    auto maybePrologueInstructions = calcPrologueMinLength(instructions, prologueLength);
+    auto maybePrologueInstructions = calcPrologueMinLength(instructions,
+                                                           prologueOvrwStartOffset,
+                                                           prologueOvrwEndOffset);
     if (!maybePrologueInstructions) {
         sendError(maybePrologueInstructions.unwrapError());
         return false;
     }
-    assert(prologueLength >= jumpLength);
+    assert(prologueOvrwEndOffset >= prologueOvrwStartOffset);
 
     InstructionVector prologueInstructions = std::move(maybePrologueInstructions).unwrap();
     dbgPrintInstructionVec("Prologue: ", prologueInstructions);
 
-    if (shouldMakePrologueJmpTable(instructions, prologueLength)) {
-        insertPrologueJumpTable(instructions, prologueLength);
-        return false;
-    }
+    PLH::Maybe<InstructionVector> prologueJumpTableInst = insertPrologueJumpTable(instructions,
+                                                                                  prologueOvrwStartOffset,
+                                                                                  prologueOvrwEndOffset);
+    assert(prologueOvrwEndOffset >= prologueOvrwStartOffset);
 
     // Count # of entries that will be in the jump table
     InstructionVector conditionalJumpsToFix;
@@ -159,7 +164,7 @@ bool Detour<Architecture, Disassembler>::hook() {
      * DO NOT remove this reservation, without it the underlying vector could relocate the
      * trampoline without letting us know on a push_back or insert, and all our precious
      * fixups are out the window.*/
-    size_t reserveSize = prologueLength +
+    size_t reserveSize = prologueOvrwEndOffset +
                          m_archImpl.preferredPrologueLength() +
                          (conditionalJumpsToFix.size() * m_archImpl.preferredPrologueLength())
                          + (jumpAbsolute ? 0 : 8);
@@ -174,7 +179,7 @@ bool Detour<Architecture, Disassembler>::hook() {
     // Insert the jmp to fnAddress.Body from the trampoline
     InstructionVector bodyJump = m_archImpl.makePreferredJump((uint64_t)m_trampoline.unwrap().data() +
                                                               m_trampoline.unwrap().size(),
-                                                              m_fnAddress + jumpLength);
+                                                              m_fnAddress + m_archImpl.minimumPrologueLength());
 
     for (const auto& inst : bodyJump)
         m_trampoline.unwrap().insert(m_trampoline.unwrap().end(), inst->getBytes().begin(), inst->getBytes().end());
@@ -209,8 +214,17 @@ bool Detour<Architecture, Disassembler>::hook() {
     for (const auto& inst : detourJump)
         m_disassembler.writeEncoding(*inst);
 
+    // write prologue jump table if we made one
+    if(prologueJumpTableInst)
+    {
+        for(const auto& inst : prologueJumpTableInst.unwrap())
+            m_disassembler.writeEncoding(*inst);
+    }
+
     // Nop the space between jmp and end of prologue
-    std::memset((char*)(m_fnAddress + jumpLength), 0x90, prologueLength - jumpLength);
+    std::memset((char*)(m_fnAddress + prologueOvrwStartOffset),
+                0x90,
+                prologueOvrwEndOffset - prologueOvrwStartOffset);
 
     if (m_debugSet) {
         std::cout << "fnAddress: " << std::hex << m_fnAddress << " fnCallback: " << m_fnCallback <<
@@ -226,7 +240,7 @@ bool Detour<Architecture, Disassembler>::hook() {
         // Go a little past prologue to see if we corrupted anything
         InstructionVector newPrologueInst = m_disassembler.disassemble(m_fnAddress,
                                                                        m_fnAddress,
-                                                                       m_fnAddress + prologueLength + 10);
+                                                                       m_fnAddress + prologueOvrwEndOffset + 10);
         dbgPrintInstructionVec("New Prologue: ", newPrologueInst);
 
         InstructionVector callbackInst = m_disassembler.disassemble(m_fnCallback,
@@ -365,15 +379,16 @@ void Detour<Architecture, Disassembler>::insertTrampolineJumpTable(
 template<typename Architecture, typename Disassembler>
 Maybe<InstructionVector>
 Detour<Architecture, Disassembler>::calcPrologueMinLength(const InstructionVector& functionInsts,
-                                                          size_t& lengthWanted) {
+                                                          const size_t prolOvrwStartOffset,
+                                                          size_t& prolOvrwEndOffset) {
     std::size_t                                    prologueLength = 0;
     std::vector<std::shared_ptr<PLH::Instruction>> instructionsInRange;
 
     for (auto inst : functionInsts) {
-        if (prologueLength >= lengthWanted)
+        if (prologueLength >= prolOvrwStartOffset)
             break;
 
-        //TODO: detect end of function better
+        //TODO: determine if more stringent tests needed
         if (inst->getMnemonic() == "ret")
             break;
 
@@ -381,11 +396,11 @@ Detour<Architecture, Disassembler>::calcPrologueMinLength(const InstructionVecto
         instructionsInRange.push_back(inst);
     }
 
-    if (prologueLength >= lengthWanted) {
-        lengthWanted = prologueLength;
+    if (prologueLength >= prolOvrwStartOffset) {
+        prolOvrwEndOffset = prologueLength;
         return std::move(instructionsInRange);
     }
-    function_fail("Function too small, function is not of length >= " + std::to_string(lengthWanted));
+    function_fail("Function too small, function is not of length >= " + std::to_string(prolOvrwStartOffset));
 }
 
 template<typename Architecture, typename Disassembler>
@@ -399,57 +414,32 @@ HookType Detour<Architecture, Disassembler>::getType() {
 }
 
 template<typename Architecture, typename Disassembler>
-bool Detour<Architecture, Disassembler>::shouldMakePrologueJmpTable(const InstructionVector& functionInsts,
-                                                                    size_t& overWrittenBytes) {
-    assert(functionInsts.size() > 0);
-
-    size_t walkedBytes = 0;
-    for (const auto& inst : functionInsts) {
-        // Walk only the section of prologue that will be overwritten
-        if (walkedBytes >= overWrittenBytes)
-            break;
-
-        walkedBytes += inst->size();
-
-        // If anything in that section is pointed to, we need a jump table
-        if (inst->getChildren().size() > 0)
-            return true;
-    }
-    assert(walkedBytes >= overWrittenBytes);
-
-    // Cool nothing points back into prologue ezpz from here. (This is 99.99% of time).
-    return false;
-}
-
-template<typename Architecture, typename Disassembler>
 PLH::Maybe<InstructionVector>
 Detour<Architecture, Disassembler>::insertPrologueJumpTable(const InstructionVector& functionInsts,
-                                                            size_t& overWrittenBytes) {
+                                                            size_t& prolOvrwStartOffset,
+                                                            size_t& prolOvrwEndOffset) {
     assert(functionInsts.size() > 0);
-    typedef std::vector<std::shared_ptr<PLH::Instruction>> InstructionChildren;
 
-    InstructionVector                      modifiedPrologue;
+    typedef std::vector<std::shared_ptr<PLH::Instruction>> InstructionChildren;
     std::map<uint8_t, InstructionChildren> jumpsToFix;
 
+    const size_t origProlOvrwStartOffset = prolOvrwStartOffset;
     bool jumpAbsolute = m_archImpl.minimumJumpType() == PLH::JmpType::Absolute;
 
     uint8_t tableEntries = 0;
     uint8_t tableSize    = 0;
     uint8_t walkedBytes  = 0;
     for (const auto& inst : functionInsts) {
-        if (walkedBytes >= overWrittenBytes)
+        if (walkedBytes >= prolOvrwStartOffset)
             break;
 
         walkedBytes += inst->size();
-
-        // keep the instruction pointed at
-        modifiedPrologue.push_back(inst);
 
         // end of function
         if (inst->getMnemonic() == "ret")
             break;
 
-        if (inst->getChildren().size() <= 0)
+        if (inst->getChildren().empty())
             continue;
 
         /* if inst is pointed at, note to make a table entry
@@ -460,35 +450,71 @@ Detour<Architecture, Disassembler>::insertPrologueJumpTable(const InstructionVec
            is a recursive problem done iteratively. By expanding
            the prologue we may overwrite more instructions pointed
            at.*/
-        tableSize += (m_archImpl.minimumPrologueLength() + (jumpAbsolute ? 0 : 8));
-        overWrittenBytes += tableSize;
+        tableSize += m_archImpl.minimumPrologueLength();
+        prolOvrwStartOffset += tableSize;
     }
 
-    /* Make a place for indirect jumps if we need too. Should be +- 2Gb from prologue*/
-    m_prologueJumpTable = std::move(m_archImpl.makeMemoryBuffer(m_fnAddress));
-    try {
-        m_prologueJumpTable.unwrap().reserve(tableSize);
-    }catch (const PLH::AllocationFailure& ex) {
-        function_fail("Unable to allocate space for indirect prologue table");
-    }
+    //TODO: fix case where children pointing to intermediate jump can
+    // get overwritten by jump table
 
-    /* This may happen if we expand the prologue to hold jump table entries, but
-     * we encounter function end before we encounter enough bytes for said entry.
-     * In that case there is no room for the jump table, and we must fail.*/
-    if (walkedBytes < overWrittenBytes)
+    // no work
+    if(tableEntries == 0)
+        return InstructionVector();
+
+    // round up end pointer to not split instrs
+    if (walkedBytes >= prolOvrwStartOffset) {
+        prolOvrwEndOffset = walkedBytes;
+    }else{
         function_fail("Function does cyclic prologue jumps and is to small for jump table");
+    }
 
-    //TODO: make this
-    // we have the room for jump table, add N entries to end of prologue, and point saved children to entry
-    for (uint8_t i = 0; i < tableEntries; i++) {
-        InstructionVector jumpInstruction;
-        if (jumpAbsolute) {
-            //jumpInstruction = m_archImpl.makeMinimumJump(m_fnAddress, m_fnCallback);
-        } else {
-            //m_archImpl.setIndirectHolder((uint64_t)m_trampoline->data() + m_trampoline->size());
-            //jumpInstruction = m_archImpl.makeMinimumJump(m_fnAddress, m_fnCallback);
+    // Make a place for indirect jump holders. Should be +- 2Gb from prologue
+    if (!jumpAbsolute) {
+        m_prologueJumpTable = std::move(m_archImpl.makeMemoryBuffer(m_fnAddress));
+
+        try {
+            m_prologueJumpTable.unwrap().resize(tableEntries * 8, 0xCC);
+        }catch (const PLH::AllocationFailure& ex) {
+            function_fail("Unable to allocate space for indirect prologue table");
         }
     }
+
+    InstructionVector instructionsToWriteLater;
+
+    // we have the room for jump table. Add N entries to end of prologue, and point saved children to entry
+    for (uint8_t i = 0; i < tableEntries; i++) {
+        // calc offset between inst pointed at and prologue start
+        uint64_t homeOffset       = jumpsToFix[i][0]->getDestination() - m_fnAddress;
+        uint64_t entryLocation    = m_fnAddress + origProlOvrwStartOffset + (i * m_archImpl.minimumPrologueLength());
+        uint64_t entryDestination = m_fnCallback + homeOffset; // moved prologue guaranteed to be same offset away
+
+        InstructionVector jumpInstruction;
+        if (jumpAbsolute) {
+            jumpInstruction = m_archImpl.makeMinimumJump(entryLocation, entryDestination);
+        } else {
+            m_archImpl.setIndirectHolder((uint64_t)m_prologueJumpTable.unwrap().data() + (i * 8));
+            jumpInstruction = m_archImpl.makeMinimumJump(entryLocation, entryDestination);
+        }
+
+        // write the table entries later
+        instructionsToWriteLater.insert(instructionsToWriteLater.end(), jumpInstruction.begin(),
+                                        jumpInstruction.end());
+
+        // point children to the new entry
+        for (auto& child : jumpsToFix[i]) {
+            if (!child->hasDisplacement() || !child->isDisplacementRelative())
+                continue;
+
+            int64_t newRelativeDisp = PLH::ADisassembler::calculateRelativeDisplacement<int64_t>(child->getAddress(),
+                                                                                                 entryLocation,
+                                                                                                 child->size());
+            child->setRelativeDisplacement(newRelativeDisp);
+
+            // write them later
+            instructionsToWriteLater.push_back(child);
+        }
+    }
+    return instructionsToWriteLater;
 }
 
 template<typename Architecture, typename Disassembler>
