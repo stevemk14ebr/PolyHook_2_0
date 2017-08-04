@@ -28,6 +28,7 @@ namespace PLH {
  *  jump, in order to simplify logic. The minimum jump type may be indirect
  * **/
 typedef std::vector<std::shared_ptr<PLH::Instruction>> InstructionVector;
+typedef std::map<uint8_t, InstructionVector> JumpTableMap;
 
 template<typename Architecture, typename Disassembler = PLH::CapstoneDisassembler>
 class Detour : public PLH::IHook
@@ -64,18 +65,19 @@ private:
     calcPrologueMinLength(const InstructionVector& functionInsts, const size_t prolOvrwStartOffset,
                           size_t& prolOvrwEndOffset);
 
-    /**Walks the prologue for instructions in the functions body that jump back into the prologue section that will
-     * be overwritten by the jump to the callback. This overwritten section is calculated to be the address of the first
-     * instruction given in the instruction vector to that address + an offset. I.E. [firstAddr, firstAddr + firstUnusedInst).
-     * If it is detected that any instructions jump back into the prologue then a jump table is built and those instructions
-     * pointed to an entry in the jump table. Room for this jump table is made by expanding the prologue area copied
-     * over to the callback. The return value is a vector of instructions that should overwrite the originally prologue.
-     * This doesn't actually overwrite any prologue instructions, just returns instructions that should be written to
-     * memory later**/
+    
     PLH::Maybe<InstructionVector>
-    insertPrologueJumpTable(const InstructionVector& functionInsts,
-                            size_t& prolOvrwStartOffset,
-                            size_t& prologueOvrwEndOffset);
+    insertPrologueJumpTable(const JumpTableMap& jumpTableMap,
+                            const size_t prolTableStartOffset);
+
+    PLH::Maybe<JumpTableMap> calcPrologueJumpTable(const InstructionVector& jumpTableMap,
+                                                   size_t& prolOvrwStartOffset,
+                                                   size_t& prolOvrwEndOffset);
+
+    // TODO: make trampoline table function use JumpTable type
+    void insertTrampolineJumpTable(const InstructionVector& conditionalJumpsToFix, const int64_t trampolineDelta);
+
+    int64_t insertTrampolinePrologue(const InstructionVector& prologueInstructions);
 
     void dbgPrintInstructionVec(const std::string& name, const InstructionVector& instructionVector);
 
@@ -89,10 +91,6 @@ private:
 
     Architecture m_archImpl;
     Disassembler m_disassembler;
-
-    void insertTrampolineJumpTable(const InstructionVector& conditionalJumpsToFix, const int64_t trampolineDelta);
-
-    int64_t insertTrampolinePrologue(const InstructionVector& prologueInstructions);
 };
 
 
@@ -147,9 +145,9 @@ bool Detour<Architecture, Disassembler>::hook() {
     InstructionVector prologueInstructions = std::move(maybePrologueInstructions).unwrap();
     dbgPrintInstructionVec("Prologue: ", prologueInstructions);
 
-    PLH::Maybe<InstructionVector> prologueJumpTableInst = insertPrologueJumpTable(instructions,
-                                                                                  prologueOvrwStartOffset,
-                                                                                  prologueOvrwEndOffset);
+    // at this point prolOvrwStartOffset points to the end of the jump
+    const size_t prolJumpTableStartOffset = prologueOvrwStartOffset;
+    PLH::Maybe<JumpTableMap> prolJumpTableMap = calcPrologueJumpTable(instructions, prologueOvrwStartOffset, prologueOvrwEndOffset);
     assert(prologueOvrwEndOffset >= prologueOvrwStartOffset);
 
     // Count # of entries that will be in the jump table
@@ -197,6 +195,17 @@ bool Detour<Architecture, Disassembler>::hook() {
         return false;
     }
 
+    //TODO: will currently pretend everything is all good if function is too small for jump table
+    // insert prolJumpTable if appropriate
+    if(prolJumpTableMap)
+    {
+        PLH::Maybe<InstructionVector> tableInsts = insertPrologueJumpTable(prolJumpTableMap.unwrap(), prolJumpTableStartOffset);
+        if(tableInsts){
+            for(const auto& inst : tableInsts.unwrap())
+                m_disassembler.writeEncoding(*inst);
+        }
+    }
+
     /* Overwrite the prologue with the jmp to the callback. Always
      * use the smallest jump type we can, otherwise we can get into
      * complex cases where condition branches point back to parts of
@@ -213,13 +222,6 @@ bool Detour<Architecture, Disassembler>::hook() {
 
     for (const auto& inst : detourJump)
         m_disassembler.writeEncoding(*inst);
-
-    // write prologue jump table if we made one
-    if(prologueJumpTableInst)
-    {
-        for(const auto& inst : prologueJumpTableInst.unwrap())
-            m_disassembler.writeEncoding(*inst);
-    }
 
     // Nop the space between jmp and end of prologue
     std::memset((char*)(m_fnAddress + prologueOvrwStartOffset),
@@ -415,16 +417,67 @@ HookType Detour<Architecture, Disassembler>::getType() {
 
 template<typename Architecture, typename Disassembler>
 PLH::Maybe<InstructionVector>
-Detour<Architecture, Disassembler>::insertPrologueJumpTable(const InstructionVector& functionInsts,
-                                                            size_t& prolOvrwStartOffset,
-                                                            size_t& prolOvrwEndOffset) {
-    assert(functionInsts.size() > 0);
+Detour<Architecture, Disassembler>::insertPrologueJumpTable(const JumpTableMap& jumpTableMap,
+                                                            const size_t prolTableStartOffset) {
+    function_assert(jumpTableMap.size() > 0);
+    function_assert(m_trampoline.isOk() && m_trampoline.unwrap().capacity() > 0);
 
-    typedef std::vector<std::shared_ptr<PLH::Instruction>> InstructionChildren;
-    std::map<uint8_t, InstructionChildren> jumpsToFix;
+    const bool jumpAbsolute = m_archImpl.minimumJumpType() == PLH::JmpType::Absolute;
 
-    const size_t origProlOvrwStartOffset = prolOvrwStartOffset;
-    bool jumpAbsolute = m_archImpl.minimumJumpType() == PLH::JmpType::Absolute;
+    // Make a place for indirect jump holders. Should be +- 2Gb from prologue
+    if (!jumpAbsolute) {
+        m_prologueJumpTable = std::move(m_archImpl.makeMemoryBuffer(m_fnAddress));
+
+        try {
+            m_prologueJumpTable.unwrap().resize(jumpTableMap.size() * 8, 0xCC);
+        }catch (const PLH::AllocationFailure& ex) {
+            function_fail("Unable to allocate space for indirect prologue table");
+        }
+    }
+
+    InstructionVector instructionsToWriteLater;
+
+    // we have the room for jump table. Add N entries to end of prologue, and point saved children to entry
+    for (uint8_t i = 0; i < jumpTableMap.size(); i++) {
+        // calc offset between inst pointed at and prologue start
+        uint64_t homeOffset       = jumpTableMap.at(i)[0]->getDestination() - m_fnAddress;
+        uint64_t entryLocation    = m_fnAddress + prolTableStartOffset + (i * m_archImpl.minimumPrologueLength());
+        uint64_t entryDestination = (uint64_t)m_trampoline.unwrap().data() + homeOffset; // moved prologue guaranteed to be same offset away
+
+        InstructionVector jumpInstruction;
+        if (jumpAbsolute) {
+            jumpInstruction = m_archImpl.makeMinimumJump(entryLocation, entryDestination);
+        } else {
+            m_archImpl.setIndirectHolder((uint64_t)m_prologueJumpTable.unwrap().data() + (i * 8));
+            jumpInstruction = m_archImpl.makeMinimumJump(entryLocation, entryDestination);
+        }
+
+        // write the table entries later
+        instructionsToWriteLater.insert(instructionsToWriteLater.end(), jumpInstruction.begin(),
+                                        jumpInstruction.end());
+
+        // point children to the new entry
+        for (auto& child : jumpTableMap.at(i)) {
+            if (!child->hasDisplacement() || !child->isDisplacementRelative())
+                continue;
+
+            int64_t newRelativeDisp = PLH::ADisassembler::calculateRelativeDisplacement<int64_t>(child->getAddress(),
+                                                                                                 entryLocation,
+                                                                                                 child->size());
+            child->setRelativeDisplacement(newRelativeDisp);
+
+            // write them later
+            instructionsToWriteLater.push_back(child);
+        }
+    }
+    return instructionsToWriteLater;
+}
+
+template<typename Architecture, typename Disassembler>
+PLH::Maybe<JumpTableMap> Detour<Architecture, Disassembler>::calcPrologueJumpTable(const InstructionVector& functionInsts,
+                                                                                        size_t& prolOvrwStartOffset,
+                                                                                        size_t& prolOvrwEndOffset){
+    JumpTableMap tableMap;
 
     uint8_t tableEntries = 0;
     uint8_t tableSize    = 0;
@@ -442,9 +495,21 @@ Detour<Architecture, Disassembler>::insertPrologueJumpTable(const InstructionVec
         if (inst->getChildren().empty())
             continue;
 
+        /* does the current instruction go past any elements in our map.
+         * If so then our jump table would be overwriting a jump, very bad.*/
+        if(std::find_if(tableMap.begin(), tableMap.end(), [&](const auto& pair){
+            for(const auto& mapInst : pair.second){
+                if(inst->getAddress() >= mapInst->getAddress())
+                    return true;
+            }
+            return false;
+        }) != tableMap.end()){
+            function_fail("Function to small to make jump table");
+        }
+
         /* if inst is pointed at, note to make a table entry
          * and remember who to point at that entry.*/
-        jumpsToFix[tableEntries++] = inst->getChildren();
+        tableMap[tableEntries++] = inst->getChildren();
 
         /* expand prologue to hold the jump table entries. This
            is a recursive problem done iteratively. By expanding
@@ -454,12 +519,12 @@ Detour<Architecture, Disassembler>::insertPrologueJumpTable(const InstructionVec
         prolOvrwStartOffset += tableSize;
     }
 
-    //TODO: fix case where children pointing to intermediate jump can
-    // get overwritten by jump table
+    /*TODO: fix case where children pointing to intermediate jump can
+     get overwritten by jump table*/
 
     // no work
     if(tableEntries == 0)
-        return InstructionVector();
+        return JumpTableMap();
 
     // round up end pointer to not split instrs
     if (walkedBytes >= prolOvrwStartOffset) {
@@ -467,54 +532,7 @@ Detour<Architecture, Disassembler>::insertPrologueJumpTable(const InstructionVec
     }else{
         function_fail("Function does cyclic prologue jumps and is to small for jump table");
     }
-
-    // Make a place for indirect jump holders. Should be +- 2Gb from prologue
-    if (!jumpAbsolute) {
-        m_prologueJumpTable = std::move(m_archImpl.makeMemoryBuffer(m_fnAddress));
-
-        try {
-            m_prologueJumpTable.unwrap().resize(tableEntries * 8, 0xCC);
-        }catch (const PLH::AllocationFailure& ex) {
-            function_fail("Unable to allocate space for indirect prologue table");
-        }
-    }
-
-    InstructionVector instructionsToWriteLater;
-
-    // we have the room for jump table. Add N entries to end of prologue, and point saved children to entry
-    for (uint8_t i = 0; i < tableEntries; i++) {
-        // calc offset between inst pointed at and prologue start
-        uint64_t homeOffset       = jumpsToFix[i][0]->getDestination() - m_fnAddress;
-        uint64_t entryLocation    = m_fnAddress + origProlOvrwStartOffset + (i * m_archImpl.minimumPrologueLength());
-        uint64_t entryDestination = m_fnCallback + homeOffset; // moved prologue guaranteed to be same offset away
-
-        InstructionVector jumpInstruction;
-        if (jumpAbsolute) {
-            jumpInstruction = m_archImpl.makeMinimumJump(entryLocation, entryDestination);
-        } else {
-            m_archImpl.setIndirectHolder((uint64_t)m_prologueJumpTable.unwrap().data() + (i * 8));
-            jumpInstruction = m_archImpl.makeMinimumJump(entryLocation, entryDestination);
-        }
-
-        // write the table entries later
-        instructionsToWriteLater.insert(instructionsToWriteLater.end(), jumpInstruction.begin(),
-                                        jumpInstruction.end());
-
-        // point children to the new entry
-        for (auto& child : jumpsToFix[i]) {
-            if (!child->hasDisplacement() || !child->isDisplacementRelative())
-                continue;
-
-            int64_t newRelativeDisp = PLH::ADisassembler::calculateRelativeDisplacement<int64_t>(child->getAddress(),
-                                                                                                 entryLocation,
-                                                                                                 child->size());
-            child->setRelativeDisplacement(newRelativeDisp);
-
-            // write them later
-            instructionsToWriteLater.push_back(child);
-        }
-    }
-    return instructionsToWriteLater;
+    return tableMap;
 }
 
 template<typename Architecture, typename Disassembler>

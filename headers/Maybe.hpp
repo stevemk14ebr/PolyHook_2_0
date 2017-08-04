@@ -105,4 +105,10 @@ private:
 }
 #define function_fail(error) return PLH::ExplicitMaybeError<std::string>(error);
 
+// assert in debug, fail return in release. Stronger runtime guards
+#define function_assert(expr) \
+    if (!(expr)) {            \
+    assert(expr);\
+    return PLH::ExplicitMaybeError<std::string>("assertion failed: " #expr); \
+    }
 #endif //POLYHOOK_2_MONAD_HPP
