@@ -1,9 +1,10 @@
 //
 // Created by steve on 6/25/17.
 //
-
 #ifndef POLYHOOK_2_MONAD_HPP
 #define POLYHOOK_2_MONAD_HPP
+
+#include "headers/Enums.hpp"
 
 #include <iostream>
 #include <cassert>
@@ -14,6 +15,46 @@ namespace PLH {
  * uses a boost variant for simplicity. If boost is not wanted
  * the same can be accomplished using in-place-new, and a buffer
  * that uses std::aligned_storage.**/
+
+/**A special error type that can be used to attach a level of error to
+ * an error message**/
+struct ErrorSeverityMsg
+{
+    ErrorSeverityMsg()
+    {
+        m_severity = ErrorSeverity::Ok;
+        m_errorMsg = "default initialized";
+    }
+
+    ErrorSeverityMsg(const ErrorSeverity level, const std::string& msg)
+    {
+        m_severity = level;
+        m_errorMsg = msg;
+    }
+
+    ErrorSeverityMsg(const ErrorSeverity level, std::string&& msg)
+    {
+        m_severity = level;
+        m_errorMsg = std::move(msg);
+    }
+
+    /**Used by function_assert. Default construct given only string**/
+    ErrorSeverityMsg(const std::string& msg)
+    {
+        m_severity = ErrorSeverity::Critical;
+        m_errorMsg = msg;
+    }
+
+    /**Used by function_assert. Default construct given only string**/
+    ErrorSeverityMsg(std::string&& msg)
+    {
+        m_severity = ErrorSeverity::Critical;
+        m_errorMsg = std::move(msg);
+    }
+
+    ErrorSeverity m_severity;
+    std::string m_errorMsg;
+};
 
 /*A container for the error type to allow returning from a function. This should
  * definitely call std::decay, but i don't use char* or array types so no*/
@@ -31,13 +72,11 @@ private:
     E errorValue;
 };
 
-template<typename T>
+template<typename T, typename EType = std::string>
 class Maybe
 {
 public:
-    typedef std::string EType;
-
-    Maybe() : m_error(ExplicitMaybeError<EType>("")),
+    Maybe() : m_error(ExplicitMaybeError<EType>(EType())),
               m_isError(true) {
 
     }
@@ -52,12 +91,12 @@ public:
 
     }
 
-    Maybe(const T& value) : m_error(ExplicitMaybeError<EType>("")),
+    Maybe(const T& value) : m_error(ExplicitMaybeError<EType>(EType())),
                             m_isError(false) {
         new(m_content) T(value);
     }
 
-    Maybe(T&& value) : m_error(ExplicitMaybeError<EType>("")),
+    Maybe(T&& value) : m_error(ExplicitMaybeError<EType>(EType())),
                        m_isError(false) {
         new(m_content) T(std::move(value));
     }
@@ -103,12 +142,24 @@ private:
     bool m_isError;
 };
 }
-#define function_fail(error) return PLH::ExplicitMaybeError<std::string>(error);
+
+#define function_fail(...) OVERLOADED_MACRO(function_fail, __VA_ARGS__)
+#define function_assert(...) OVERLOADED_MACRO(function_assert, __VA_ARGS__)
+
+#define function_fail1(error) return PLH::ExplicitMaybeError<std::string>(error);
+
+#define function_fail2(level, error) return PLH::ExplicitMaybeError<PLH::ErrorSeverityMsg>(PLH::ErrorSeverityMsg(level, error));
 
 // assert in debug, fail return in release. Stronger runtime guards
-#define function_assert(expr) \
+#define function_assert1(expr) \
     if (!(expr)) {            \
     assert(expr);\
     return PLH::ExplicitMaybeError<std::string>("assertion failed: " #expr); \
+    }
+
+#define function_assert2(level, expr) \
+    if (!(expr)) {            \
+    assert(expr);\
+    return PLH::ExplicitMaybeError<PLH::ErrorSeverityMsg>(PLH::ErrorSeverityMsg(level, "assertion failed: " #expr)); \
     }
 #endif //POLYHOOK_2_MONAD_HPP

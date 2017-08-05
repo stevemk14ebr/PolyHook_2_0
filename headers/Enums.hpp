@@ -105,5 +105,14 @@ enum class Mode
     x86,
     x64
 };
+
+enum class ErrorSeverity
+{
+    Ok, // failed to do something, but fine to ignore it and continue
+    Important, // normal error, should be handled gracefully, maybe fine to ignore
+    Critical, // absolutely must handle or things blow up
+    Fatal // can't handle
+};
+
 }
 #endif //POLYHOOK_2_0_ENUMS_HPP

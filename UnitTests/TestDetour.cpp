@@ -27,18 +27,24 @@ __attribute_noinline__ int loop(int param) {
 }
 decltype(&loop) oLoop;
 
-__attribute_noinline__ int loopCallback(int param) {
+volatile __attribute_noinline__ int loopCallback(int param) {
     return oLoop(10);
 }
 
 uint8_t toSmall[1] = {0xC3};
 
 //bunch of nops then a jump back into the second nop. Then some nops at the end for jump table to go into
-uint8_t prologueCyclicJump[] = { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+uint8_t prologueCyclicJumpBad[] = { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
                                  0x90, 0x90,
-                                 0xEB, 0xF3,
+                                 0xEB, 0xF6,
                                  0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
                                  0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
+
+uint8_t prologueCyclicJump[] = { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                                    0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                                    0xEB, 0xF6,
+                                    0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                                    0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
 
 __attribute_noinline__ void prologueLoopCallback(){
     return;
@@ -58,9 +64,7 @@ TEST_CASE("Testing detours", "[ADetour]") {
         REQUIRE(branch(0) == 15);
     }
 
-    /* This is not fully implemented. Cyclic jumps usually don't happen since we
-     * took care to use the smallest jump type, but they are possible. We
-     * should check*/
+    // in release mode these tests sometimes fail. Whatcha doing optimizer?
     SECTION("Verify functions with loop are resolved")
     {
         PLH::Detour<PLH::x64DetourImp> detour((char*)&loop, (char*)&loopCallback);
@@ -79,10 +83,17 @@ TEST_CASE("Testing detours", "[ADetour]") {
         REQUIRE(!detour.hook());
     }
 
-    SECTION("Check functions that jump back into prologue"){
+    SECTION("Check that prologue jump table fails when there's no room"){
+        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueCyclicJumpBad, (char*)&prologueLoopCallback);
+
+        //detour.setDebug(true);
+        REQUIRE(detour.hook() == false);
+    }
+
+    SECTION("Check that prologue jump table succeeds when appropriate"){
         PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueCyclicJump, (char*)&prologueLoopCallback);
 
         detour.setDebug(true);
-        detour.hook();
+        REQUIRE(detour.hook());
     }
 }

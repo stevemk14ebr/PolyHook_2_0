@@ -10,6 +10,7 @@
 #include "headers/Detour/x86DetourImp.hpp"
 #include "headers/MemoryAllocation/MemoryProtector.hpp"
 #include "headers/Finally.hpp"
+#include "headers/Enums.hpp"
 #include "headers/Maybe.hpp"
 
 #include <map>
@@ -70,7 +71,7 @@ private:
     insertPrologueJumpTable(const JumpTableMap& jumpTableMap,
                             const size_t prolTableStartOffset);
 
-    PLH::Maybe<JumpTableMap> calcPrologueJumpTable(const InstructionVector& jumpTableMap,
+    PLH::Maybe<JumpTableMap, ErrorSeverityMsg> calcPrologueJumpTable(const InstructionVector& jumpTableMap,
                                                    size_t& prolOvrwStartOffset,
                                                    size_t& prolOvrwEndOffset);
 
@@ -147,7 +148,11 @@ bool Detour<Architecture, Disassembler>::hook() {
 
     // at this point prolOvrwStartOffset points to the end of the jump
     const size_t prolJumpTableStartOffset = prologueOvrwStartOffset;
-    PLH::Maybe<JumpTableMap> prolJumpTableMap = calcPrologueJumpTable(instructions, prologueOvrwStartOffset, prologueOvrwEndOffset);
+    PLH::Maybe<JumpTableMap, ErrorSeverityMsg> prolJumpTableMap = calcPrologueJumpTable(instructions, prologueOvrwStartOffset, prologueOvrwEndOffset);
+    if(!prolJumpTableMap && prolJumpTableMap.unwrapError().m_severity != ErrorSeverity::Ok) {
+        sendError(prolJumpTableMap.unwrapError().m_errorMsg);
+        return false;
+    }
     assert(prologueOvrwEndOffset >= prologueOvrwStartOffset);
 
     // Count # of entries that will be in the jump table
@@ -195,7 +200,6 @@ bool Detour<Architecture, Disassembler>::hook() {
         return false;
     }
 
-    //TODO: will currently pretend everything is all good if function is too small for jump table
     // insert prolJumpTable if appropriate
     if(prolJumpTableMap)
     {
@@ -239,10 +243,16 @@ bool Detour<Architecture, Disassembler>::hook() {
                                                                       m_trampoline.unwrap().size());
         dbgPrintInstructionVec("Trampoline: ", trampolineInst);
 
+        // print the indirect holder
+        std::stringstream ss;
+        for(int i = 0; i < 8; i++)
+            ss << std::hex << std::setw(2) << std::setfill('0') << (unsigned)m_trampoline.unwrap()[m_trampoline.unwrap().size() + i] << " ";
+        std::cout << ss.str() << std::endl;
+
         // Go a little past prologue to see if we corrupted anything
         InstructionVector newPrologueInst = m_disassembler.disassemble(m_fnAddress,
                                                                        m_fnAddress,
-                                                                       m_fnAddress + prologueOvrwEndOffset + 10);
+                                                                       m_fnAddress + prologueOvrwEndOffset + 30);
         dbgPrintInstructionVec("New Prologue: ", newPrologueInst);
 
         InstructionVector callbackInst = m_disassembler.disassemble(m_fnCallback,
@@ -474,7 +484,7 @@ Detour<Architecture, Disassembler>::insertPrologueJumpTable(const JumpTableMap& 
 }
 
 template<typename Architecture, typename Disassembler>
-PLH::Maybe<JumpTableMap> Detour<Architecture, Disassembler>::calcPrologueJumpTable(const InstructionVector& functionInsts,
+PLH::Maybe<JumpTableMap, ErrorSeverityMsg> Detour<Architecture, Disassembler>::calcPrologueJumpTable(const InstructionVector& functionInsts,
                                                                                         size_t& prolOvrwStartOffset,
                                                                                         size_t& prolOvrwEndOffset){
     JumpTableMap tableMap;
@@ -492,9 +502,6 @@ PLH::Maybe<JumpTableMap> Detour<Architecture, Disassembler>::calcPrologueJumpTab
         if (inst->getMnemonic() == "ret")
             break;
 
-        if (inst->getChildren().empty())
-            continue;
-
         /* does the current instruction go past any elements in our map.
          * If so then our jump table would be overwriting a jump, very bad.*/
         if(std::find_if(tableMap.begin(), tableMap.end(), [&](const auto& pair){
@@ -504,8 +511,11 @@ PLH::Maybe<JumpTableMap> Detour<Architecture, Disassembler>::calcPrologueJumpTab
             }
             return false;
         }) != tableMap.end()){
-            function_fail("Function to small to make jump table");
+            function_fail(ErrorSeverity::Important, "Function to small to make jump table");
         }
+
+        if (inst->getChildren().empty())
+            continue;
 
         /* if inst is pointed at, note to make a table entry
          * and remember who to point at that entry.*/
@@ -524,13 +534,13 @@ PLH::Maybe<JumpTableMap> Detour<Architecture, Disassembler>::calcPrologueJumpTab
 
     // no work
     if(tableEntries == 0)
-        return JumpTableMap();
+        function_fail(ErrorSeverity::Ok, "No table needed");
 
     // round up end pointer to not split instrs
     if (walkedBytes >= prolOvrwStartOffset) {
         prolOvrwEndOffset = walkedBytes;
     }else{
-        function_fail("Function does cyclic prologue jumps and is to small for jump table");
+        function_fail(ErrorSeverity::Important, "Function does cyclic prologue jumps and is to small for jump table");
     }
     return tableMap;
 }
