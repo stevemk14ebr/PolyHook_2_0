@@ -46,10 +46,6 @@ uint8_t prologueCyclicJump[] = { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
                                     0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
                                     0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
 
-__attribute_noinline__ void prologueLoopCallback(){
-    return;
-}
-
 TEST_CASE("Testing detours", "[ADetour]") {
 
     // On gcc in linux this also tests that the red-zone isn't touched
@@ -84,14 +80,14 @@ TEST_CASE("Testing detours", "[ADetour]") {
     }
 
     SECTION("Check that prologue jump table fails when there's no room"){
-        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueCyclicJumpBad, (char*)&prologueLoopCallback);
+        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueCyclicJumpBad, (char*)&toSmall);
 
         //detour.setDebug(true);
-        REQUIRE(detour.hook() == false);
+        REQUIRE(!detour.hook());
     }
 
     SECTION("Check that prologue jump table succeeds when appropriate"){
-        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueCyclicJump, (char*)&prologueLoopCallback);
+        PLH::Detour<PLH::x64DetourImp> detour((char*)&prologueCyclicJump, (char*)&toSmall);
 
         detour.setDebug(true);
         REQUIRE(detour.hook());

@@ -98,7 +98,7 @@ private:
 template<typename Architecture, typename Disassembler>
 Detour<Architecture, Disassembler>::Detour(const uint64_t hookAddress, const uint64_t callbackAddress) :
         m_archImpl(), m_disassembler(m_archImpl.GetArchType()) {
-    assert(hookAddress != NULL && callbackAddress != NULL);
+    assert(hookAddress != 0 && callbackAddress != 0);
     m_fnAddress  = hookAddress;
     m_fnCallback = callbackAddress;
     m_hooked     = false;
