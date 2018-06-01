@@ -9,7 +9,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
     std::vector<PLH::Instruction> InsVec;
 
     uint64_t Size = End - start;
-    while (cs_disasm_iter(m_capHandle, (const uint8_t**)(&start),(size_t*)&Size, &firstInstruction, InsInfo)) {
+    while (cs_disasm_iter(m_capHandle, (const uint8_t**)&start,(size_t*)&Size, &firstInstruction, InsInfo)) {
         //Set later by 'SetDisplacementFields'
         PLH::Instruction::Displacement displacement;
         displacement.Absolute = 0;
@@ -48,28 +48,28 @@ void PLH::CapstoneDisassembler::writeEncoding(const PLH::Instruction& instructio
  * memory or immediate, and then finally if that mem/imm is encoded via a displacement relative to
  * the instruction pointer, or directly to an absolute address**/
 void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, const cs_insn* capInst) const {
-    cs_x86* x86 = &(capInst->detail->x86);
+    cs_x86 x86 = capInst->detail->x86;
 
-    for (uint_fast32_t j = 0; j < x86->op_count; j++) {
-        cs_x86_op* op = &(x86->operands[j]);
-        if (op->type == X86_OP_MEM) {
+    for (uint_fast32_t j = 0; j < x86.op_count; j++) {
+        cs_x86_op op = x86.operands[j];
+        if (op.type == X86_OP_MEM) {
             //Are we relative to instruction pointer?
             //mem are types like jmp [rip + 0x4] where location is dereference-d
-            if (op->mem.base != getIpReg())
+            if (op.mem.base != getIpReg())
                 continue;
 
-            const uint8_t Offset = x86->encoding.disp_offset;
-            const uint8_t Size   = x86->encoding.disp_size;
+            const uint8_t Offset = x86.encoding.disp_offset;
+            const uint8_t Size   = x86.encoding.disp_size;
             copyDispSX(inst, Offset, Size, std::numeric_limits<int64_t>::max());
-        } else if (op->type == X86_OP_IMM) {
+        } else if (op.type == X86_OP_IMM) {
             //IMM types are like call 0xdeadbeef where they jmp straight to some location
             if (!hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) &&
                 !hasGroup(capInst, x86_insn_group::X86_GRP_CALL))
                 continue;
 
-            const uint8_t Offset = x86->encoding.imm_offset;
-            const uint8_t Size   = x86->encoding.imm_size;
-            copyDispSX(inst, Offset, Size, op->imm);
+            const uint8_t Offset = x86.encoding.imm_offset;
+            const uint8_t Size   = x86.encoding.imm_size;
+            copyDispSX(inst, Offset, Size, op.imm);
         }
     }
 }

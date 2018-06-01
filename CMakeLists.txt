@@ -3,9 +3,9 @@ project(PolyHook_2)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
-set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+#set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
+#set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+#set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 #IDE's like it when header file are included as source files
 set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
@@ -34,7 +34,6 @@ set(HEADER_IMP_SOURCES ${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
 set(SOURCE_FILES_PLH ${UNIT_TEST_SOURCES} ${HEADER_IMP_SOURCES} ${HEADER_FILES} ${DETOUR_HEADER_FILES})
 
 add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
-set_target_properties(PolyHook_2 PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}")
 
 #Set this variable to hold the path to capstone directory
 set(CAPSTONE_LIB_PATH_64 ${PROJECT_SOURCE_DIR}/capstone/build64/)

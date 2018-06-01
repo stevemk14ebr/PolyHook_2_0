@@ -83,51 +83,51 @@ std::vector<uint8_t> x86ASM = {
         0xe9, 0x00, 0xff, 0x00, 0x00        //7) 57b8edd5 jmp 57b9ecda
 };
 
-//TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembler]") {
-//    PLH::CapstoneDisassembler disasm(PLH::Mode::x86);
-//    auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-//                                                                (uint64_t)&x86ASM.front() + x86ASM.size());
-//   
-//    const uint8_t CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
-//    const char* CorrectMnemonic[] = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp"};
-//
-//    SECTION("Check disassembler integrity") {
-//		REQUIRE(Instructions.size() == 8);
-//    }
-//
-//    SECTION("Check instruction re-encoding integrity") {
-//        Instructions[3].setRelativeDisplacement(0x00);
-//        disasm.writeEncoding(Instructions[3]);
-//
-//        Instructions[7].setRelativeDisplacement(0x00);
-//        disasm.writeEncoding(Instructions[7]);
-//
-//        REQUIRE(Instructions[3].getDestination() == Instructions[3].getAddress() + Instructions[3].size());
-//        REQUIRE(Instructions[7].getDestination() == Instructions[7].getAddress() + Instructions[7].size());
-//
-//        Instructions =
-//                disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-//                                   (uint64_t)&x86ASM.front() + x86ASM.size());
-//    }
-//
-//    uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
-//    size_t   PrevInstSize    = 0;
-//
-//    for (int i = 0; i < Instructions.size(); i++) {
-//        INFO("Index: " << i);
-//        INFO("Correct Mnemonic:"
-//                     << CorrectMnemonic[i]
-//                     << " Mnemonic:"
-//                     << Instructions[i].getMnemonic());
-//
-//        REQUIRE(Instructions[i].getMnemonic().compare(CorrectMnemonic[i]) == 0);
-//
-//        REQUIRE(Instructions[i].size() == CorrectSizes[i]);
-//
-//        REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
-//        PrevInstAddress = Instructions[i].getAddress();
-//        PrevInstSize    = Instructions[i].size();
-//    }
-//
-//}
+TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembler]") {
+    PLH::CapstoneDisassembler disasm(PLH::Mode::x86);
+    auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+                                                                (uint64_t)&x86ASM.front() + x86ASM.size());
+   
+    const uint8_t CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
+    const char* CorrectMnemonic[] = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp"};
+
+    SECTION("Check disassembler integrity") {
+		REQUIRE(Instructions.size() == 8);
+    }
+
+    SECTION("Check instruction re-encoding integrity") {
+        Instructions[3].setRelativeDisplacement(0x00);
+        disasm.writeEncoding(Instructions[3]);
+
+        Instructions[7].setRelativeDisplacement(0x00);
+        disasm.writeEncoding(Instructions[7]);
+
+        REQUIRE(Instructions[3].getDestination() == Instructions[3].getAddress() + Instructions[3].size());
+        REQUIRE(Instructions[7].getDestination() == Instructions[7].getAddress() + Instructions[7].size());
+
+        Instructions =
+                disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+                                   (uint64_t)&x86ASM.front() + x86ASM.size());
+    }
+
+    uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
+    size_t   PrevInstSize    = 0;
+
+    for (int i = 0; i < Instructions.size(); i++) {
+        INFO("Index: " << i);
+        INFO("Correct Mnemonic:"
+                     << CorrectMnemonic[i]
+                     << " Mnemonic:"
+                     << Instructions[i].getMnemonic());
+
+        REQUIRE(Instructions[i].getMnemonic().compare(CorrectMnemonic[i]) == 0);
+
+        REQUIRE(Instructions[i].size() == CorrectSizes[i]);
+
+        REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
+        PrevInstAddress = Instructions[i].getAddress();
+        PrevInstSize    = Instructions[i].size();
+    }
+
+}
 

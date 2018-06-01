@@ -21,8 +21,8 @@ class CapstoneDisassembler : public ADisassembler
 public:
     CapstoneDisassembler(PLH::Mode mode) : ADisassembler(mode) {
         cs_mode capmode = (mode == PLH::Mode::x64 ? CS_MODE_64 : CS_MODE_32);
-        if (cs_open(CS_ARCH_X86, capmode, &m_capHandle) != CS_ERR_OK)
-          // TODO report err
+		if (cs_open(CS_ARCH_X86, capmode, &m_capHandle) != CS_ERR_OK)
+			printf("error opening cap\n");
 
         cs_option(m_capHandle, CS_OPT_DETAIL, CS_OPT_ON);
     }
