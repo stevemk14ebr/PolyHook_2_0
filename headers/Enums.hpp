@@ -10,6 +10,20 @@
 
 namespace PLH {
 
+enum class HookType
+{
+	X86Detour,
+	X64Detour,
+	UNKNOWN
+	//#if(ARCH_WIN)
+	//    ,VFuncSwap,
+	//    VFuncDetour,
+	//    VTableSwap,
+	//    IAT,
+	//    VEH,
+	//#endif
+};
+
 //unsafe enum by design to allow binary OR
 enum ProtFlag : std::uint8_t
 {
@@ -81,22 +95,19 @@ inline std::string ProtFlagToString(PLH::ProtFlag flags) {
     return s;
 }
 
-// TODO: add if-def for windows
-#include <sys/mman.h>
-
 inline int TranslateProtection(const PLH::ProtFlag flags) {
     int NativeFlag = 0;
     if (flags & PLH::ProtFlag::X)
-        NativeFlag |= PROT_EXEC;
+        NativeFlag |= 0;
 
     if (flags & PLH::ProtFlag::R)
-        NativeFlag |= PROT_READ;
+        NativeFlag |= 0;
 
     if (flags & PLH::ProtFlag::W)
-        NativeFlag |= PROT_WRITE;
+        NativeFlag |= 0;
 
     if (flags & PLH::ProtFlag::NONE)
-        NativeFlag |= PROT_NONE;
+        NativeFlag |= 0;
     return NativeFlag;
 }
 
@@ -105,14 +116,5 @@ enum class Mode
     x86,
     x64
 };
-
-enum class ErrorSeverity
-{
-    Ok, // failed to do something, but fine to ignore it and continue
-    Important, // normal error, should be handled gracefully, maybe fine to ignore
-    Critical, // absolutely must handle or things blow up
-    Fatal // can't handle
-};
-
 }
 #endif //POLYHOOK_2_0_ENUMS_HPP

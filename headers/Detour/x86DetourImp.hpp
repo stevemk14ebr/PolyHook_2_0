@@ -6,37 +6,22 @@
 #define POLYHOOK_2_X86DETOUR_HPP
 
 #include "headers/IHook.hpp"
-
-#include <memory>
+#include "headers/Instruction.hpp"
 #include <vector>
+#include <sstream>
 
 namespace PLH {
 
 class x86DetourImp
 {
 public:
-    typedef std::vector<uint8_t>                           DetourBuffer;
-    typedef std::vector<std::shared_ptr<PLH::Instruction>> InstructionVector;
+    HookType getType() const;
 
-    DetourBuffer makeMemoryBuffer(const uint64_t hint);
+    Mode getArchType() const;
 
-    PLH::HookType getType() const;
+    insts_t makeMinimumJump(const uint64_t address, const uint64_t destination) const;
 
-    PLH::Mode getArchType() const;
-
-    uint8_t minimumPrologueLength() const;
-
-    uint8_t preferredPrologueLength() const;
-
-    JmpType minimumJumpType() const;
-
-    JmpType preferredJumpType() const;
-
-    void setIndirectHolder(const uint64_t holderAddress);
-
-    InstructionVector makeMinimumJump(const uint64_t address, const uint64_t destination) const;
-
-    InstructionVector makePreferredJump(const uint64_t address, const uint64_t destination) const;
+    insts_t makePreferredJump(const uint64_t address, const uint64_t destination) const;
 
 private:
 

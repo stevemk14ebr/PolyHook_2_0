@@ -5,25 +5,12 @@
 #ifndef POLYHOOK_2_0_IHOOK_HPP
 #define POLYHOOK_2_0_IHOOK_HPP
 
-#include "headers/ErrorSystem.hpp"
+
 #include "headers/ADisassembler.hpp"
+#include "headers/Enums.hpp"
 
 namespace PLH {
-enum class HookType
-{
-    X86Detour,
-    X64Detour,
-    UNKNOWN
-#if(ARCH_WIN)
-    ,VFuncSwap,
-    VFuncDetour,
-    VTableSwap,
-    IAT,
-    VEH,
-#endif
-};
-
-class IHook : public PLH::Errant
+class IHook
 {
 public:
     IHook() {

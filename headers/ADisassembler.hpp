@@ -5,12 +5,10 @@
 #ifndef POLYHOOK_2_0_IDISASSEMBLER_HPP
 #define POLYHOOK_2_0_IDISASSEMBLER_HPP
 
-#include "headers/ErrorSystem.hpp"
 #include "headers/Instruction.hpp"
 #include "headers/Enums.hpp"
 
 #include <vector>
-#include <memory>
 
 namespace PLH {
 //Abstract Disassembler
@@ -28,7 +26,7 @@ public:
      * @param Start: The address of the code buffer
      * @param End: The address of the end of the code buffer
      * **/
-    virtual std::vector<std::shared_ptr<PLH::Instruction>>
+    virtual std::vector<PLH::Instruction>
     disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end) = 0;
 
     virtual void writeEncoding(const PLH::Instruction& instruction) const = 0;
@@ -41,16 +39,8 @@ public:
             return 0 - (from - to) - insSize;
         return to - (from + insSize);
     }
-
-    typedef PLH::EventDispatcher<void(const PLH::Message&)> tErrorHandler;
-
-    virtual tErrorHandler& OnError() {
-        return m_errorCallback;
-    }
-
 protected:
     Mode          m_mode;
-    tErrorHandler m_errorCallback;
 };
 }
 #endif //POLYHOOK_2_0_IDISASSEMBLER_HPP

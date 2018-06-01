@@ -75,7 +75,7 @@ template <typename T, typename R, typename... Args, R (T::*mf)(Args...)>
 struct proxy<R (T::*)(Args...), mf>
 {
     typedef R (*TCallback)(Args...);
-    __attribute_noinline__ static R call(T* obj, Args&&... args)
+    static R call(T* obj, Args&&... args)
     {
         return (*obj.*mf)(std::forward<Args>(args)...);
     }

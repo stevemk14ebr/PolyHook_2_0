@@ -5,10 +5,9 @@
 #ifndef POLYHOOK_2_0_INSTRUCTION_HPP
 #define POLYHOOK_2_0_INSTRUCTION_HPP
 
-#include <cstring> //memcpy
 #include <string>
 #include <vector>
-#include <memory>
+#include <sstream>
 #include <iostream> //ostream operator
 #include <iomanip> //setw
 
@@ -29,6 +28,7 @@ public:
                 const std::vector<uint8_t>& bytes,
                 const std::string& mnemonic,
                 const std::string& opStr) {
+
         Init(address, displacement, displacementOffset, isRelative, bytes, mnemonic, opStr);
     }
 
@@ -40,6 +40,7 @@ public:
                 size_t arrLen,
                 const std::string& mnemonic,
                 const std::string& opStr) {
+
         std::vector<uint8_t> Arr(bytes, bytes + arrLen);
         Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr);
     }
@@ -95,14 +96,6 @@ public:
         return m_bytes.size();
     }
 
-    void addChild(const std::shared_ptr<Instruction>& child) {
-        m_Children.push_back(child);
-    }
-
-    const std::vector<std::shared_ptr<Instruction>>& getChildren() const {
-        return m_Children;
-    }
-
     void setRelativeDisplacement(const int64_t displacement) {
         /**Update our class' book-keeping of this stuff and then modify the byte array.
          * This doesn't actually write the changes to the executeable code, it writes to our
@@ -125,9 +118,6 @@ public:
         std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, size() - getDisplacementOffset());
     }
 
-
-protected:
-    std::vector<std::shared_ptr<Instruction>> m_Children;
 private:
     void Init(uint64_t address,
               const Displacement& displacement,
@@ -172,5 +162,6 @@ inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
     return os;
 }
 
+typedef std::vector<Instruction> insts_t;
 }
 #endif //POLYHOOK_2_0_INSTRUCTION_HPP

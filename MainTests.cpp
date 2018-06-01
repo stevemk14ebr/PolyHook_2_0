@@ -6,5 +6,6 @@
 TEST_CASE("","")
 {
     std::cout << "Welcome to PolyHook -By- Stevemk14ebr" << std::endl;
+	getchar();
 }
 
