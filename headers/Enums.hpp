@@ -50,67 +50,6 @@ enum class JmpType
     Indirect
 };
 
-inline bool operator&(ProtFlag lhs, ProtFlag rhs) {
-    return static_cast<std::uint8_t>(lhs) &
-           static_cast<std::uint8_t>(rhs);
-}
-
-inline ProtFlag operator|(ProtFlag lhs, ProtFlag rhs) {
-    return static_cast<ProtFlag >(
-            static_cast<std::uint8_t>(lhs) |
-            static_cast<std::uint8_t>(rhs));
-}
-
-inline std::string ProtFlagToString(PLH::ProtFlag flags) {
-    std::string s = "";
-    if (flags == PLH::ProtFlag::UNSET) {
-        s += "UNSET";
-        return s;
-    }
-
-    if (flags & PLH::ProtFlag::X)
-        s += "x";
-    else
-        s += "-";
-
-    if (flags & PLH::ProtFlag::R)
-        s += "r";
-    else
-        s += "-";
-
-    if (flags & PLH::ProtFlag::W)
-        s += "w";
-    else
-        s += "-";
-
-    if (flags & PLH::ProtFlag::NONE)
-        s += "n";
-    else
-        s += "-";
-
-    if (flags & PLH::ProtFlag::P)
-        s += " private";
-    else if (flags & PLH::ProtFlag::S)
-        s += " shared";
-    return s;
-}
-
-inline int TranslateProtection(const PLH::ProtFlag flags) {
-    int NativeFlag = 0;
-    if (flags & PLH::ProtFlag::X)
-        NativeFlag |= 0;
-
-    if (flags & PLH::ProtFlag::R)
-        NativeFlag |= 0;
-
-    if (flags & PLH::ProtFlag::W)
-        NativeFlag |= 0;
-
-    if (flags & PLH::ProtFlag::NONE)
-        NativeFlag |= 0;
-    return NativeFlag;
-}
-
 enum class Mode
 {
     x86,

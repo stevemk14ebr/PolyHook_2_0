@@ -7,66 +7,101 @@
 #include <iostream>
 #include <vector>
 
-//std::vector<uint8_t> x64ASM = {
-//        //start address = 0x1800182B0
-//        0x48, 0x89, 0x5C, 0x24, 0x08,           //0) mov QWORD PTR [rsp+0x8],rbx    with child @index 8
-//        0x48, 0x89, 0x74, 0x24, 0x10,           //1) mov QWORD PTR [rsp+0x10],rsi
-//        0x57,                                   //2) push rdi
-//        0x48, 0x83, 0xEC, 0x20,                 //3) sub rsp, 0x20
-//        0x49, 0x8B, 0xF8,                       //4) mov rdi, r8
-//        0x8B, 0xDA,                             //5) mov ebx, edx
-//        0x48, 0x8B, 0xF1,                       //6) mov rsi, rcx
-//        0x83, 0xFA, 0x01,                       //7) cmp edx, 1
-//        0x75, 0xE4,                             //8) jne  0x1800182B0   when @0x1800182CA (base + 0xE4(neg) + 0x2)
-//        0xE8, 0xCB, 0x57, 0x01, 0x00,           //9) call 0x18002DA9C   when @0x1800182CC (base + 0x157CB + 0x5)
-//        0xFF, 0x25, 0xCB, 0x57, 0x01, 0x00,     //10)jmp qword ptr [rip + 0x157cb]  when @0x1800182d1FF
-//};
-//
-//TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembler]") {
-//    PLH::CapstoneDisassembler disasm(PLH::Mode::x64);
-//    auto                      Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
-//                                                                (uint64_t)&x64ASM.front() + x64ASM.size());
-//
-//    uint64_t PrevInstAddress = (uint64_t)&x64ASM.front();
-//    size_t   PrevInstSize    = 0;
-//
-//    const char* CorrectMnemonic[] = {"mov", "mov", "push", "sub", "mov", "mov", "mov", "cmp", "jne", "call", "jmp"};
-//    const uint8_t CorrectSizes[] = {5, 5, 1, 4, 3, 2, 3, 3, 2, 5, 6};
-//
-//    //TO-DO: Break this section in further sub-sections
-//    SECTION("Check disassembler integrity") {
-//        REQUIRE(Instructions.size() == 11);
-//    }
-//
-//    SECTION("Check instruction re-encoding integrity") {
-//        Instructions[8].setRelativeDisplacement(0x00);
-//        disasm.writeEncoding(Instructions[8]);
-//
-//        Instructions[9].setRelativeDisplacement(0x00);
-//        disasm.writeEncoding(Instructions[9]);
-//
-//        REQUIRE(Instructions[8].getDestination() == Instructions[8].getAddress() + Instructions[8].size());
-//        REQUIRE(Instructions[9].getDestination() == Instructions[9].getAddress() + Instructions[9].size());
-//        Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
-//                                   (uint64_t)&x64ASM.front() + x64ASM.size());
-//    }
-//
-//    for (int i = 0; i < Instructions.size(); i++) {
-//        INFO("Index: " << i
-//                       << " Correct Mnemonic:"
-//                       << CorrectMnemonic[i]
-//                       << " Mnemonic:"
-//                       << Instructions[i].getMnemonic());
-//
-//        REQUIRE(Instructions[i].getMnemonic().compare(CorrectMnemonic[i]) == 0);
-//
-//        REQUIRE(Instructions[i].size() == CorrectSizes[i]);
-//
-//        REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
-//        PrevInstAddress = Instructions[i].getAddress();
-//        PrevInstSize    = Instructions[i].size();
-//    }
-//}
+std::vector<uint8_t> x64ASM = {
+        //start address = 0x1800182B0
+        0x48, 0x89, 0x5C, 0x24, 0x08,           //0) mov QWORD PTR [rsp+0x8],rbx    with child @index 8
+        0x48, 0x89, 0x74, 0x24, 0x10,           //1) mov QWORD PTR [rsp+0x10],rsi
+        0x57,                                   //2) push rdi
+        0x48, 0x83, 0xEC, 0x20,                 //3) sub rsp, 0x20
+        0x49, 0x8B, 0xF8,                       //4) mov rdi, r8
+        0x8B, 0xDA,                             //5) mov ebx, edx
+        0x48, 0x8B, 0xF1,                       //6) mov rsi, rcx
+        0x83, 0xFA, 0x01,                       //7) cmp edx, 1
+        0x75, 0xE4,                             //8) jne  0x1800182B0   when @0x1800182CA (base + 0xE4(neg) + 0x2)
+        0xE8, 0xCB, 0x57, 0x01, 0x00,           //9) call 0x18002DA9C   when @0x1800182CC (base + 0x157CB + 0x5)
+        0xFF, 0x25, 0xCB, 0x57, 0x01, 0x00,     //10)jmp qword ptr [rip + 0x157cb]  when @0x1800182d1FF
+};
+
+TEST_CASE("Test Instruction UUID generator", "[Instruction],[UID]") {
+	PLH::Instruction::Displacement displacement;
+	displacement.Absolute = 0;
+
+	long lastID = 0;
+	for (int i = 0; i < 30; i++) {
+		auto inst = PLH::Instruction(0,
+			displacement,
+			0,
+			false,
+			{},
+			0,
+			"nothing",
+			"nothing");
+
+		auto instCopy = inst;
+		REQUIRE(instCopy.getUID() == inst.getUID());
+
+		if (i != 0)
+			REQUIRE(inst.getUID() != lastID);
+		lastID = inst.getUID();
+	}
+}
+
+TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembler]") {
+    PLH::CapstoneDisassembler disasm(PLH::Mode::x64);
+    auto                      Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
+                                                                (uint64_t)&x64ASM.front() + x64ASM.size());
+
+    uint64_t PrevInstAddress = (uint64_t)&x64ASM.front();
+    size_t   PrevInstSize    = 0;
+
+    const char* CorrectMnemonic[] = {"mov", "mov", "push", "sub", "mov", "mov", "mov", "cmp", "jne", "call", "jmp"};
+    const uint8_t CorrectSizes[] = {5, 5, 1, 4, 3, 2, 3, 3, 2, 5, 6};
+
+    SECTION("Check disassembler integrity") {
+        REQUIRE(Instructions.size() == 11);
+
+		std::cout << Instructions << std::endl;
+
+		for (const auto &p : disasm.getBranchMap()) {
+			std::cout << std::hex << "dest: " << p.first << " " << std::dec << p.second << std::endl;
+		}
+    }
+
+	SECTION("Check branch map") {
+		auto brMap = disasm.getBranchMap();
+		REQUIRE(brMap.size() == 1);
+		REQUIRE(brMap.find(Instructions[0].getAddress()) != brMap.end());
+	}
+
+    SECTION("Check instruction re-encoding integrity") {
+        Instructions[8].setRelativeDisplacement(0x00);
+        disasm.writeEncoding(Instructions[8]);
+
+        Instructions[9].setRelativeDisplacement(0x00);
+        disasm.writeEncoding(Instructions[9]);
+
+        REQUIRE(Instructions[8].getDestination() == Instructions[8].getAddress() + Instructions[8].size());
+        REQUIRE(Instructions[9].getDestination() == Instructions[9].getAddress() + Instructions[9].size());
+        Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
+                                   (uint64_t)&x64ASM.front() + x64ASM.size());
+    }
+
+    for (int i = 0; i < Instructions.size(); i++) {
+        INFO("Index: " << i
+                       << " Correct Mnemonic:"
+                       << CorrectMnemonic[i]
+                       << " Mnemonic:"
+                       << Instructions[i].getMnemonic());
+
+        REQUIRE(Instructions[i].getMnemonic().compare(CorrectMnemonic[i]) == 0);
+
+        REQUIRE(Instructions[i].size() == CorrectSizes[i]);
+
+        REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
+        PrevInstAddress = Instructions[i].getAddress();
+        PrevInstSize    = Instructions[i].size();
+    }
+}
 
 // page 590 for jmp types, page 40 for mod/rm table:
 // https://www-ssl.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf
@@ -94,20 +129,29 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
     SECTION("Check disassembler integrity") {
 		REQUIRE(Instructions.size() == 8);
 		std::cout << Instructions << std::endl;
+
 		for (const auto &p : disasm.getBranchMap()) {
-			std::cout << std::hex << "m[" << p.first << "] = " << std::dec << p.second << std::endl;
+			std::cout << std::hex << "dest: " << p.first << " " << std::dec << p.second << std::endl;
 		}
     }
+
+	SECTION("Check branch map") {
+		auto brMap = disasm.getBranchMap();
+		REQUIRE(brMap.size() == 3);
+		REQUIRE(brMap.find(Instructions[3].getAddress()) != brMap.end());
+		REQUIRE(brMap.find(Instructions[5].getAddress()) != brMap.end());
+		REQUIRE(brMap.find(Instructions[6].getAddress()) != brMap.end());
+	}
 
     SECTION("Check instruction re-encoding integrity") {
         Instructions[3].setRelativeDisplacement(0x00);
         disasm.writeEncoding(Instructions[3]);
 
-        Instructions[7].setRelativeDisplacement(0x00);
-        disasm.writeEncoding(Instructions[7]);
+        Instructions[6].setRelativeDisplacement(0x00);
+        disasm.writeEncoding(Instructions[6]);
 
         REQUIRE(Instructions[3].getDestination() == Instructions[3].getAddress() + Instructions[3].size());
-        REQUIRE(Instructions[7].getDestination() == Instructions[7].getAddress() + Instructions[7].size());
+        REQUIRE(Instructions[6].getDestination() == Instructions[6].getAddress() + Instructions[6].size());
 
         Instructions =
                 disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),

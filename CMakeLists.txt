@@ -15,6 +15,8 @@ set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
         ${PROJECT_SOURCE_DIR}/headers/Instruction.hpp
         ${PROJECT_SOURCE_DIR}/headers/Misc.hpp
 		${PROJECT_SOURCE_DIR}/headers/UID.hpp
+		${PROJECT_SOURCE_DIR}/headers/MemProtector.hpp
+		${PROJECT_SOURCE_DIR}/headers/MemAllocator.hpp
        )
 
 set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/Detour/ADetour.hpp
@@ -30,7 +32,7 @@ set(UNIT_TEST_SOURCES ${PROJECT_SOURCE_DIR}/MainTests.cpp
 
 set(HEADER_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
-		${PROJECT_SOURCE_DIR}/sources/ADisassembler.cpp
+		${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp
         ${PROJECT_SOURCE_DIR}/sources/x64DetourImp.cpp
         ${PROJECT_SOURCE_DIR}/sources/x86DetourImp.cpp)
 
