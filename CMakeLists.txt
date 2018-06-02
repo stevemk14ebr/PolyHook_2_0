@@ -14,6 +14,7 @@ set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
         ${PROJECT_SOURCE_DIR}/headers/IHook.hpp
         ${PROJECT_SOURCE_DIR}/headers/Instruction.hpp
         ${PROJECT_SOURCE_DIR}/headers/Misc.hpp
+		${PROJECT_SOURCE_DIR}/headers/UID.hpp
        )
 
 set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/Detour/ADetour.hpp
@@ -27,7 +28,9 @@ include_directories(${PROJECT_SOURCE_DIR})
 set(UNIT_TEST_SOURCES ${PROJECT_SOURCE_DIR}/MainTests.cpp
         ${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp)
 
-set(HEADER_IMP_SOURCES ${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
+set(HEADER_IMP_SOURCES 
+		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
+		${PROJECT_SOURCE_DIR}/sources/ADisassembler.cpp
         ${PROJECT_SOURCE_DIR}/sources/x64DetourImp.cpp
         ${PROJECT_SOURCE_DIR}/sources/x86DetourImp.cpp)
 

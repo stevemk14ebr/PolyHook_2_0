@@ -93,6 +93,10 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
 
     SECTION("Check disassembler integrity") {
 		REQUIRE(Instructions.size() == 8);
+		std::cout << Instructions << std::endl;
+		for (const auto &p : disasm.getBranchMap()) {
+			std::cout << std::hex << "m[" << p.first << "] = " << std::dec << p.second << std::endl;
+		}
     }
 
     SECTION("Check instruction re-encoding integrity") {
@@ -126,8 +130,7 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
 
         REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
         PrevInstAddress = Instructions[i].getAddress();
-        PrevInstSize    = Instructions[i].size();
+		PrevInstSize = Instructions[i].size();
     }
-
 }
 

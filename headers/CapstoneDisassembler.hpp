@@ -13,6 +13,7 @@
 #include <iostream> //for debug printing
 #include <limits>
 #include <cassert>
+#include <algorithm>
 
 namespace PLH {
 

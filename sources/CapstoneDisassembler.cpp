@@ -9,24 +9,42 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
     std::vector<PLH::Instruction> InsVec;
 
     uint64_t Size = End - start;
-    while (cs_disasm_iter(m_capHandle, (const uint8_t**)&start,(size_t*)&Size, &firstInstruction, InsInfo)) {
-        //Set later by 'SetDisplacementFields'
-        PLH::Instruction::Displacement displacement;
-        displacement.Absolute = 0;
+	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&start, (size_t*)&Size, &firstInstruction, InsInfo)) {
+		//Set later by 'SetDisplacementFields'
+		PLH::Instruction::Displacement displacement;
+		displacement.Absolute = 0;
 
-        auto Inst = PLH::Instruction(InsInfo->address,
-                                                       displacement,
-                                                       0,
-                                                       false,
-                                                       InsInfo->bytes,
-                                                       InsInfo->size,
-                                                       InsInfo->mnemonic,
-                                                       InsInfo->op_str);
+		auto Inst = PLH::Instruction(InsInfo->address,
+			displacement,
+			0,
+			false,
+			InsInfo->bytes,
+			InsInfo->size,
+			InsInfo->mnemonic,
+			InsInfo->op_str);
 
-        setDisplacementFields(Inst, InsInfo);
-     
-        InsVec.push_back(Inst);
-    }
+		setDisplacementFields(Inst, InsInfo);
+		InsVec.push_back(Inst);
+
+		// update jump map if the instruction is jump/call
+		if (Inst.hasDisplacement()) {
+			// search back, check if new instruction points to older ones (one to one)
+			auto destInst = std::find_if(InsVec.begin(), InsVec.end(), [=](const PLH::Instruction& oldIns) {
+				return oldIns.getAddress() == Inst.getDestination();
+			});
+
+			if (destInst != InsVec.end()) {
+				updateBranchMap(destInst->getAddress(), Inst);
+			}
+		}
+
+		// search forward, check if old instructions now point to new one (many to one possible)
+		for (const PLH::Instruction& oldInst : InsVec) {
+			if (oldInst.hasDisplacement() && oldInst.getDestination() == Inst.getAddress()) {
+				updateBranchMap(Inst.getAddress(), oldInst);
+			}
+		}
+	}
     cs_free(InsInfo, 1);
     return InsVec;
 }
@@ -43,7 +61,7 @@ void PLH::CapstoneDisassembler::writeEncoding(const PLH::Instruction& instructio
 }
 
 /**If an instruction is a jmp/call variant type this will set it's displacement fields to the
- * appropriate values. All other types of instructions are ignored and is no-op. More specifically
+ * appropriate values. All other types of instructions are ignored as no-op. More specifically
  * this determines if an instruction is a jmp/call variant, and then further if it is is jumping via
  * memory or immediate, and then finally if that mem/imm is encoded via a displacement relative to
  * the instruction pointer, or directly to an absolute address**/
@@ -60,6 +78,8 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
 
             const uint8_t Offset = x86.encoding.disp_offset;
             const uint8_t Size   = x86.encoding.disp_size;
+
+			// it's relative, set immDest to max to trigger later check
             copyDispSX(inst, Offset, Size, std::numeric_limits<int64_t>::max());
         } else if (op.type == X86_OP_IMM) {
             //IMM types are like call 0xdeadbeef where they jmp straight to some location
