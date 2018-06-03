@@ -8,6 +8,7 @@
 #include "headers/Enums.hpp"
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <iostream>
 
 PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs);
 bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs);
@@ -32,6 +33,10 @@ namespace PLH {
 			return m_origProtection;
 		}
 
+		bool isGood() {
+			return status;
+		}
+
 		~MemoryProtector() {
 			if(m_origProtection == PLH::ProtFlag::UNSET)
 				return;
@@ -40,8 +45,9 @@ namespace PLH {
 		}
 	private:
 		PLH::ProtFlag protect(const uint64_t address, const uint64_t length, int prot) {
-			DWORD orig = 0;
-			VirtualProtect((char*)address, length, prot, &orig);
+			DWORD orig;
+			DWORD dwProt = prot;
+			status = VirtualProtect((char*)address, length, dwProt, &orig) != 0;
 			return TranslateProtection(orig);
 		}
 
@@ -49,6 +55,7 @@ namespace PLH {
 
 		uint64_t m_address;
 		uint64_t m_length;
+		bool status;
 	};
 }
 #endif //POLYHOOK_2_MEMORYPROTECTOR_HPP

@@ -27,8 +27,10 @@ set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/Detour/ADetour.hpp
 
 include_directories(${PROJECT_SOURCE_DIR})
 
-set(UNIT_TEST_SOURCES ${PROJECT_SOURCE_DIR}/MainTests.cpp
-        ${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp)
+set(UNIT_TEST_SOURCES 
+		${PROJECT_SOURCE_DIR}/MainTests.cpp
+        ${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp
+		${PROJECT_SOURCE_DIR}/UnitTests/TestMemProtector.cpp)
 
 set(HEADER_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp

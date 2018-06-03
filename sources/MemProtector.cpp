@@ -58,13 +58,13 @@ int PLH::TranslateProtection(const PLH::ProtFlag flags) {
 		NativeFlag = PAGE_READONLY;
 
 	if (flags == PLH::ProtFlag::W)
-		NativeFlag = PAGE_WRITECOPY;
+		NativeFlag = PAGE_READWRITE;
 
 	if ((flags & PLH::ProtFlag::X) && (flags & PLH::ProtFlag::R))
 		NativeFlag = PAGE_EXECUTE_READ;
 
 	if ((flags & PLH::ProtFlag::X) && (flags & PLH::ProtFlag::W))
-		NativeFlag = PAGE_EXECUTE_WRITECOPY;
+		NativeFlag = PAGE_EXECUTE_READWRITE;
 
 	if ((flags & PLH::ProtFlag::X) && (flags & PLH::ProtFlag::R) && (flags & PLH::ProtFlag::W))
 		NativeFlag = PAGE_EXECUTE_READWRITE;
@@ -83,8 +83,9 @@ PLH::ProtFlag PLH::TranslateProtection(const int prot) {
 	case PAGE_READONLY:
 		flags = flags | PLH::ProtFlag::R;
 		break;
-	case PAGE_WRITECOPY:
+	case PAGE_READWRITE:
 		flags = flags | PLH::ProtFlag::W;
+		flags = flags | PLH::ProtFlag::R;
 		break;
 	case PAGE_EXECUTE_READWRITE:
 		flags = flags | PLH::ProtFlag::X;
@@ -94,10 +95,6 @@ PLH::ProtFlag PLH::TranslateProtection(const int prot) {
 	case PAGE_EXECUTE_READ:
 		flags = flags | PLH::ProtFlag::X;
 		flags = flags | PLH::ProtFlag::R;
-		break;
-	case PAGE_EXECUTE_WRITECOPY:
-		flags = flags | PLH::ProtFlag::X;
-		flags = flags | PLH::ProtFlag::W;
 		break;
 	case PAGE_NOACCESS:
 		flags = flags | PLH::ProtFlag::NONE;
