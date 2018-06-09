@@ -27,7 +27,7 @@ public:
 
     virtual bool unHook() = 0;
 
-    virtual HookType getType() = 0;
+    virtual HookType getType() const = 0;
 
     virtual void setDebug(const bool state) {
         m_debugSet = state;

@@ -47,15 +47,35 @@ public:
         Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr);
     }
 
+	void operator=(const Instruction& rhs) {
+		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative, rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr);
+	}
+
 	/**Get the address of where the instruction points if it's a branching instruction
 	* @Notes: Handles eip/rip & immediate branches correctly
 	* **/
     uint64_t getDestination() const {
-        if (m_isRelative) {
+        if (isDisplacementRelative()) {
             return m_address + m_displacement.Relative + size();
         }
         return m_displacement.Absolute;
     }
+
+	void setDestination(const uint64_t dest) {
+		if (!hasDisplacement())
+			return;
+
+		if (isDisplacementRelative()) {
+			int64_t newRelativeDisp = calculateRelativeDisplacement<int64_t>(
+				getAddress(),
+				dest,
+				size());
+
+			setRelativeDisplacement(newRelativeDisp);
+			return;
+		}
+		setAbsoluteDisplacement(dest);
+	}
 
 	/**Get the address of the instruction in memory**/
     uint64_t getAddress() const {
@@ -136,6 +156,13 @@ public:
 	long getUID() const {
 		return m_uid.val;
 	}
+
+	template<typename T>
+	static T calculateRelativeDisplacement(uint64_t from, uint64_t to, uint8_t insSize) {
+		if (to < from)
+			return 0 - (from - to) - insSize;
+		return to - (from + insSize);
+	}
 private:
     void Init(uint64_t address,
               const Displacement& displacement,
@@ -167,9 +194,10 @@ private:
 	UID m_uid;
 };
 
-inline bool operator==(const Instruction& lhs, const PLH::Instruction& rhs) {
+inline bool operator==(const Instruction& lhs, const Instruction& rhs) {
 	return lhs.getUID() == rhs.getUID();
 }
+
 
 inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
     std::stringstream byteStream;

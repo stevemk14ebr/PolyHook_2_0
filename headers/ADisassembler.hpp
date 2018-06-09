@@ -10,22 +10,10 @@
 
 #include <vector>
 #include <unordered_map>
-#include <unordered_set>
 #include <functional>
 
 namespace PLH {
-struct InstHash
-{
-	size_t operator()(const PLH::Instruction& i) const noexcept
-	{
-		return std::hash<long>()(i.getUID());
-	}
-};
-
-typedef std::unordered_set<PLH::Instruction, InstHash> set_insts_t;
-typedef std::unordered_map<uint64_t, set_insts_t> branch_map_t;
-
-inline std::ostream& operator<<(std::ostream& os, const PLH::set_insts_t& v) { return printInsts(os, v); }
+typedef std::unordered_map<uint64_t, insts_t> branch_map_t;
 
 //Abstract Disassembler
 class ADisassembler
@@ -48,12 +36,7 @@ public:
 
     virtual bool isConditionalJump(const Instruction& inst) const = 0;
 
-    template<typename T>
-    static T calculateRelativeDisplacement(uint64_t from, uint64_t to, uint8_t insSize) {
-        if (to < from)
-            return 0 - (from - to) - insSize;
-        return to - (from + insSize);
-    }
+	virtual bool isFuncEnd(const Instruction& inst) const = 0;
 
 	branch_map_t getBranchMap() {
 		return m_branchMap;
@@ -62,10 +45,10 @@ protected:
 	typename branch_map_t::mapped_type& updateBranchMap(uint64_t key,const Instruction& new_val) {
 		branch_map_t::iterator it = m_branchMap.find(key);
 		if (it != m_branchMap.end()) {
-			it->second.emplace(new_val);
+			it->second.push_back(new_val);
 		} else {
 			branch_map_t::mapped_type s;
-			s.emplace(new_val);
+			s.push_back(new_val);
 			m_branchMap.emplace(key, s);
 			return m_branchMap.at(key);
 		}
@@ -74,7 +57,9 @@ protected:
 
     Mode          m_mode;
 
-	// key = address of instruction pointed at (dest of jump). Value = set of unique instruction branching to dest
+	/* key = address of instruction pointed at (dest of jump). Value = set of unique instruction branching to dest
+	   Must only hold entries from the last segment disassembled. I.E clear every new call to disassemble
+	*/
 	branch_map_t m_branchMap;
 };
 }

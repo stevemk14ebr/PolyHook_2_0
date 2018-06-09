@@ -12,9 +12,9 @@
 
 PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs);
 bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs);
+std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag v);
 
 namespace PLH {
-	std::string ProtFlagToString(PLH::ProtFlag flags);
 	int	TranslateProtection(const PLH::ProtFlag flags);
 	ProtFlag TranslateProtection(const int prot);
 

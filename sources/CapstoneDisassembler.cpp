@@ -7,6 +7,7 @@ std::vector<PLH::Instruction>
 PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
     cs_insn* InsInfo = cs_malloc(m_capHandle);
     std::vector<PLH::Instruction> InsVec;
+	m_branchMap.clear();
 
     uint64_t Size = End - start;
 	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&start, (size_t*)&Size, &firstInstruction, InsInfo)) {
@@ -150,4 +151,9 @@ bool PLH::CapstoneDisassembler::isConditionalJump(const PLH::Instruction& instru
         return true;
 
     return false;
+}
+
+bool PLH::CapstoneDisassembler::isFuncEnd(const PLH::Instruction& instruction) const {
+	// TODO: more?
+	return instruction.getMnemonic() == "ret";
 }

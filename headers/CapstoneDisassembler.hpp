@@ -35,6 +35,7 @@ public:
 
     virtual bool isConditionalJump(const PLH::Instruction& instruction) const override;
 
+	virtual bool isFuncEnd(const PLH::Instruction& instructioni) const override;
 private:
     x86_reg getIpReg() const {
         if (m_mode == PLH::Mode::x64)

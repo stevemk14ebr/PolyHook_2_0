@@ -15,38 +15,37 @@ bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
 		static_cast<std::uint8_t>(rhs);
 }
 
-std::string PLH::ProtFlagToString(PLH::ProtFlag flags) {
-	std::string s = "";
+std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag flags){
 	if (flags == PLH::ProtFlag::UNSET) {
-		s += "UNSET";
-		return s;
+		os << "UNSET";
+		return os;
 	}
 
 	if (flags & PLH::ProtFlag::X)
-		s += "x";
+		os << "x";
 	else
-		s += "-";
+		os << "-";
 
 	if (flags & PLH::ProtFlag::R)
-		s += "r";
+		os << "r";
 	else
-		s += "-";
+		os << "-";
 
 	if (flags & PLH::ProtFlag::W)
-		s += "w";
+		os << "w";
 	else
-		s += "-";
+		os << "-";
 
 	if (flags & PLH::ProtFlag::NONE)
-		s += "n";
+		os << "n";
 	else
-		s += "-";
+		os << "-";
 
 	if (flags & PLH::ProtFlag::P)
-		s += " private";
+		os << " private";
 	else if (flags & PLH::ProtFlag::S)
-		s += " shared";
-	return s;
+		os << " shared";
+	return os;
 }
 
 int PLH::TranslateProtection(const PLH::ProtFlag flags) {

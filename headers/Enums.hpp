@@ -12,8 +12,7 @@ namespace PLH {
 
 enum class HookType
 {
-	X86Detour,
-	X64Detour,
+	Detour,
 	UNKNOWN
 	//#if(ARCH_WIN)
 	//    ,VFuncSwap,
@@ -54,6 +53,12 @@ enum class Mode
 {
     x86,
     x64
+};
+
+enum class ErrorLevel {
+	INFO,
+	WARN,
+	SEV
 };
 }
 #endif //POLYHOOK_2_0_ENUMS_HPP
