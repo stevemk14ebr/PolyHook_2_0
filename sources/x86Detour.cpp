@@ -65,7 +65,8 @@ bool PLH::x86Detour::hook() {
 	assert(prolOrigLen >= prolJmpLen);
 	prologue = *prologueOpt;
 	
-	char* trampoline = new char[prolOrigLen];
+	const uint32_t trampolineSz = prolOrigLen;
+	char* trampoline = new char[trampolineSz];
 
 	insts_t prolJmps;
 	if (needProlJmpTbl) {
@@ -95,6 +96,19 @@ bool PLH::x86Detour::hook() {
 
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 	std::cout << "Prologue jump table:" << std::endl << prolJmps << std::endl;
+
+	{// copy all the prologue stuff to trampoline
+		
+		uint64_t trampolineAddr = (uint64_t)trampoline;
+		MemoryProtector prot(trampolineAddr, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
+		for (auto& inst : prologue) {
+			inst.setAddress(trampolineAddr);
+			trampolineAddr += inst.size();
+			m_disasm.writeEncoding(inst);
+		}
+	}
+
+	std::cout << m_disasm.disassemble((uint64_t)trampoline, (uint64_t)trampoline, (uint64_t)trampoline + trampolineSz) << std::endl;
 	return true;
 }
 

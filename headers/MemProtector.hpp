@@ -21,9 +21,10 @@ namespace PLH {
 	class MemoryProtector
 	{
 	public:
-		MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot) {
+		MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot, bool unsetOnDestroy = true) {
 			m_address = address;
 			m_length = length;
+			unsetLater = unsetOnDestroy;
 
 			m_origProtection = PLH::ProtFlag::UNSET;
 			m_origProtection = protect(address, length, TranslateProtection(prot));
@@ -38,7 +39,7 @@ namespace PLH {
 		}
 
 		~MemoryProtector() {
-			if(m_origProtection == PLH::ProtFlag::UNSET)
+			if(m_origProtection == PLH::ProtFlag::UNSET || !unsetLater)
 				return;
 
 			protect(m_address, m_length, TranslateProtection(m_origProtection));
@@ -56,6 +57,7 @@ namespace PLH {
 		uint64_t m_address;
 		uint64_t m_length;
 		bool status;
+		bool unsetLater;
 	};
 }
 #endif //POLYHOOK_2_MEMORYPROTECTOR_HPP

@@ -83,7 +83,7 @@ public:
     }
 
 	/**Set a new address of the instruction in memory
-	@Notes: Doesn't move the instruction, marks it for move on writeEncoding**/
+	@Notes: Doesn't move the instruction, marks it for move on writeEncoding and relocates if appropriate**/
     void setAddress(const uint64_t address) {
         m_address = address;
     }

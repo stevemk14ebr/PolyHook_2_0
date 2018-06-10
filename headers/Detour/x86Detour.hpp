@@ -13,6 +13,7 @@
 #include "headers/Instruction.hpp"
 #include "headers/ADisassembler.hpp"
 #include "headers/ErrorLog.hpp"
+#include "headers/MemProtector.hpp"
 
 namespace PLH {
 
