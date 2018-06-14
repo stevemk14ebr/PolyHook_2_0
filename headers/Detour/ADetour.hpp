@@ -80,10 +80,62 @@ protected:
 	require yet another jump table entry, so be careful to account for that**/
 	std::optional<insts_t> expandProl(const insts_t& prolInsts, const insts_t& funcInsts, uint64_t& minSz, uint64_t& roundedSz, const uint8_t jmpSz, bool& expanded);
 
+	/**Build the jmp table needed for when insts point back into the prologue. Also repoint the insts to the jmp entries
+	instead of whereever they went into the prologue**/
+	template<typename MakeJmpFn>
+	void buildProlJmpTbl(const insts_t& prol, insts_t& jmpTbl, insts_t& jmpToFix,
+		const uint64_t trampolineAddr,
+		const uint8_t jmpSz,
+		MakeJmpFn makeJmp);
+
+	bool isSrcBranchNotRelocated(const insts_t& sources, const uint64_t relocAddrEnd);
+
 	// fnAddress -> Trampoline map, allows trampoline references to be handed out and later filled by hook(). Global lifetime
 	static std::map<uint64_t, Trampoline> m_trampolines;
     bool                    m_hooked;
 };
+
+template<typename MakeJmpFn>
+void PLH::Detour::buildProlJmpTbl(const insts_t& prol, insts_t& jmpTbl,
+	insts_t& jmpToFix,
+	const uint64_t trampolineAddr,
+	const uint8_t jmpSz,
+	MakeJmpFn makeJmp)
+{
+	PLH::branch_map_t branchMap = m_disasm.getBranchMap();
+
+	const uint64_t prolStart = prol.at(0).getAddress();
+	const uint64_t tblStart = prolStart + jmpSz;
+	int tblIdx = 0;
+	for (int i = 0; i < prol.size(); i++)
+	{
+		auto inst = prol.at(i);
+		if (branchMap.find(inst.getAddress()) == branchMap.end())
+			continue;
+
+		// the (long) jmp that goes from prologue to trampoline
+		const uint64_t entryAddr = tblStart + tblIdx * jmpSz;
+
+
+		// point all jmp sources to the tbl entry instead of the to-be-moved instruction
+		bool needEntry = false;
+		insts_t branchSources = branchMap.at(inst.getAddress());
+		for (auto& branch : branchSources) {
+			if (branch.getAddress() > prolStart + prol.size()) {
+				branch.setDestination(entryAddr);
+				jmpToFix.push_back(branch);
+				needEntry = true;
+			}
+		}
+
+		if (!needEntry)
+			continue;
+
+		auto jmpEntry = makeJmp(entryAddr, trampolineAddr + (inst.getAddress() - prolStart));
+		jmpTbl.insert(jmpTbl.end(), jmpEntry.begin(), jmpEntry.end());
+		tblIdx++;
+	}
+}
 
 /** Before Hook:                                                After hook:
 *

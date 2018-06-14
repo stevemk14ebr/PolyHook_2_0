@@ -47,52 +47,30 @@ bool PLH::x86Detour::hook() {
 
 	std::cout << "Originial function:" << std::endl << insts << std::endl;
 
-	uint64_t prolJmpLen = getJmpSize(); // min size of patches that may-split instructions
-	uint64_t prolOrigLen = prolJmpLen; // size of original non-split instructions
+	uint64_t minProlSz = getJmpSize(); // min size of patches that may-split instructions
+	uint64_t roundProlSz = minProlSz; // size of original non-split instructions
 
 	// find the prologue section we will overwrite with jmp + zero or more nops
-	auto prologueOpt = calcNearestSz(insts, prolJmpLen, prolOrigLen);
+	auto prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
 	if (!prologueOpt) {
 		ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
 		return false;
 	}
-	assert(prolOrigLen >= prolJmpLen);
+	assert(roundProlSz >= minProlSz);
 	insts_t prologue = *prologueOpt;
 
 	// expand prologue for jmp tbl if necessary
 	bool needProlJmpTbl = false;
-	prologueOpt = expandProl(prologue, insts, prolJmpLen, prolOrigLen, getJmpSize(), needProlJmpTbl);
-	assert(prolOrigLen >= prolJmpLen);
+	prologueOpt = expandProl(prologue, insts, minProlSz, roundProlSz, getJmpSize(), needProlJmpTbl);
+	assert(roundProlSz >= minProlSz);
 	prologue = *prologueOpt;
 	
-	const uint32_t trampolineSz = prolOrigLen;
+	const uint32_t trampolineSz = roundProlSz;
 	char* trampoline = new char[trampolineSz];
 
 	insts_t prolJmps;
-	if (needProlJmpTbl) {
-		PLH::branch_map_t branchMap = m_disasm.getBranchMap();
-
-		const uint64_t prolStart = prologue.at(0).getAddress();
-		const uint64_t tblStart = prolStart + getJmpSize();
-		int tblIdx = 0;
-		for (int i = 0; i < prologue.size(); i++)
-		{
-			auto inst = prologue.at(i);
-			if (branchMap.find(inst.getAddress()) == branchMap.end())
-				continue;
-
-			// the (long) jmp that goes from prologue to trampoline
-			const uint64_t entryAddr = tblStart + (tblIdx++) * getJmpSize();
-			auto jmpEntry = makeJmp(entryAddr, (uint64_t)trampoline + (inst.getAddress() - prolStart));
-			prolJmps.insert(prolJmps.end(), jmpEntry.begin(), jmpEntry.end());
-
-			// point all jmp sources to the tbl entry instead of the to-be-moved instruction
-			insts_t branchSources = branchMap.at(inst.getAddress());
-			for (auto& branch : branchSources) {
-				branch.setDestination(entryAddr);
-			}
-		}
-	}
+	insts_t prolJmpsToFix;
+	buildProlJmpTbl(prologue, prolJmps, prolJmpsToFix, (uint64_t)trampoline, getJmpSize(), std::bind(&x86Detour::makeJmp, this, _1, _2));
 
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 	std::cout << "Prologue jump table:" << std::endl << prolJmps << std::endl;

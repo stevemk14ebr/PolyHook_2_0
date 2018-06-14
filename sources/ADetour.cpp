@@ -42,6 +42,18 @@ bool PLH::Detour::followProlJmp(PLH::insts_t& functionInsts,const uint8_t curDep
 	followProlJmp(functionInsts, curDepth + 1); // recurse
 }
 
+bool PLH::Detour::isSrcBranchNotRelocated(const insts_t& sources, const uint64_t relocAddrEnd){
+	bool sourceNotRel = false;
+	for (auto& inst : sources) {
+		if (inst.getAddress() > relocAddrEnd) {
+			sourceNotRel = true;
+			break;
+		}
+	}
+
+	return sourceNotRel;
+}
+
 std::optional<PLH::insts_t> PLH::Detour::expandProl(const insts_t& prolInsts,const insts_t& funcInsts, uint64_t& minSz, uint64_t& roundedSz, const uint8_t jmpSz, bool& expanded) {
 	assert(prolInsts.size() > 0 && funcInsts.size() > 0);
 	assert(minSz <= roundedSz);
@@ -49,10 +61,13 @@ std::optional<PLH::insts_t> PLH::Detour::expandProl(const insts_t& prolInsts,con
 	expanded = false;
 
 	/* look for instructions that point back into prologue, if they do
-	then expand prologue to make room for the prologue jump table. Loop
+	then expand prologue to make room for the prologue jump table. Only do this if
+	they are inside the range that will be relocated. Loop
 	bound is modified during loop*/
 	PLH::branch_map_t branchMap = m_disasm.getBranchMap();
+	uint64_t prolStartAddr = prolInsts.at(0).getAddress();
 	insts_t prologue = prolInsts;
+
 	int idx = 0;
 	
 	std::cout << "is: " << minSz << " " << roundedSz << std::endl;
@@ -63,6 +78,14 @@ std::optional<PLH::insts_t> PLH::Detour::expandProl(const insts_t& prolInsts,con
 		if (branchMap.find(inst.getAddress()) == branchMap.end())
 			continue; 
 		
+		insts_t sourceJmps = branchMap.at(inst.getAddress());
+
+		/* if any inst point into prol and are outsize rel range then expand.
+		This overestimates as earlier sources may no longer need an entry if
+		they expanded range passes it TODO: minimize*/
+		if (!isSrcBranchNotRelocated(sourceJmps, prolStartAddr + roundedSz));
+			continue;
+
 		expanded = true;
 		minSz += jmpSz;
 		auto prologueOpt = calcNearestSz(funcInsts, minSz, roundedSz);
@@ -76,3 +99,4 @@ std::optional<PLH::insts_t> PLH::Detour::expandProl(const insts_t& prolInsts,con
 	std::cout << "Expanded: " << minSz << " " << roundedSz << std::endl;
 	return prologue;
 }
+

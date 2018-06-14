@@ -7,6 +7,8 @@
 
 #include <sstream>
 #include <algorithm>
+#include <functional>
+using namespace std::placeholders;
 
 #include "headers/Detour/ADetour.hpp"
 #include "headers/Enums.hpp"
