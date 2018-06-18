@@ -3,19 +3,19 @@
 //
 #include "headers/CapstoneDisassembler.hpp"
 
-std::vector<PLH::Instruction>
+PLH::insts_t
 PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
     cs_insn* InsInfo = cs_malloc(m_capHandle);
-    std::vector<PLH::Instruction> InsVec;
+    insts_t InsVec;
 	m_branchMap.clear();
 
     uint64_t Size = End - start;
 	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&start, (size_t*)&Size, &firstInstruction, InsInfo)) {
 		//Set later by 'SetDisplacementFields'
-		PLH::Instruction::Displacement displacement;
+		Instruction::Displacement displacement;
 		displacement.Absolute = 0;
 
-		auto Inst = PLH::Instruction(InsInfo->address,
+		Instruction Inst(InsInfo->address,
 			displacement,
 			0,
 			false,
@@ -30,7 +30,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 		// update jump map if the instruction is jump/call
 		if (Inst.hasDisplacement()) {
 			// search back, check if new instruction points to older ones (one to one)
-			auto destInst = std::find_if(InsVec.begin(), InsVec.end(), [=](const PLH::Instruction& oldIns) {
+			auto destInst = std::find_if(InsVec.begin(), InsVec.end(), [=](const Instruction& oldIns) {
 				return oldIns.getAddress() == Inst.getDestination();
 			});
 
@@ -40,7 +40,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 		}
 
 		// search forward, check if old instructions now point to new one (many to one possible)
-		for (const PLH::Instruction& oldInst : InsVec) {
+		for (const Instruction& oldInst : InsVec) {
 			if (oldInst.hasDisplacement() && oldInst.getDestination() == Inst.getAddress()) {
 				updateBranchMap(Inst.getAddress(), oldInst);
 			}

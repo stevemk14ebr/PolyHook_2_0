@@ -31,7 +31,7 @@ public:
                 const std::string& mnemonic,
                 const std::string& opStr) : m_uid(UID::singleton()) {
 
-        Init(address, displacement, displacementOffset, isRelative, bytes, mnemonic, opStr);
+        Init(address, displacement, displacementOffset, isRelative, bytes, mnemonic, opStr, false, m_uid);
     }
 
     Instruction(uint64_t address,
@@ -44,11 +44,13 @@ public:
                 const std::string& opStr) : m_uid(UID::singleton()) {
 
         std::vector<uint8_t> Arr(bytes, bytes + arrLen);
-        Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr);
+        Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr, false, m_uid);
     }
 
-	void operator=(const Instruction& rhs) {
-		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative, rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr);
+	Instruction& operator=(const Instruction& rhs) {
+		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative,
+			 rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr, rhs.m_hasDisplacement, rhs.m_uid);
+		return *this;
 	}
 
 	/**Get the address of where the instruction points if it's a branching instruction
@@ -164,21 +166,26 @@ public:
 		return to - (from + insSize);
 	}
 private:
-    void Init(uint64_t address,
+    void Init(const uint64_t address,
               const Displacement& displacement,
               const uint8_t displacementOffset,
               const bool isRelative,
               const std::vector<uint8_t>& bytes,
               const std::string& mnemonic,
-              const std::string& opStr) {
+              const std::string& opStr,
+			  const bool hasDisp,
+			  const UID id) {
         m_address         = address;
         m_displacement    = displacement;
         m_dispOffset      = displacementOffset;
         m_isRelative      = isRelative;
+		m_hasDisplacement = hasDisp;
+
         m_bytes           = bytes;
         m_mnemonic        = mnemonic;
         m_opStr           = opStr;
-        m_hasDisplacement = false;
+       
+		m_uid = id;
     }
 
     uint64_t     m_address;       //Address the instruction is at
