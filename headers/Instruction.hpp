@@ -71,7 +71,7 @@ public:
 			int64_t newRelativeDisp = calculateRelativeDisplacement<int64_t>(
 				getAddress(),
 				dest,
-				size());
+				(uint8_t)size());
 
 			setRelativeDisplacement(newRelativeDisp);
 			return;
@@ -162,8 +162,8 @@ public:
 	template<typename T>
 	static T calculateRelativeDisplacement(uint64_t from, uint64_t to, uint8_t insSize) {
 		if (to < from)
-			return 0 - (from - to) - insSize;
-		return to - (from + insSize);
+			return (T)(0 - (from - to) - insSize);
+		return (T)(to - (from + insSize));
 	}
 private:
     void Init(const uint64_t address,

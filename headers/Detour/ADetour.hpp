@@ -15,6 +15,9 @@
 #include "headers/ErrorLog.hpp"
 #include <optional>
 
+#pragma warning(disable:4100)
+#pragma warning(disable:4189)
+
 /**
  * All of these methods must be transactional. That
  * is to say that if a function fails it will completely
@@ -107,7 +110,7 @@ void PLH::Detour::buildProlJmpTbl(const insts_t& prol, insts_t& jmpTbl,
 	const uint64_t prolStart = prol.at(0).getAddress();
 	const uint64_t tblStart = prolStart + jmpSz;
 	int tblIdx = 0;
-	for (int i = 0; i < prol.size(); i++)
+	for (size_t i = 0; i < prol.size(); i++)
 	{
 		auto inst = prol.at(i);
 		if (branchMap.find(inst.getAddress()) == branchMap.end())

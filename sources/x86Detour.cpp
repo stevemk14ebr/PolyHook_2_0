@@ -65,8 +65,8 @@ bool PLH::x86Detour::hook() {
 	assert(roundProlSz >= minProlSz);
 	prologue = *prologueOpt;
 	
-	const uint32_t trampolineSz = roundProlSz;
-	char* trampoline = new char[trampolineSz];
+	const uint64_t trampolineSz = roundProlSz;
+	unsigned char* trampoline = new unsigned char[(int)trampolineSz];
 
 	insts_t prolJmps;
 	insts_t prolJmpsToFix;

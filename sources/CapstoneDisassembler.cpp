@@ -110,8 +110,8 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
     int64_t displacement = 0;
     memcpy(&displacement, &inst.getBytes()[offset], size);
 
-    uint64_t mask = (1U << (size * 8 - 1));
-    if (displacement & (1U << (size * 8 - 1))) {
+    uint64_t mask = (((uint64_t)1U) << (size * 8 - 1));
+    if (displacement & (((uint64_t)1U) << (size * 8 - 1))) {
         /* sign extend if negative, requires that bits above Size*8 are zero,
          * if bits are not zero use x = x & ((1U << b) - 1) where x is a temp for displacement
          * and b is Size*8*/
@@ -125,7 +125,7 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
      * in the destinations calculation. By definition this means it is relative. Otherwise it is absolute*/
     if (displacement < immDestination) {
         if (immDestination != std::numeric_limits<int64_t>::max())
-            assert(displacement + inst.getAddress() + inst.size() == immDestination);
+            assert(displacement + inst.getAddress() + inst.size() == (uint64_t)immDestination);
         inst.setRelativeDisplacement(displacement);
     } else {
         assert(((uint64_t)displacement) == ((uint64_t)immDestination));

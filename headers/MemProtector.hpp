@@ -48,7 +48,7 @@ namespace PLH {
 		PLH::ProtFlag protect(const uint64_t address, const uint64_t length, int prot) {
 			DWORD orig;
 			DWORD dwProt = prot;
-			status = VirtualProtect((char*)address, length, dwProt, &orig) != 0;
+			status = VirtualProtect((char*)address, (SIZE_T)length, dwProt, &orig) != 0;
 			return TranslateProtection(orig);
 		}
 

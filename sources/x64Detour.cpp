@@ -15,8 +15,8 @@ uint8_t* PLH::x64Detour::makeTrampolineNear(const uint64_t hint, const uint64_t 
     uint64_t MinAddress = hint < 0x80000000 ? 0 : hint - 0x80000000;            //Use 0 if would underflow
     uint64_t MaxAddress = hint > std::numeric_limits<uint64_t>::max() - 0x80000000 ? 
                           std::numeric_limits<uint64_t>::max() : hint + 0x80000000; //use max if would overflow
-
-	return 0; // TODO
+	
+	return 0;
 }
 
 PLH::Mode PLH::x64Detour::getArchType() const {

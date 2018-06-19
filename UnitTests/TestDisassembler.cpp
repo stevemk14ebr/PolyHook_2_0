@@ -86,7 +86,7 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
                                    (uint64_t)&x64ASM.front() + x64ASM.size());
     }
 
-    for (int i = 0; i < Instructions.size(); i++) {
+    for (size_t i = 0; i < Instructions.size(); i++) {
         INFO("Index: " << i
                        << " Correct Mnemonic:"
                        << CorrectMnemonic[i]
@@ -161,7 +161,7 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
     uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
     size_t   PrevInstSize    = 0;
 
-    for (int i = 0; i < Instructions.size(); i++) {
+    for (size_t i = 0; i < Instructions.size(); i++) {
         INFO("Index: " << i);
         INFO("Correct Mnemonic:"
                      << CorrectMnemonic[i]

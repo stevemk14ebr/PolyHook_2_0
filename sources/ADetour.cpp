@@ -39,7 +39,7 @@ bool PLH::Detour::followProlJmp(PLH::insts_t& functionInsts,const uint8_t curDep
 	
 	uint64_t dest = functionInsts.at(0).getDestination();
 	functionInsts = m_disasm.disassemble(dest, dest, dest + 100);
-	followProlJmp(functionInsts, curDepth + 1); // recurse
+	return followProlJmp(functionInsts, curDepth + 1); // recurse
 }
 
 bool PLH::Detour::isSrcBranchNotRelocated(const insts_t& sources, const uint64_t relocAddrEnd){
@@ -83,7 +83,7 @@ std::optional<PLH::insts_t> PLH::Detour::expandProl(const insts_t& prolInsts,con
 		/* if any inst point into prol and are outsize rel range then expand.
 		This overestimates as earlier sources may no longer need an entry if
 		they expanded range passes it TODO: minimize*/
-		if (!isSrcBranchNotRelocated(sourceJmps, prolStartAddr + roundedSz));
+		if (!isSrcBranchNotRelocated(sourceJmps, prolStartAddr + roundedSz))
 			continue;
 
 		expanded = true;

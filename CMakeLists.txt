@@ -42,6 +42,11 @@ set(SOURCE_FILES_PLH ${UNIT_TEST_SOURCES} ${HEADER_IMP_SOURCES} ${HEADER_FILES} 
 
 add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
 target_compile_options(PolyHook_2 PRIVATE /std:c++latest)
+if(MSVC)
+  target_compile_options(PolyHook_2 PRIVATE /W4 /WX)
+else(MSVC)
+  target_compile_options(PolyHook_2 PRIVATE -Wall -Wextra -pedantic -Werror)
+endif(MSVC)
 
 #Set this variable to hold the path to capstone directory
 set(CAPSTONE_LIB_PATH_64 ${PROJECT_SOURCE_DIR}/capstone/build64/)
