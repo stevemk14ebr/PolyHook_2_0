@@ -101,6 +101,14 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
         PrevInstAddress = Instructions[i].getAddress();
         PrevInstSize    = Instructions[i].size();
     }
+
+	SECTION("Check multiple calls") {
+		PLH::insts_t insts;
+		for (int i = 0; i < 100; i++) {
+			insts = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
+				(uint64_t)&x64ASM.front() + x64ASM.size());
+		}
+	}
 }
 
 // page 590 for jmp types, page 40 for mod/rm table:
@@ -176,5 +184,13 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
         PrevInstAddress = Instructions[i].getAddress();
 		PrevInstSize = Instructions[i].size();
     }
+
+	SECTION("Check multiple calls") {
+		PLH::insts_t insts;
+		for (int i = 0; i < 100; i++) {
+			insts = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+				(uint64_t)&x86ASM.front() + x86ASM.size());
+		}
+	}
 }
 
