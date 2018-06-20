@@ -10,7 +10,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 	m_branchMap.clear();
 
     uint64_t Size = End - start;
-	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&start, (size_t*)&Size, &firstInstruction, InsInfo)) {
+	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&Size, &start, InsInfo)) {
 		//Set later by 'SetDisplacementFields'
 		Instruction::Displacement displacement;
 		displacement.Absolute = 0;
@@ -109,7 +109,7 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
      * and 0 when sign bit not set (positive displacement)*/
     int64_t displacement = 0;
 	if (offset + size > (uint8_t)inst.getBytes().size()) {
-		__debugbreak();
+		//__debugbreak();
 		return;
 	}
 
@@ -124,15 +124,13 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
         displacement = (displacement ^ mask) -
                        mask; //xor clears sign bit, subtraction makes number negative again but in the int64 range
     }
-
+	
     inst.setDisplacementOffset(offset);
 
     /* When the retrieved displacement is < immDestination we know that the base address is included
      * in the destinations calculation. By definition this means it is relative. Otherwise it is absolute*/
     if (displacement < immDestination) {
-        if (immDestination != std::numeric_limits<int64_t>::max())
-            assert(displacement + inst.getAddress() + inst.size() == (uint64_t)immDestination);
-        inst.setRelativeDisplacement(displacement);
+		inst.setRelativeDisplacement(displacement);
     } else {
         assert(((uint64_t)displacement) == ((uint64_t)immDestination));
         inst.setAbsoluteDisplacement((uint64_t)displacement);

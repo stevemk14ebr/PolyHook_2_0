@@ -6,7 +6,7 @@
 
 #include <iostream>
 #include <vector>
-
+#include <random>
 std::vector<uint8_t> x64ASM = {
         //start address = 0x1800182B0
         0x48, 0x89, 0x5C, 0x24, 0x08,           //0) mov QWORD PTR [rsp+0x8],rbx    with child @index 8
@@ -21,6 +21,13 @@ std::vector<uint8_t> x64ASM = {
         0xE8, 0xCB, 0x57, 0x01, 0x00,           //9) call 0x18002DA9C   when @0x1800182CC (base + 0x157CB + 0x5)
         0xFF, 0x25, 0xCB, 0x57, 0x01, 0x00,     //10)jmp qword ptr [rip + 0x157cb]  when @0x1800182d1FF
 };
+
+uint8_t randByte() {
+	static std::random_device dev;
+	static std::mt19937 rng(dev());
+	static std::uniform_int_distribution<int> gen(0, 255); 
+	return (uint8_t)gen(rng);
+}
 
 TEST_CASE("Test Instruction UUID generator", "[Instruction],[UID]") {
 	PLH::Instruction::Displacement displacement;
@@ -109,6 +116,16 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
 				(uint64_t)&x64ASM.front() + x64ASM.size());
 		}
 	}
+
+	SECTION("Test garbage instructions") {
+		char randomBuf[500];
+		for (int i = 0; i < 500; i++)
+			randomBuf[i] = randByte();
+
+		auto insts = disasm.disassemble((uint64_t)randomBuf, (uint64_t)0x0,
+			500);
+		std::cout << insts << std::endl;
+	}
 }
 
 // page 590 for jmp types, page 40 for mod/rm table:
@@ -191,6 +208,16 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
 			insts = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 				(uint64_t)&x86ASM.front() + x86ASM.size());
 		}
+	}
+
+	SECTION("Test garbage instructions") {
+		char randomBuf[500];
+		for (int i = 0; i < 500; i++)
+			randomBuf[i] = randByte();
+
+		auto insts = disasm.disassemble((uint64_t)randomBuf, (uint64_t)0x0,
+			500);
+		std::cout << insts << std::endl;
 	}
 }
 
