@@ -78,7 +78,7 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
                 continue;
 
             const uint8_t Offset = x86.encoding.disp_offset;
-            const uint8_t Size   = x86.encoding.disp_size;
+            const uint8_t Size   = std::min<uint8_t>(x86.encoding.disp_size, sizeof(uint64_t));
 
 			// it's relative, set immDest to max to trigger later check
             copyDispSX(inst, Offset, Size, std::numeric_limits<int64_t>::max());
@@ -89,7 +89,7 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
                 continue;
 
             const uint8_t Offset = x86.encoding.imm_offset;
-            const uint8_t Size   = x86.encoding.imm_size;
+            const uint8_t Size   = std::min<uint8_t>(x86.encoding.imm_size, sizeof(uint64_t));
             copyDispSX(inst, Offset, Size, op.imm);
         }
     }
@@ -108,6 +108,12 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
      * the result will be positive if sign bit is set (negative displacement)
      * and 0 when sign bit not set (positive displacement)*/
     int64_t displacement = 0;
+	if (offset + size > (uint8_t)inst.getBytes().size()) {
+		__debugbreak();
+		return;
+	}
+
+	assert(offset + size <= (uint8_t)inst.getBytes().size());
     memcpy(&displacement, &inst.getBytes()[offset], size);
 
     uint64_t mask = (((uint64_t)1U) << (size * 8 - 1));

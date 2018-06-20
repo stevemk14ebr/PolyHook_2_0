@@ -5,6 +5,7 @@
 #ifndef POLYHOOK_2_0_INSTRUCTION_HPP
 #define POLYHOOK_2_0_INSTRUCTION_HPP
 
+#include <cassert>
 #include <string>
 #include <vector>
 #include <sstream>
@@ -141,18 +142,32 @@ public:
         m_isRelative      = true;
         m_hasDisplacement = true;
 
-        std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Relative, size() - getDisplacementOffset());
+		const uint32_t dispSz = size() - getDisplacementOffset();
+		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
+			__debugbreak();
+			return;
+		}
+
+		assert(getDisplacementOffset() + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Relative));
+        std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Relative, dispSz);
     }
 
     void setAbsoluteDisplacement(const uint64_t displacement) {
-        m_displacement.Absolute = displacement;
+         /**Update our class' book-keeping of this stuff and then modify the byte array.
+         * This doesn't actually write the changes to the executeable code, it writes to our
+         * copy of the bytes**/
+		m_displacement.Absolute = displacement;
         m_isRelative      = false;
         m_hasDisplacement = true;
 
-        /**Update our class' book-keeping of this stuff and then modify the byte array.
-         * This doesn't actually write the changes to the executeable code, it writes to our
-         * copy of the bytes**/
-        std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, size() - getDisplacementOffset());
+		const uint32_t dispSz = size() - getDisplacementOffset();
+		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Absolute)) {
+			__debugbreak();
+			return;
+		}
+
+		assert(getDisplacementOffset() + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Absolute));
+        std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, dispSz);
     }
 
 	long getUID() const {
