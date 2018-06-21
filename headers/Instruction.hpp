@@ -14,6 +14,7 @@
 #include <type_traits>
 
 #include "headers/UID.hpp"
+#include "headers/Enums.hpp"
 namespace PLH {
 class Instruction
 {
@@ -30,9 +31,10 @@ public:
                 const bool isRelative,
                 const std::vector<uint8_t>& bytes,
                 const std::string& mnemonic,
-                const std::string& opStr) : m_uid(UID::singleton()) {
+                const std::string& opStr,
+			    Mode mode) : m_uid(UID::singleton()) {
 
-        Init(address, displacement, displacementOffset, isRelative, bytes, mnemonic, opStr, false, m_uid);
+        Init(address, displacement, displacementOffset, isRelative, bytes, mnemonic, opStr, false, m_uid, mode);
     }
 
     Instruction(uint64_t address,
@@ -42,15 +44,16 @@ public:
                 uint8_t bytes[],
                 size_t arrLen,
                 const std::string& mnemonic,
-                const std::string& opStr) : m_uid(UID::singleton()) {
+                const std::string& opStr,
+				Mode mode) : m_uid(UID::singleton()) {
 
         std::vector<uint8_t> Arr(bytes, bytes + arrLen);
-        Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr, false, m_uid);
+        Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr, false, m_uid, mode);
     }
 
 	Instruction& operator=(const Instruction& rhs) {
 		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative,
-			 rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr, rhs.m_hasDisplacement, rhs.m_uid);
+			 rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr, rhs.m_hasDisplacement, rhs.m_uid, rhs.m_mode);
 		return *this;
 	}
 
@@ -59,8 +62,13 @@ public:
 	* **/
     uint64_t getDestination() const {
         if (isDisplacementRelative()) {
-            return m_address + m_displacement.Relative + size();
+			uint64_t dest = m_address + m_displacement.Relative + size();
+			if (m_mode == Mode::x86)
+				dest &= 0xFFFFFFFF;
+			return dest;
         }
+		if (m_mode == Mode::x86)
+			return m_displacement.Absolute & 0xFFFFFFFF;
         return m_displacement.Absolute;
     }
 
@@ -189,7 +197,8 @@ private:
               const std::string& mnemonic,
               const std::string& opStr,
 			  const bool hasDisp,
-			  const UID id) {
+			  const UID id,
+			  Mode mode) {
         m_address         = address;
         m_displacement    = displacement;
         m_dispOffset      = displacementOffset;
@@ -201,6 +210,7 @@ private:
         m_opStr           = opStr;
        
 		m_uid = id;
+		m_mode = mode;
     }
 
     uint64_t     m_address;       //Address the instruction is at
@@ -212,6 +222,8 @@ private:
     std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
     std::string          m_mnemonic; //If you don't know what these two are then gtfo of this source code :)
     std::string          m_opStr;
+
+	Mode m_mode;
 
 	UID m_uid;
 };

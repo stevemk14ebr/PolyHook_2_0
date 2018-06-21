@@ -26,7 +26,7 @@ PLH::insts_t PLH::x86Detour::makeJmp(const uint64_t address, const uint64_t dest
 	std::stringstream ss;
 	ss << std::hex << destination;
 
-	return { Instruction(address, disp, 1, true, bytes, "jmp", ss.str()) };
+	return { Instruction(address, disp, 1, true, bytes, "jmp", ss.str(), Mode::x86) };
 }
 
 uint8_t PLH::x86Detour::getJmpSize() const {

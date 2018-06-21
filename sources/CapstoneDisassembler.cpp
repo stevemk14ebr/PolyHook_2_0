@@ -22,7 +22,8 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 			InsInfo->bytes,
 			InsInfo->size,
 			InsInfo->mnemonic,
-			InsInfo->op_str);
+			InsInfo->op_str,
+			m_mode);
 
 		setDisplacementFields(Inst, InsInfo);
 		InsVec.push_back(Inst);
@@ -109,15 +110,15 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
      * and 0 when sign bit not set (positive displacement)*/
     int64_t displacement = 0;
 	if (offset + size > (uint8_t)inst.getBytes().size()) {
-		//__debugbreak();
+		__debugbreak();
 		return;
 	}
 
 	assert(offset + size <= (uint8_t)inst.getBytes().size());
     memcpy(&displacement, &inst.getBytes()[offset], size);
 
-    uint64_t mask = (((uint64_t)1U) << (size * 8 - 1));
-    if (displacement & (((uint64_t)1U) << (size * 8 - 1))) {
+    uint64_t mask = (1ULL << (size * 8 - 1));
+    if (displacement & (1ULL << (size * 8 - 1))) {
         /* sign extend if negative, requires that bits above Size*8 are zero,
          * if bits are not zero use x = x & ((1U << b) - 1) where x is a temp for displacement
          * and b is Size*8*/
@@ -131,11 +132,10 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
      * in the destinations calculation. By definition this means it is relative. Otherwise it is absolute*/
     if (displacement < immDestination) {
 		if (immDestination != std::numeric_limits<int64_t>::max()) {
-			/* all debug logic. Verify we got displacement correctly,
-			also capstone zeros upper 32 bits *sometimes* so check if they
-			do that and do it too so the compare works*/
+			/*Verify we got displacement correctly,
+			also zero upper 32 bits in x86*/
 			uint64_t calcDest = inst.getAddress() + displacement + inst.size();
-			if (!(immDestination & ~0xFFFFFFFF))
+			if(m_mode == Mode::x86)
 				calcDest &= 0xFFFFFFFF;
 
 			if (calcDest != (uint64_t)immDestination)
