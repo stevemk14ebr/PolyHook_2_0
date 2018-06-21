@@ -130,6 +130,18 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
     /* When the retrieved displacement is < immDestination we know that the base address is included
      * in the destinations calculation. By definition this means it is relative. Otherwise it is absolute*/
     if (displacement < immDestination) {
+		if (immDestination != std::numeric_limits<int64_t>::max()) {
+			/* all debug logic. Verify we got displacement correctly,
+			also capstone zeros upper 32 bits *sometimes* so check if they
+			do that and do it too so the compare works*/
+			uint64_t calcDest = inst.getAddress() + displacement + inst.size();
+			if (!(immDestination & ~0xFFFFFFFF))
+				calcDest &= 0xFFFFFFFF;
+
+			if (calcDest != (uint64_t)immDestination)
+				__debugbreak();
+			assert(calcDest == (uint64_t)immDestination);
+		}
 		inst.setRelativeDisplacement(displacement);
     } else {
         assert(((uint64_t)displacement) == ((uint64_t)immDestination));
