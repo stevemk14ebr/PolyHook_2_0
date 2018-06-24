@@ -49,8 +49,8 @@ else(MSVC)
 endif(MSVC)
 
 #Set this variable to hold the path to capstone directory
-set(CAPSTONE_LIB_PATH_64 ${PROJECT_SOURCE_DIR}/capstone/build64/)
-set(CAPSTONE_LIB_PATH_86 ${PROJECT_SOURCE_DIR}/capstone/build/)
+set(CAPSTONE_LIB_PATH_64 ${PROJECT_SOURCE_DIR}/capstone/build64)
+set(CAPSTONE_LIB_PATH_86 ${PROJECT_SOURCE_DIR}/capstone/build)
 
 #Find the absolute path to the lib (linux)
 #find_library(CAPSTONE_LIB NAMES libcapstone.a PATHS ${CAPSTONE_LIB_PATH})

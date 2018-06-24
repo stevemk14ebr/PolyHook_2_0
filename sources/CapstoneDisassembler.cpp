@@ -11,7 +11,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 
     uint64_t Size = End - start;
 	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&Size, &start, InsInfo)) {
-		//Set later by 'SetDisplacementFields'
+		// Set later by 'SetDisplacementFields'
 		Instruction::Displacement displacement;
 		displacement.Absolute = 0;
 
@@ -73,9 +73,9 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
     for (uint_fast32_t j = 0; j < x86.op_count; j++) {
         cs_x86_op op = x86.operands[j];
         if (op.type == X86_OP_MEM) {
-            //Are we relative to instruction pointer?
-            //mem are types like jmp [rip + 0x4] where location is dereference-d
-            if (op.mem.base != getIpReg())
+            // Are we relative to instruction pointer?
+            // mem are types like jmp [rip + 0x4] where location is dereference-d
+            if (op.mem.base != (uint32_t)getIpReg())
                 continue;
 
             const uint8_t Offset = x86.encoding.disp_offset;
@@ -83,8 +83,9 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
 
 			// it's relative, set immDest to max to trigger later check
             copyDispSX(inst, Offset, Size, std::numeric_limits<int64_t>::max());
+			break;
         } else if (op.type == X86_OP_IMM) {
-            //IMM types are like call 0xdeadbeef where they jmp straight to some location
+            // IMM types are like call 0xdeadbeef where they jmp straight to some location
             if (!hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) &&
                 !hasGroup(capInst, x86_insn_group::X86_GRP_CALL))
                 continue;
@@ -92,6 +93,7 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
             const uint8_t Offset = x86.encoding.imm_offset;
             const uint8_t Size   = std::min<uint8_t>(x86.encoding.imm_size, sizeof(uint64_t));
             copyDispSX(inst, Offset, Size, op.imm);
+			break;
         }
     }
 }
@@ -150,7 +152,7 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
 }
 
 bool PLH::CapstoneDisassembler::isConditionalJump(const PLH::Instruction& instruction) const {
-    //http://unixwiz.net/techtips/x86-jumps.html
+    // http://unixwiz.net/techtips/x86-jumps.html
     if (instruction.size() < 1)
         return false;
 
