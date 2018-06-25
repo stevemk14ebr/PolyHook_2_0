@@ -106,9 +106,9 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 	const uint64_t prolStart = prol.front().getAddress();
 	branch_map_t branchMap = m_disasm.getBranchMap();
 
-	/* expand round, overcalculates # of tbl entries when the
-	src of a jump is inside the prologue itself, which can occur
-	dynamically as we expand prol as we go. TODO: minimize (this is hard)*/
+	/* expand round, check for jmps into prol and expand prologue
+	to make room for jmp tbl entries. Take care if a jmp src overlaps
+	the prologue or the to-be expanded prologue*/
 	for (size_t i = 0; i < prol.size(); i++)
 	{
 		auto inst = prol.at(i);
@@ -116,9 +116,31 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 		// is there a jump pointing at the current instruction?
 		if (branchMap.find(inst.getAddress()) == branchMap.end())
 			continue;
+
 		insts_t srcs = branchMap.at(inst.getAddress());
-		minProlSz += jmpSz;
-		
+
+		bool needExp = false;
+		bool canJustStep = true;
+		for (const auto& src : srcs) {
+			/* just include the jmp if it's the only src and it's in the prol/exp. prol.*/
+			if (src.getAddress() > prol.back().getAddress() + inst.size())
+				canJustStep = false;
+
+			/* we could have srcs already within the prologue, expand if any src is outside*/
+			if (src.getAddress() > prol.back().getAddress())
+				needExp = true;
+		}
+
+		/* if a src is about to eclipse the expansion, then it can be 
+		   just stepped over, and will be relocated later by the trampoline
+		   table, and doesn't need an entry in the prol tbl
+		*/
+		if (canJustStep && needExp) {
+			minProlSz += inst.size();
+		} else if (needExp){
+			minProlSz += jmpSz;
+		}
+
 		// expand prol by one entry size
 		auto prolOpt = calcNearestSz(func, minProlSz, roundProlSz);
 		if (!prolOpt)
@@ -126,7 +148,8 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 		prol = *prolOpt;
 	}
 
-	/* count srcs that are outside of prologue area */
+	/* count srcs that are outside of prologue area. Must happen
+	after the expansion as the end of prol is variable*/
 	for (size_t i = 0; i < prol.size(); i++) {
 		auto inst = prol.at(i);
 
@@ -148,6 +171,8 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 	const uint64_t tblStart = prolStart + minProlSz;
 	for (auto& fix : jmpsToFix) {
 		const uint64_t tblAddr = tblStart + tblIdx * jmpSz;
+
+		// TODO: make point into trampoline
 		insts_t entry = makeJmp(tblAddr, fix.getDestination());
 		fix.setDestination(tblAddr);
 		tbl.insert(tbl.end(), entry.begin(), entry.end());
