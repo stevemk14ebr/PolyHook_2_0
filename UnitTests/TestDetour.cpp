@@ -22,14 +22,34 @@ void __cdecl h_hookMe1() {
 	//return hookMe1Tramp.get<decltype(&hookMe1)>()();
 }
 
-/*push ebp
-  mov ebp, esp
-  je *back to push ebp*
-  je *back to mov*/
+/*  55                      push   ebp
+1:  8b ec                   mov    ebp,esp
+3:  74 fb                   je     0x0
+5:  74 fa                   je     0x1
+7:  8b ec                   mov    ebp,esp
+9:  8b ec                   mov    ebp,esp
+b:  8b ec                   mov    ebp,esp
+d:  90                      nop
+e:  90                      nop
+f:  90                      nop
+10: 90                      nop
+11: 90                      nop */
 unsigned char hookMe2[] = {0x55, 0x8b, 0xec, 0x74, 0xFB, 0x74, 0xFA, 0x8b, 0xec,0x8b, 0xec,0x8b, 0xec,0x90, 0x90, 0x90, 0x90, 0x90 };
 void __cdecl h_nullstub() {
 	volatile int i = 0;
 }
+
+/*
+0:  55                      push   ebp
+1:  89 e5                   mov    ebp,esp
+3:  89 e5                   mov    ebp,esp
+5:  89 e5                   mov    ebp,esp
+7:  89 e5                   mov    ebp,esp
+9:  90                      nop
+a:  90                      nop
+b:  7f f4                   jg     0x1
+*/
+unsigned char hookMe3[] = { 0x55, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x90, 0x90, 0x7F, 0xF4 };
 
 TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 	PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -42,8 +62,14 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 		hookMe1();
 	}
 
-	SECTION("Jmp into prologue") {
+	SECTION("Jmp into prologue w/ src in range") {
 		PLH::x86Detour detour((char*)&hookMe2, (char*)&h_nullstub, dis);
+		//hookMe1Tramp = detour.getTrampoline();
+		REQUIRE(detour.hook() == true);
+	}
+
+	SECTION("Jmp into prologue w/ src out of range") {
+		PLH::x86Detour detour((char*)&hookMe3, (char*)&h_nullstub, dis);
 		//hookMe1Tramp = detour.getTrampoline();
 		REQUIRE(detour.hook() == true);
 	}
