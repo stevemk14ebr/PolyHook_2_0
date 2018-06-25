@@ -59,21 +59,13 @@ bool PLH::x86Detour::hook() {
 	assert(roundProlSz >= minProlSz);
 	insts_t prologue = *prologueOpt;
 
-	// expand prologue for jmp tbl if necessary
-	bool needProlJmpTbl = false;
-	prologueOpt = expandProl(prologue, insts, minProlSz, roundProlSz, getJmpSize(), needProlJmpTbl);
-	assert(roundProlSz >= minProlSz);
-	prologue = *prologueOpt;
-	
 	const uint64_t trampolineSz = roundProlSz;
 	unsigned char* trampoline = new unsigned char[(int)trampolineSz];
 
-	insts_t prolJmps;
-	insts_t prolJmpsToFix;
-	buildProlJmpTbl(prologue, prolJmps, prolJmpsToFix, (uint64_t)trampoline, getJmpSize(), std::bind(&x86Detour::makeJmp, this, _1, _2));
+	insts_t writeLater;
+	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, minProlSz, roundProlSz, getJmpSize(), std::bind(&x86Detour::makeJmp, this, _1, _2));
 
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
-	std::cout << "Prologue jump table:" << std::endl << prolJmps << std::endl;
 
 	{// copy all the prologue stuff to trampoline
 		

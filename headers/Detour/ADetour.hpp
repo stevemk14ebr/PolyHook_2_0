@@ -79,19 +79,15 @@ protected:
 	false if resolution failed.**/
 	bool followProlJmp(insts_t& functionInsts, const uint8_t curDepth = 0, const uint8_t depth = 3);
 
-	/**Expand prologue to make room for jump table if instrs point back into it. The expansion will overwrite more instructions, which could
-	require yet another jump table entry, so be careful to account for that**/
-	std::optional<insts_t> expandProl(const insts_t& prolInsts, const insts_t& funcInsts, uint64_t& minSz, uint64_t& roundedSz, const uint8_t jmpSz, bool& expanded);
-
-	/**Build the jmp table needed for when insts point back into the prologue. Also repoint the insts to the jmp entries
-	instead of whereever they went into the prologue**/
+	/**Build the jmp table needed for when insts point back into the prologue. Returns the instructions that make the jump table, modified the input prol to
+	the expanded size needed to insert the jump table**/
 	template<typename MakeJmpFn>
-	void buildProlJmpTbl(const insts_t& prol, insts_t& jmpTbl, insts_t& jmpToFix,
-		const uint64_t trampolineAddr,
-		const uint8_t jmpSz,
+	std::optional<insts_t> buildProlJmpTbl(insts_t& prol, const insts_t& func,
+		insts_t& writeLater,
+		uint64_t& minProlSz,
+		uint64_t& roundProlSz,
+		const uint64_t jmpSz,
 		MakeJmpFn makeJmp);
-
-	bool isSrcBranchNotRelocated(const insts_t& sources, const uint64_t relocAddrEnd);
 
 	// fnAddress -> Trampoline map, allows trampoline references to be handed out and later filled by hook(). Global lifetime
 	static std::map<uint64_t, Trampoline> m_trampolines;
@@ -99,45 +95,66 @@ protected:
 };
 
 template<typename MakeJmpFn>
-void PLH::Detour::buildProlJmpTbl(const insts_t& prol, insts_t& jmpTbl,
-	insts_t& jmpToFix,
-	const uint64_t trampolineAddr,
-	const uint8_t jmpSz,
+std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t& func,
+	insts_t& writeLater,
+	uint64_t& minProlSz,
+	uint64_t& roundProlSz,
+	const uint64_t jmpSz, 
 	MakeJmpFn makeJmp)
 {
-	PLH::branch_map_t branchMap = m_disasm.getBranchMap();
+	insts_t jmpsToFix;
+	const uint64_t prolStart = prol.front().getAddress();
+	branch_map_t branchMap = m_disasm.getBranchMap();
 
-	const uint64_t prolStart = prol.at(0).getAddress();
-	const uint64_t tblStart = prolStart + jmpSz;
-	int tblIdx = 0;
+	/* expand round, overcalculates # of tbl entries when the
+	src of a jump is inside the prologue itself, which can occur
+	dynamically as we expand prol as we go. TODO: minimize (this is hard)*/
 	for (size_t i = 0; i < prol.size(); i++)
 	{
 		auto inst = prol.at(i);
+
+		// is there a jump pointing at the current instruction?
+		if (branchMap.find(inst.getAddress()) == branchMap.end())
+			continue;
+		insts_t srcs = branchMap.at(inst.getAddress());
+		minProlSz += jmpSz;
+		
+		// expand prol by one entry size
+		auto prolOpt = calcNearestSz(func, minProlSz, roundProlSz);
+		if (!prolOpt)
+			return std::nullopt;
+		prol = *prolOpt;
+	}
+
+	/* count srcs that are outside of prologue area */
+	for (size_t i = 0; i < prol.size(); i++) {
+		auto inst = prol.at(i);
+
+		// is there a jump pointing at the current instruction?
 		if (branchMap.find(inst.getAddress()) == branchMap.end())
 			continue;
 
-		// the (long) jmp that goes from prologue to trampoline
-		const uint64_t entryAddr = tblStart + tblIdx * jmpSz;
-
-
-		// point all jmp sources to the tbl entry instead of the to-be-moved instruction
-		bool needEntry = false;
-		insts_t branchSources = branchMap.at(inst.getAddress());
-		for (auto& branch : branchSources) {
-			if (branch.getAddress() > prolStart + prol.size()) {
-				branch.setDestination(entryAddr);
-				jmpToFix.push_back(branch);
-				needEntry = true;
+		insts_t srcs = branchMap.at(inst.getAddress());
+		for (auto& src : srcs) {
+			if (src.getAddress() > prol.back().getAddress()) {
+				jmpsToFix.push_back(src);
 			}
 		}
+	}
 
-		if (!needEntry)
-			continue;
-
-		auto jmpEntry = makeJmp(entryAddr, trampolineAddr + (inst.getAddress() - prolStart));
-		jmpTbl.insert(jmpTbl.end(), jmpEntry.begin(), jmpEntry.end());
+	/* build the tbl entries and fix the srcs to point to them */
+	uint8_t tblIdx = 0;
+	insts_t tbl;
+	const uint64_t tblStart = prolStart + minProlSz;
+	for (auto& fix : jmpsToFix) {
+		const uint64_t tblAddr = tblStart + tblIdx * jmpSz;
+		insts_t entry = makeJmp(tblAddr, fix.getDestination());
+		fix.setDestination(tblAddr);
+		tbl.insert(tbl.end(), entry.begin(), entry.end());
 		tblIdx++;
 	}
+	writeLater = jmpsToFix;
+	return tbl;
 }
 
 /** Before Hook:                                                After hook:
