@@ -63,7 +63,7 @@ bool PLH::x86Detour::hook() {
 	unsigned char* trampoline = new unsigned char[(int)trampolineSz];
 
 	insts_t writeLater;
-	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, minProlSz, roundProlSz, getJmpSize(), std::bind(&x86Detour::makeJmp, this, _1, _2));
+	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, (uint64_t)trampoline, minProlSz, roundProlSz, getJmpSize(), std::bind(&x86Detour::makeJmp, this, _1, _2));
 
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 

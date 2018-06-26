@@ -84,6 +84,7 @@ protected:
 	template<typename MakeJmpFn>
 	std::optional<insts_t> buildProlJmpTbl(insts_t& prol, const insts_t& func,
 		insts_t& writeLater,
+		const uint64_t trampAddr,
 		uint64_t& minProlSz,
 		uint64_t& roundProlSz,
 		const uint64_t jmpSz,
@@ -97,6 +98,7 @@ protected:
 template<typename MakeJmpFn>
 std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t& func,
 	insts_t& writeLater,
+	const uint64_t trampAddr,
 	uint64_t& minProlSz,
 	uint64_t& roundProlSz,
 	const uint64_t jmpSz, 
@@ -171,9 +173,9 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 	const uint64_t tblStart = prolStart + minProlSz;
 	for (auto& fix : jmpsToFix) {
 		const uint64_t tblAddr = tblStart + tblIdx * jmpSz;
-
-		// TODO: make point into trampoline
-		insts_t entry = makeJmp(tblAddr, fix.getDestination());
+		const uint64_t jmpDest = fix.getDestination() - prolStart + trampAddr;
+		
+		insts_t entry = makeJmp(tblAddr, jmpDest);
 		fix.setDestination(tblAddr);
 		tbl.insert(tbl.end(), entry.begin(), entry.end());
 		tblIdx++;
