@@ -90,6 +90,9 @@ protected:
 		const uint64_t jmpSz,
 		MakeJmpFn makeJmp);
 
+	void copyTrampolineProl(insts_t& prologue,const uint64_t trampStart, 
+		unsigned char* trampoline,const uint64_t roundProlSz);
+
 	// fnAddress -> Trampoline map, allows trampoline references to be handed out and later filled by hook(). Global lifetime
 	static std::map<uint64_t, Trampoline> m_trampolines;
     bool                    m_hooked;

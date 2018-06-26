@@ -45,48 +45,40 @@ bool PLH::x86Detour::hook() {
 		return false;
 	}
 
-	std::cout << "Originial function:" << std::endl << insts << std::endl;
+	std::cout << "Original function:" << std::endl << insts << std::endl;
 
 	uint64_t minProlSz = getJmpSize(); // min size of patches that may-split instructions
 	uint64_t roundProlSz = minProlSz; // size of original non-split instructions
 
-	// find the prologue section we will overwrite with jmp + zero or more nops
-	auto prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
-	if (!prologueOpt) {
-		ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
-		return false;
+	insts_t prologue;
+	{
+		// find the prologue section we will overwrite with jmp + zero or more nops
+		auto prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
+		if (!prologueOpt) {
+			ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
+			return false;
+		}
+		assert(roundProlSz >= minProlSz);
+		prologue = *prologueOpt;
 	}
-	assert(roundProlSz >= minProlSz);
-	insts_t prologue = *prologueOpt;
 
-	const uint64_t trampolineSz = roundProlSz;
-	unsigned char* trampoline = new unsigned char[(int)trampolineSz];
+	const uint8_t trampolineFuzz = 50;
+	uint64_t trampolineSz = roundProlSz;
+	unsigned char* trampoline = new unsigned char[(uint32_t)trampolineSz + trampolineFuzz];
+	uint64_t trampolineAddr = (uint64_t)trampoline;
 
 	insts_t writeLater;
-	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, (uint64_t)trampoline, minProlSz, roundProlSz, getJmpSize(), std::bind(&x86Detour::makeJmp, this, _1, _2));
+	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, trampolineAddr, minProlSz, roundProlSz, getJmpSize(), std::bind(&x86Detour::makeJmp, this, _1, _2));
+	trampolineSz = roundProlSz;
 
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 
-	{// copy all the prologue stuff to trampoline
-		
-		uint64_t trampolineAddr = (uint64_t)trampoline;
+	{   // copy all the prologue stuff to trampoline
 		MemoryProtector prot(trampolineAddr, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
-		for (auto& inst : prologue) {
-			uint64_t instDest = inst.getDestination();
-			inst.setAddress(trampolineAddr);
-
-			// relocate if it doesn't point inside prologue 
-			if (inst.getDestination() < (uint64_t)trampoline ||
-				inst.getDestination() > (uint64_t)trampoline + roundProlSz) {
-				inst.setDestination(instDest);
-			}
-			
-			trampolineAddr += inst.size();
-			m_disasm.writeEncoding(inst);
-		}
+		copyTrampolineProl(prologue, trampolineAddr, trampoline, roundProlSz);
+		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble((uint64_t)trampoline, (uint64_t)trampoline, (uint64_t)trampoline + trampolineSz) << std::endl;
 	}
 
-	std::cout << m_disasm.disassemble((uint64_t)trampoline, (uint64_t)trampoline, (uint64_t)trampoline + trampolineSz) << std::endl;
 	return true;
 }
 
