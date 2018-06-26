@@ -72,7 +72,15 @@ bool PLH::x86Detour::hook() {
 		uint64_t trampolineAddr = (uint64_t)trampoline;
 		MemoryProtector prot(trampolineAddr, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
 		for (auto& inst : prologue) {
+			uint64_t instDest = inst.getDestination();
 			inst.setAddress(trampolineAddr);
+
+			// relocate if it doesn't point inside prologue 
+			if (inst.getDestination() < (uint64_t)trampoline ||
+				inst.getDestination() > (uint64_t)trampoline + roundProlSz) {
+				inst.setDestination(instDest);
+			}
+			
 			trampolineAddr += inst.size();
 			m_disasm.writeEncoding(inst);
 		}
