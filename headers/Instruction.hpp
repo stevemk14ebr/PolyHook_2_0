@@ -138,6 +138,11 @@ public:
         return m_mnemonic + " " + m_opStr;
     }
 
+	size_t getDispSize() {
+		// jmp (e9 eb be ad de) = 5 bytes, 1 disp off, 4 disp sz
+		return size() - getDisplacementOffset();
+	}
+
     size_t size() const {
         return m_bytes.size();
     }

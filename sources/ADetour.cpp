@@ -41,21 +41,3 @@ bool PLH::Detour::followProlJmp(PLH::insts_t& functionInsts,const uint8_t curDep
 	functionInsts = m_disasm.disassemble(dest, dest, dest + 100);
 	return followProlJmp(functionInsts, curDepth + 1); // recurse
 }
-
-void PLH::Detour::copyTrampolineProl(insts_t& prologue, const uint64_t trampStart, unsigned char* trampoline, const uint64_t roundProlSz)
-{
-	uint64_t trampAddr = trampStart;
-	for (auto& inst : prologue) {
-		uint64_t instDest = inst.getDestination();
-		inst.setAddress(trampAddr);
-
-		// relocate if it doesn't point inside prologue 
-		if (inst.getDestination() < (uint64_t)trampoline ||
-			inst.getDestination() > (uint64_t)trampoline + roundProlSz) {
-			inst.setDestination(instDest);
-		}
-
-		trampAddr += inst.size();
-		m_disasm.writeEncoding(inst);
-	}
-}

@@ -90,8 +90,8 @@ protected:
 		const uint64_t jmpSz,
 		MakeJmpFn makeJmp);
 
-	void copyTrampolineProl(insts_t& prologue,const uint64_t trampStart, 
-		unsigned char* trampoline,const uint64_t roundProlSz);
+	template<typename MakeJmpFn>
+	std::optional<insts_t> copyTrampolineProl(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, MakeJmpFn makeJmp);
 
 	// fnAddress -> Trampoline map, allows trampoline references to be handed out and later filled by hook(). Global lifetime
 	static std::map<uint64_t, Trampoline> m_trampolines;
@@ -185,6 +185,41 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 	}
 	writeLater = jmpsToFix;
 	return tbl;
+}
+
+template<typename MakeJmpFn>
+std::optional<PLH::insts_t> PLH::Detour::copyTrampolineProl(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, MakeJmpFn makeJmp)
+{
+	const uint64_t delta = std::llabs(prologue.front().getAddress() - trampStart);
+	uint64_t trampAddr = trampStart;
+	uint64_t jmpTblStart = trampStart + roundProlSz;
+	assert(jmpTblStart > trampAddr);
+
+	for (auto& inst : prologue) {
+		uint64_t instDest = inst.getDestination();
+		inst.setAddress(trampAddr);
+
+		// relocate if it doesn't point inside trampoline prol
+		if (inst.hasDisplacement() &&
+			(inst.getDestination() < trampStart ||
+				inst.getDestination() > trampStart + roundProlSz)) {
+
+			// can inst just be re-encoded or do we need a tbl entry
+			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
+			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0);
+			if (delta > maxInstDisp) {
+				// TODO
+			} else {
+				inst.setDestination(instDest);
+			}
+		}
+
+		trampAddr += inst.size();
+		m_disasm.writeEncoding(inst);
+	}
+
+	assert(trampAddr > trampStart);
+	return insts_t();
 }
 
 /** Before Hook:                                                After hook:

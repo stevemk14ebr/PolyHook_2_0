@@ -67,17 +67,21 @@ bool PLH::x86Detour::hook() {
 	unsigned char* trampoline = new unsigned char[(uint32_t)trampolineSz + trampolineFuzz];
 	uint64_t trampolineAddr = (uint64_t)trampoline;
 
+	auto makeJmpFn = std::bind(&x86Detour::makeJmp, this, _1, _2);
+
 	insts_t writeLater;
-	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, trampolineAddr, minProlSz, roundProlSz, getJmpSize(), std::bind(&x86Detour::makeJmp, this, _1, _2));
+	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, trampolineAddr, minProlSz, roundProlSz, getJmpSize(), makeJmpFn);
 	trampolineSz = roundProlSz;
 
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 
 	{   // copy all the prologue stuff to trampoline
 		MemoryProtector prot(trampolineAddr, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
-		copyTrampolineProl(prologue, trampolineAddr, trampoline, roundProlSz);
-		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble((uint64_t)trampoline, (uint64_t)trampoline, (uint64_t)trampoline + trampolineSz) << std::endl;
+		copyTrampolineProl(prologue, trampolineAddr, roundProlSz, makeJmpFn);
+		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble((uint64_t)trampoline, (uint64_t)trampoline, (uint64_t)trampoline + roundProlSz) << std::endl;
 	}
+
+
 
 	return true;
 }
