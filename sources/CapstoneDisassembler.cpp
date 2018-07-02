@@ -75,11 +75,12 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
         if (op.type == X86_OP_MEM) {
             // Are we relative to instruction pointer?
             // mem are types like jmp [rip + 0x4] where location is dereference-d
-            if (op.mem.base != (uint32_t)getIpReg())
+            if (op.mem.base != getIpReg())
                 continue;
 
             const uint8_t Offset = x86.encoding.disp_offset;
-            const uint8_t Size   = std::min<uint8_t>(x86.encoding.disp_size, sizeof(uint64_t));
+            const uint8_t Size   = std::min<uint8_t>(x86.encoding.disp_size, 
+				std::min<uint8_t>(sizeof(uint64_t), (uint8_t)(capInst->size - x86.encoding.disp_offset)));
 
 			// it's relative, set immDest to max to trigger later check
             copyDispSX(inst, Offset, Size, std::numeric_limits<int64_t>::max());
@@ -91,7 +92,9 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
                 continue;
 
             const uint8_t Offset = x86.encoding.imm_offset;
-            const uint8_t Size   = std::min<uint8_t>(x86.encoding.imm_size, sizeof(uint64_t));
+            const uint8_t Size   = std::min<uint8_t>(x86.encoding.imm_size, 
+				std::min<uint8_t>(sizeof(uint64_t), (uint8_t)(capInst->size - x86.encoding.imm_offset)));
+
             copyDispSX(inst, Offset, Size, op.imm);
 			break;
         }

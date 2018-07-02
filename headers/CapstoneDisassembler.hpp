@@ -7,7 +7,7 @@
 
 #include "headers/ADisassembler.hpp"
 
-#include <capstone/include/capstone.h>
+#include <capstone/include/capstone/capstone.h>
 
 #include <string.h>
 #include <iostream> //for debug printing
