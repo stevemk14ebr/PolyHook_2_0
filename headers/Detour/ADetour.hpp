@@ -192,8 +192,12 @@ std::optional<PLH::insts_t> PLH::Detour::copyTrampolineProl(insts_t& prologue, c
 {
 	const uint64_t delta = std::llabs(prologue.front().getAddress() - trampStart);
 	uint64_t trampAddr = trampStart;
-	uint64_t jmpTblStart = trampStart + roundProlSz;
-	assert(jmpTblStart > trampAddr);
+	uint64_t jmpTblAddr = trampStart + roundProlSz; // end of copied prol is start of tramp jump table
+	
+	assert(jmpTblAddr > trampAddr);
+
+	// just a convenience list to see what the jmp table became
+	PLH::insts_t jmpTblEntries;
 
 	for (auto& inst : prologue) {
 		uint64_t instDest = inst.getDestination();
@@ -206,9 +210,14 @@ std::optional<PLH::insts_t> PLH::Detour::copyTrampolineProl(insts_t& prologue, c
 
 			// can inst just be re-encoded or do we need a tbl entry
 			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
-			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0);
+			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); // 2^bitSz give max val, /2 and -1 because signed
 			if (delta > maxInstDisp) {
-				// TODO
+				// make an entry pointing to where inst did point to
+				auto entry = makeJmp(jmpTblAddr, instDest); 
+				inst.setDestination(jmpTblAddr);
+				jmpTblAddr += entry.size();
+				m_disasm.writeEncoding(entry);
+				jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());
 			} else {
 				inst.setDestination(instDest);
 			}
@@ -219,7 +228,7 @@ std::optional<PLH::insts_t> PLH::Detour::copyTrampolineProl(insts_t& prologue, c
 	}
 
 	assert(trampAddr > trampStart);
-	return insts_t();
+	return jmpTblEntries;
 }
 
 /** Before Hook:                                                After hook:

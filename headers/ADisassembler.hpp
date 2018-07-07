@@ -32,6 +32,11 @@ public:
      * **/
     virtual insts_t disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end) = 0;
 
+	virtual void writeEncoding(const PLH::insts_t& instructions) const {
+		for (const auto& inst : instructions)
+			writeEncoding(inst);
+	}
+
     virtual void writeEncoding(const Instruction& instruction) const = 0;
 
     virtual bool isConditionalJump(const Instruction& inst) const = 0;

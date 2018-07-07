@@ -77,8 +77,11 @@ bool PLH::x86Detour::hook() {
 
 	{   // copy all the prologue stuff to trampoline
 		MemoryProtector prot(trampolineAddr, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
-		copyTrampolineProl(prologue, trampolineAddr, roundProlSz, makeJmpFn);
+		auto jmpTblOpt = copyTrampolineProl(prologue, trampolineAddr, roundProlSz, makeJmpFn);
 		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble((uint64_t)trampoline, (uint64_t)trampoline, (uint64_t)trampoline + roundProlSz) << std::endl;
+
+		if (jmpTblOpt)
+			std::cout << "Trampoline Jmp Tbl:" << std::endl << *jmpTblOpt << std::endl;
 	}
 
 
