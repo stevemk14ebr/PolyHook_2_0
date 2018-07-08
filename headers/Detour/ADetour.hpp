@@ -68,12 +68,12 @@ protected:
 	std::optional<insts_t> calcNearestSz(const insts_t& functionInsts, const uint64_t minSz,
 			uint64_t& roundedSz);
 
-	/**If function starts with a jump follow it until the first non-jump character recursively. This handles already hooked functions
+	/**If function starts with a jump follow it until the first non-jump instruction, recursively. This handles already hooked functions
 	and also compilers that emit jump tables on function call. Returns true if resolution was successful (nothing to resolve, or resolution worked),
 	false if resolution failed.**/
 	bool followJmp(insts_t& functionInsts, const uint8_t curDepth = 0, const uint8_t depth = 3);
 
-	/**Expand the prologue up to the address of that last jmp that points back into the prologue. This
+	/**Expand the prologue up to the address of the last jmp that points back into the prologue. This
 	is necessary because we modify the location of things in the prologue, so re-entrant jmps point
 	to the wrong place. Therefore we move all of it to the trampoline where there is ample space to 
 	relocate and create jmp tbl entries**/
@@ -116,7 +116,7 @@ std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const
 
 			// can inst just be re-encoded or do we need a tbl entry
 			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
-			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); // 2^bitSz give max val, /2 and -1 because signed
+			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); // 2^bitSz give max val, /2 and -1 because signed ex (int8_t [-128, 127] = [2^8 / 2, 2^8 / 2 - 1]
 			if (delta > maxInstDisp) {
 				// make an entry pointing to where inst did point to
 				auto entry = makeJmp(jmpTblAddr, instDest); 

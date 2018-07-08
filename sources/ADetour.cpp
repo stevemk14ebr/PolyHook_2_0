@@ -39,7 +39,7 @@ bool PLH::Detour::followJmp(PLH::insts_t& functionInsts,const uint8_t curDepth, 
 	return followJmp(functionInsts, curDepth + 1); // recurse
 }
 
-bool PLH::Detour::buildProlJmpTbl(insts_t& prol,
+bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
 	const insts_t& func,
 	uint64_t& minProlSz,
 	uint64_t& roundProlSz)
