@@ -74,3 +74,28 @@ bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
 
 	return true;
 }
+
+void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t& instsNeedingEntry, PLH::insts_t& instsNeedingReloc)
+{
+	assert(instsNeedingEntry.size() == 0);
+	assert(instsNeedingReloc.size() == 0);
+	assert(prologue.size() > 0);
+
+	const uint64_t prolStart = prologue.front().getAddress();
+
+	for (auto& inst : prologue) {
+		if (inst.hasDisplacement() &&
+			(inst.getDestination() < prolStart ||
+				inst.getDestination() > prolStart + roundProlSz)) {
+
+			// can inst just be re-encoded or do we need a tbl entry
+			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
+			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); // 2^bitSz give max val, /2 and -1 because signed ex (int8_t [-128, 127] = [2^8 / 2, 2^8 / 2 - 1]
+			if ((uint64_t)std::llabs(delta) > maxInstDisp) {
+				instsNeedingEntry.push_back(inst);
+			} else {
+				instsNeedingReloc.push_back(inst);
+			}
+		}
+	}
+}

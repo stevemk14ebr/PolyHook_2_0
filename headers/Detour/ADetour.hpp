@@ -34,6 +34,8 @@ public:
 		assert(fnAddress != 0 && fnCallback != 0);
 		m_fnAddress = fnAddress;
 		m_fnCallback = fnCallback;
+		m_trampoline = NULL;
+		m_trampolineSz = NULL;
 		m_hooked = false;
 	}
 
@@ -41,6 +43,8 @@ public:
 		assert(fnAddress != nullptr && fnCallback != nullptr);
 		m_fnAddress = (uint64_t)fnAddress;
 		m_fnCallback = (uint64_t)fnCallback;
+		m_trampoline = NULL;
+		m_trampolineSz = NULL;
 		m_hooked = false;
 	}
 
@@ -61,6 +65,7 @@ protected:
     uint64_t                m_fnAddress;
     uint64_t                m_fnCallback;
 	uint64_t				m_trampoline;
+	uint16_t			    m_trampolineSz;
 	ADisassembler&			m_disasm;
 
 	/**Walks the given vector of instructions and sets roundedSz to the lowest size possible that doesn't split any instructions and is greater than minSz.
@@ -82,67 +87,86 @@ protected:
 		uint64_t& minProlSz,
 		uint64_t& roundProlSz);
 
+	void buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t &instsNeedingEntry, PLH::insts_t &instsNeedingReloc);
+
 	template<typename MakeJmpFn>
-	std::optional<insts_t> makeTrampoline(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, const uint8_t jmpSz,  MakeJmpFn makeJmp);
+	std::optional<insts_t> makeTrampoline(insts_t& prologue, const uint64_t roundProlSz, const uint8_t jmpSz,  MakeJmpFn makeJmp);
 
     bool                    m_hooked;
 };
 
 template<typename MakeJmpFn>
-std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, const uint8_t jmpSz, MakeJmpFn makeJmp)
+std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const uint64_t roundProlSz, const uint8_t jmpSz, MakeJmpFn makeJmp)
 {
-	const uint64_t delta = std::llabs(prologue.front().getAddress() - trampStart);
-	uint64_t trampAddr = trampStart;
-	const uint64_t jmpToProlAddr = trampStart + roundProlSz;
-	uint64_t jmpTblAddr = jmpToProlAddr + jmpSz; // end of copied prol + space for jmp back to prol is start of tramp jump table
-	
 	assert(prologue.size() > 0);
-	assert(jmpTblAddr > trampAddr);
+	const uint64_t prolStart = prologue.front().getAddress();
 
-	auto jmpToProl = makeJmp(jmpToProlAddr, prologue.front().getAddress() + roundProlSz);
-	m_disasm.writeEncoding(jmpToProl);
-
-	// just a convenience list to see what the jmp table became
-	PLH::insts_t jmpTblEntries;
-
-	for (auto& inst : prologue) {
-		uint64_t instDest = inst.getDestination();
-		inst.setAddress(trampAddr);
-
-		// relocate if it doesn't point inside trampoline prol
-		if (inst.hasDisplacement() &&
-			(inst.getDestination() < trampStart ||
-				inst.getDestination() > trampStart + roundProlSz)) {
-
-			// can inst just be re-encoded or do we need a tbl entry
-			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
-			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); // 2^bitSz give max val, /2 and -1 because signed ex (int8_t [-128, 127] = [2^8 / 2, 2^8 / 2 - 1]
-			if (delta > maxInstDisp) {
-				// make an entry pointing to where inst did point to
-				auto entry = makeJmp(jmpTblAddr, instDest); 
-
-				// point instruction to entry
-				inst.setDestination(jmpTblAddr);
-				jmpTblAddr += jmpSz;
-
-				m_disasm.writeEncoding(entry);
-				jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());
-			} else {
-				inst.setDestination(instDest);
-			}
+	/** Make a guess for the number entries we need so we can try to allocate a trampoline. The allocation
+	address will change each attempt, which changes delta, which changes the number of needed entries. So
+	we just try until we hit that lucky number that works**/
+	uint8_t neededEntryCount = 5;
+	PLH::insts_t instsNeedingEntry;
+	PLH::insts_t instsNeedingReloc;
+	do {
+		if (m_trampoline != NULL) {
+			delete[] (unsigned char*)m_trampoline;
+			neededEntryCount = (uint8_t)instsNeedingEntry.size();
 		}
 
-		trampAddr += inst.size();
+		m_trampolineSz = (uint16_t)(roundProlSz + jmpSz * neededEntryCount);
+		m_trampoline = (uint64_t) new unsigned char[m_trampolineSz];
+
+		int64_t delta = m_trampoline - prolStart;
+
+		buildRelocationList(prologue, roundProlSz, delta, instsNeedingEntry, instsNeedingReloc);
+	} while (instsNeedingEntry.size() > neededEntryCount);
+
+	const int64_t delta = m_trampoline - prolStart;
+	MemoryProtector prot(m_trampoline, m_trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
+
+	// Insert jmp from trampoline -> prologue after overwritten section
+	const uint64_t jmpToProlAddr = m_trampoline + roundProlSz;	
+	{
+		auto jmpToProl = makeJmp(jmpToProlAddr, prologue.front().getAddress() + roundProlSz);
+		m_disasm.writeEncoding(jmpToProl);
+	}
+
+	uint64_t jmpTblCurAddr = jmpToProlAddr + jmpSz; // end of copied prol + space for jmp back to prol is start of tramp jump table
+	assert(jmpTblCurAddr > m_trampoline);
+
+	PLH::insts_t jmpTblEntries;
+	for (auto& inst : prologue) {
+
+		if(std::find(instsNeedingEntry.begin(), instsNeedingEntry.end(), inst) != instsNeedingEntry.end()) {
+			assert(inst.hasDisplacement());
+			// make an entry pointing to where inst did point to
+			auto entry = makeJmp(jmpTblCurAddr, inst.getDestination());
+
+			// move inst to trampoline and point instruction to entry
+			inst.setAddress(inst.getAddress() + delta);
+			inst.setDestination(jmpTblCurAddr);
+			jmpTblCurAddr += jmpSz;
+
+			m_disasm.writeEncoding(entry);
+			jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());
+		} else if (std::find(instsNeedingReloc.begin(), instsNeedingReloc.end(), inst) != instsNeedingReloc.end()) {
+			assert(inst.hasDisplacement());
+
+			const uint64_t instsOldDest = inst.getDestination();
+			inst.setAddress(inst.getAddress() + delta);
+			inst.setDestination(instsOldDest);
+		} else {
+			inst.setAddress(inst.getAddress() + delta);
+		}
+
 		m_disasm.writeEncoding(inst);
 	}
 
-	assert(trampAddr > trampStart);
 	if (jmpTblEntries.size() > 0)
 		return jmpTblEntries;
 	else
 		return std::nullopt;
 }
-
 /** Before Hook:                                                After hook:
 *
 * --------fnAddress--------                                    --------fnAddress--------
@@ -199,3 +223,5 @@ std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const
 * **/
 }
 #endif //POLYHOOK_2_0_ADETOUR_HPP
+
+

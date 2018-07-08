@@ -88,18 +88,13 @@ bool PLH::x86Detour::hook() {
 		}
 	}
 
-	const uint8_t trampolineFuzz = 50;
-	uint64_t trampolineSz = roundProlSz;
-	m_trampoline = (uint64_t) new unsigned char[(uint32_t)trampolineSz + trampolineFuzz];
-
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 
 	{   // copy all the prologue stuff to trampoline
 		auto makeJmpFn = std::bind(&x86Detour::makeJmp, this, _1, _2);
-		MemoryProtector prot(m_trampoline, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
-		auto jmpTblOpt = makeTrampoline(prologue, m_trampoline, roundProlSz, getJmpSize(), makeJmpFn);
+		auto jmpTblOpt = makeTrampoline(prologue, roundProlSz, getJmpSize(), makeJmpFn);
 
-		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + trampolineSz + trampolineFuzz) << std::endl;
+		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz) << std::endl;
 		if (jmpTblOpt)
 			std::cout << "Trampoline Jmp Tbl:" << std::endl << *jmpTblOpt << std::endl;
 	}
