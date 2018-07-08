@@ -99,7 +99,7 @@ bool PLH::x86Detour::hook() {
 			std::cout << "Trampoline Jmp Tbl:" << std::endl << *jmpTblOpt << std::endl;
 	}
 
-	MemoryProtector prot(m_fnAddress, 200, ProtFlag::R | ProtFlag::W | ProtFlag::X);
+	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
 	auto prolJmp = makeJmp(m_fnAddress, m_fnCallback);
 	m_disasm.writeEncoding(prolJmp);
 
