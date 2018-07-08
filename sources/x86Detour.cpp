@@ -45,6 +45,9 @@ bool PLH::x86Detour::hook() {
 		return false;
 	}
 
+	// update given fn address to resolved one
+	m_fnAddress = insts.front().getAddress();
+
 	std::cout << "Original function:" << std::endl << insts << std::endl;
 
 	uint64_t minProlSz = getJmpSize(); // min size of patches that may-split instructions
@@ -77,14 +80,23 @@ bool PLH::x86Detour::hook() {
 
 	{   // copy all the prologue stuff to trampoline
 		MemoryProtector prot(trampolineAddr, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
-		auto jmpTblOpt = copyTrampolineProl(prologue, trampolineAddr, roundProlSz, makeJmpFn);
-		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble((uint64_t)trampoline, (uint64_t)trampoline, (uint64_t)trampoline + roundProlSz) << std::endl;
+		auto jmpTblOpt = makeTrampoline(prologue, trampolineAddr, roundProlSz, getJmpSize(), makeJmpFn);
+		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble((uint64_t)trampoline, (uint64_t)trampoline, (uint64_t)trampoline + trampolineSz + trampolineFuzz) << std::endl;
 
 		if (jmpTblOpt)
 			std::cout << "Trampoline Jmp Tbl:" << std::endl << *jmpTblOpt << std::endl;
 	}
 
+	MemoryProtector prot(m_fnAddress, 200, ProtFlag::R | ProtFlag::W | ProtFlag::X);
+	auto prolJmp = makeJmp(m_fnAddress, m_fnCallback);
+	m_disasm.writeEncoding(prolJmp);
 
+	if(prolTbl)
+		m_disasm.writeEncoding(*prolTbl);
+
+	// Nop the space between jmp and end of prologue
+	const uint8_t nopSz = (uint8_t) (roundProlSz - minProlSz);
+	std::memset((char*)(m_fnAddress + minProlSz), 0x90, (size_t)nopSz);
 
 	return true;
 }

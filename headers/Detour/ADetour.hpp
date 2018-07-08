@@ -91,7 +91,7 @@ protected:
 		MakeJmpFn makeJmp);
 
 	template<typename MakeJmpFn>
-	std::optional<insts_t> copyTrampolineProl(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, MakeJmpFn makeJmp);
+	std::optional<insts_t> makeTrampoline(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, const uint8_t jmpSz,  MakeJmpFn makeJmp);
 
 	// fnAddress -> Trampoline map, allows trampoline references to be handed out and later filled by hook(). Global lifetime
 	static std::map<uint64_t, Trampoline> m_trampolines;
@@ -188,13 +188,18 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 }
 
 template<typename MakeJmpFn>
-std::optional<PLH::insts_t> PLH::Detour::copyTrampolineProl(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, MakeJmpFn makeJmp)
+std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, const uint8_t jmpSz, MakeJmpFn makeJmp)
 {
 	const uint64_t delta = std::llabs(prologue.front().getAddress() - trampStart);
 	uint64_t trampAddr = trampStart;
-	uint64_t jmpTblAddr = trampStart + roundProlSz; // end of copied prol is start of tramp jump table
+	const uint64_t jmpToProlAddr = trampStart + roundProlSz;
+	uint64_t jmpTblAddr = jmpToProlAddr + jmpSz; // end of copied prol + space for jmp back to prol is start of tramp jump table
 	
+	assert(prologue.size() > 0);
 	assert(jmpTblAddr > trampAddr);
+
+	auto jmpToProl = makeJmp(jmpToProlAddr, prologue.front().getAddress() + roundProlSz);
+	m_disasm.writeEncoding(jmpToProl);
 
 	// just a convenience list to see what the jmp table became
 	PLH::insts_t jmpTblEntries;
@@ -214,8 +219,11 @@ std::optional<PLH::insts_t> PLH::Detour::copyTrampolineProl(insts_t& prologue, c
 			if (delta > maxInstDisp) {
 				// make an entry pointing to where inst did point to
 				auto entry = makeJmp(jmpTblAddr, instDest); 
+
+				// point instruction to entry
 				inst.setDestination(jmpTblAddr);
-				jmpTblAddr += entry.size();
+				jmpTblAddr += jmpSz;
+
 				m_disasm.writeEncoding(entry);
 				jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());
 			} else {
@@ -228,7 +236,10 @@ std::optional<PLH::insts_t> PLH::Detour::copyTrampolineProl(insts_t& prologue, c
 	}
 
 	assert(trampAddr > trampStart);
-	return jmpTblEntries;
+	if (jmpTblEntries.size() > 0)
+		return jmpTblEntries;
+	else
+		return std::nullopt;
 }
 
 /** Before Hook:                                                After hook:
