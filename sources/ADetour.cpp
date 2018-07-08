@@ -38,3 +38,39 @@ bool PLH::Detour::followJmp(PLH::insts_t& functionInsts,const uint8_t curDepth, 
 	functionInsts = m_disasm.disassemble(dest, dest, dest + 100);
 	return followJmp(functionInsts, curDepth + 1); // recurse
 }
+
+bool PLH::Detour::buildProlJmpTbl(insts_t& prol,
+	const insts_t& func,
+	uint64_t& minProlSz,
+	uint64_t& roundProlSz)
+{
+	const uint64_t prolStart = prol.front().getAddress();
+	branch_map_t branchMap = m_disasm.getBranchMap();
+
+	for (size_t i = 0; i < prol.size(); i++)
+	{
+		auto inst = prol.at(i);
+
+		// is there a jump pointing at the current instruction?
+		if (branchMap.find(inst.getAddress()) == branchMap.end())
+			continue;
+
+		insts_t srcs = branchMap.at(inst.getAddress());
+		uint64_t maxAddr = 0;
+		for (const auto& src : srcs) {
+			const uint64_t srcEndAddr = src.getAddress() + src.size();
+			if (srcEndAddr > maxAddr)
+				maxAddr = srcEndAddr;
+		}
+
+		minProlSz = maxAddr - prolStart;
+
+		// expand prol by one entry size, may fail if prol to small
+		auto prolOpt = calcNearestSz(func, minProlSz, roundProlSz);
+		if (!prolOpt)
+			return false;
+		prol = *prolOpt;
+	}
+
+	return true;
+}

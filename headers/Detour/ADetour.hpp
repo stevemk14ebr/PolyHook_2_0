@@ -73,117 +73,20 @@ protected:
 	false if resolution failed.**/
 	bool followJmp(insts_t& functionInsts, const uint8_t curDepth = 0, const uint8_t depth = 3);
 
-	/**Build the jmp table needed for when insts point back into the prologue. Returns the instructions that make the jump table, modifies the input prol to
-	the expanded size needed to insert the jump table**/
-	template<typename MakeJmpFn>
-	bool buildProlJmpTbl(insts_t& prol, const insts_t& func,
-		insts_t& writeLater,
-		const uint64_t trampAddr,
+	/**Expand the prologue up to the address of that last jmp that points back into the prologue. This
+	is necessary because we modify the location of things in the prologue, so re-entrant jmps point
+	to the wrong place. Therefore we move all of it to the trampoline where there is ample space to 
+	relocate and create jmp tbl entries**/
+	bool expandProlSelfJmps(insts_t& prol,
+		const insts_t& func,
 		uint64_t& minProlSz,
-		uint64_t& roundProlSz,
-		const uint64_t jmpSz,
-		MakeJmpFn makeJmp, insts_t& tbl);
+		uint64_t& roundProlSz);
 
 	template<typename MakeJmpFn>
 	std::optional<insts_t> makeTrampoline(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, const uint8_t jmpSz,  MakeJmpFn makeJmp);
 
     bool                    m_hooked;
 };
-
-template<typename MakeJmpFn>
-bool PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t& func,
-	insts_t& writeLater,
-	const uint64_t trampAddr,
-	uint64_t& minProlSz,
-	uint64_t& roundProlSz,
-	const uint64_t jmpSz, 
-	MakeJmpFn makeJmp,
-	insts_t& tbl)
-{
-	insts_t jmpsToFix;
-	const uint64_t prolStart = prol.front().getAddress();
-	branch_map_t branchMap = m_disasm.getBranchMap();
-
-	/* expand round, check for jmps into prol and expand prologue
-	to make room for jmp tbl entries. Take care if a jmp src overlaps
-	the prologue or the to-be expanded prologue*/
-	for (size_t i = 0; i < prol.size(); i++)
-	{
-		auto inst = prol.at(i);
-
-		// is there a jump pointing at the current instruction?
-		if (branchMap.find(inst.getAddress()) == branchMap.end())
-			continue;
-
-		insts_t srcs = branchMap.at(inst.getAddress());
-
-		uint8_t stepSz = 0;
-		bool needExp = false;
-		bool canJustStep = true;
-		for (const auto& src : srcs) {
-			/* just include the jmp if it's the only src and it's in the prol/exp. prol.*/
-			if (src.getAddress() > prol.back().getAddress() + prol.back().size()) {
-				canJustStep = false;
-			}
-
-			stepSz = (uint8_t)src.size();
-
-			/* we could have srcs already within the prologue, expand if any src is outside*/
-			if (src.getAddress() > prol.back().getAddress())
-				needExp = true;
-		}
-
-		/* if a src is about to eclipse the expansion, then it can be 
-		   just stepped over, and will be relocated later by the trampoline
-		   table, and doesn't need an entry in the prol tbl
-		*/
-		if (canJustStep && needExp) {
-			assert(stepSz > 0 && stepSz < 12);
-			minProlSz += stepSz;
-		} else if (needExp){
-			minProlSz += jmpSz;
-		}
-
-		// expand prol by one entry size, may fail if prol to small
-		auto prolOpt = calcNearestSz(func, minProlSz, roundProlSz);
-		if (!prolOpt)
-			return false;
-		prol = *prolOpt;
-	}
-
-	/* count srcs that are outside of prologue area. Must happen
-	after the expansion as the end of prol is variable*/
-	for (size_t i = 0; i < prol.size(); i++) {
-		auto inst = prol.at(i);
-
-		// is there a jump pointing at the current instruction?
-		if (branchMap.find(inst.getAddress()) == branchMap.end())
-			continue;
-
-		insts_t srcs = branchMap.at(inst.getAddress());
-		for (auto& src : srcs) {
-			if (src.getAddress() > prol.back().getAddress()) {
-				jmpsToFix.push_back(src);
-			}
-		}
-	}
-
-	/* build the tbl entries and fix the srcs to point to them */
-	uint8_t tblIdx = 0;
-	const uint64_t tblStart = prolStart + minProlSz;
-	for (auto& fix : jmpsToFix) {
-		const uint64_t tblAddr = tblStart + tblIdx * jmpSz;
-		const uint64_t jmpDest = fix.getDestination() - prolStart + trampAddr;
-		
-		insts_t entry = makeJmp(tblAddr, jmpDest);
-		fix.setDestination(tblAddr);
-		tbl.insert(tbl.end(), entry.begin(), entry.end());
-		tblIdx++;
-	}
-	writeLater = jmpsToFix;
-
-	return true;
-}
 
 template<typename MakeJmpFn>
 std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, const uint8_t jmpSz, MakeJmpFn makeJmp)
