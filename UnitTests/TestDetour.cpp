@@ -15,11 +15,11 @@ void __cdecl hookMe1() {
 	var = 2;
 	printf("%d %d\n", var, var2); // 2, 40
 }
-//PLH::Trampoline& hookMe1Tramp;
+uint64_t hookMe1Tramp = NULL;
 
 void __cdecl h_hookMe1() {
 	std::cout << "Hook 1 Called!" << std::endl;
-	//return hookMe1Tramp.get<decltype(&hookMe1)>()();
+	return ((decltype(&hookMe1))(hookMe1Tramp))();
 }
 
 /*  55                      push   ebp
@@ -56,8 +56,8 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 
 	SECTION("Normal function") {
 		PLH::x86Detour detour((char*)&hookMe1, (char*)&h_hookMe1, dis);
-		//hookMe1Tramp = detour.getTrampoline();
 		REQUIRE(detour.hook() == true);
+		hookMe1Tramp = detour.getTrampoline();
 
 		hookMe1();
 	}

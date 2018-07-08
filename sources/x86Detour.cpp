@@ -67,21 +67,20 @@ bool PLH::x86Detour::hook() {
 
 	const uint8_t trampolineFuzz = 50;
 	uint64_t trampolineSz = roundProlSz;
-	unsigned char* trampoline = new unsigned char[(uint32_t)trampolineSz + trampolineFuzz];
-	uint64_t trampolineAddr = (uint64_t)trampoline;
+	m_trampoline = (uint64_t) new unsigned char[(uint32_t)trampolineSz + trampolineFuzz];
 
 	auto makeJmpFn = std::bind(&x86Detour::makeJmp, this, _1, _2);
 
 	insts_t writeLater;
-	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, trampolineAddr, minProlSz, roundProlSz, getJmpSize(), makeJmpFn);
+	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, m_trampoline, minProlSz, roundProlSz, getJmpSize(), makeJmpFn);
 	trampolineSz = roundProlSz;
 
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 
 	{   // copy all the prologue stuff to trampoline
-		MemoryProtector prot(trampolineAddr, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
-		auto jmpTblOpt = makeTrampoline(prologue, trampolineAddr, roundProlSz, getJmpSize(), makeJmpFn);
-		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble((uint64_t)trampoline, (uint64_t)trampoline, (uint64_t)trampoline + trampolineSz + trampolineFuzz) << std::endl;
+		MemoryProtector prot(m_trampoline, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
+		auto jmpTblOpt = makeTrampoline(prologue, m_trampoline, roundProlSz, getJmpSize(), makeJmpFn);
+		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + trampolineSz + trampolineFuzz) << std::endl;
 
 		if (jmpTblOpt)
 			std::cout << "Trampoline Jmp Tbl:" << std::endl << *jmpTblOpt << std::endl;
@@ -98,6 +97,7 @@ bool PLH::x86Detour::hook() {
 	const uint8_t nopSz = (uint8_t) (roundProlSz - minProlSz);
 	std::memset((char*)(m_fnAddress + minProlSz), 0x90, (size_t)nopSz);
 
+	m_hooked = true;
 	return true;
 }
 

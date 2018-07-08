@@ -27,17 +27,6 @@
 
 namespace PLH {
 
-class Trampoline {
-public:
-	template<typename T>
-	T get() {
-		assert(m_trampoline);
-		return (T)*m_trampoline;
-	}
-private:
-	std::optional<uint64_t> m_trampoline;
-};
-
 class Detour : public PLH::IHook
 {
 public:
@@ -59,14 +48,19 @@ public:
 		return HookType::Detour;
 	}
 
-	virtual Trampoline& getTrampoline() {
-		return m_trampolines.at(m_fnAddress);
+	virtual uint64_t getTrampoline() const {
+		assert(m_hooked);
+		if (!m_hooked) 
+			throw "Must hook before getting trampoline";
+		
+		return m_trampoline;
 	}
 
 	virtual Mode getArchType() const = 0;
 protected:
     uint64_t                m_fnAddress;
     uint64_t                m_fnCallback;
+	uint64_t				m_trampoline;
 	ADisassembler&			m_disasm;
 
 	/**Walks the given vector of instructions and sets roundedSz to the lowest size possible that doesn't split any instructions and is greater than minSz.
@@ -93,8 +87,6 @@ protected:
 	template<typename MakeJmpFn>
 	std::optional<insts_t> makeTrampoline(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, const uint8_t jmpSz,  MakeJmpFn makeJmp);
 
-	// fnAddress -> Trampoline map, allows trampoline references to be handed out and later filled by hook(). Global lifetime
-	static std::map<uint64_t, Trampoline> m_trampolines;
     bool                    m_hooked;
 };
 

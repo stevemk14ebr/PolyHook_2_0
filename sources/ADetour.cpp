@@ -1,7 +1,5 @@
 #include "headers/Detour/ADetour.hpp"
 
-std::map<uint64_t, PLH::Trampoline> PLH::Detour::m_trampolines;
-
 std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& functionInsts, const uint64_t prolOvrwStartOffset,
 	uint64_t& prolOvrwEndOffset) {
 
