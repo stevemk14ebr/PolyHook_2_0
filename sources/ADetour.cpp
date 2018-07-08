@@ -25,17 +25,16 @@ std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& funct
 	return std::nullopt;
 }
 
-bool PLH::Detour::followProlJmp(PLH::insts_t& functionInsts,const uint8_t curDepth, const uint8_t depth) {
+bool PLH::Detour::followJmp(PLH::insts_t& functionInsts,const uint8_t curDepth, const uint8_t depth) {
 	if (functionInsts.size() <= 0 || curDepth >= depth)
 		return false;
 
 	// not a branching instruction, no resolution needed
-	if (!functionInsts.at(0).hasDisplacement()) {
-		m_fnAddress = functionInsts.at(0).getAddress();
+	if (!functionInsts.front().hasDisplacement()) {
 		return true;
 	}
 	
-	uint64_t dest = functionInsts.at(0).getDestination();
+	uint64_t dest = functionInsts.front().getDestination();
 	functionInsts = m_disasm.disassemble(dest, dest, dest + 100);
-	return followProlJmp(functionInsts, curDepth + 1); // recurse
+	return followJmp(functionInsts, curDepth + 1); // recurse
 }

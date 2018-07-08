@@ -34,19 +34,35 @@ uint8_t PLH::x86Detour::getJmpSize() const {
 }
 
 bool PLH::x86Detour::hook() {
+	// ------- Must resolve callback first, so that m_disasm branchmap is filled for prologue stuff
+	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100);
+	if (callbackInsts.size() <= 0) {
+		ErrorLog::singleton().push("Disassembler unable to decode any valid callback instructions", ErrorLevel::SEV);
+		return false;
+	}
+
+	if (!followJmp(callbackInsts)) {
+		ErrorLog::singleton().push("Callback jmp resolution failed", ErrorLevel::SEV);
+		return false;
+	}
+
+	m_fnCallback = callbackInsts.front().getAddress();
+
 	insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100);
 	if (insts.size() <= 0) {
 		ErrorLog::singleton().push("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
 		return false;
 	}
 
-	if (!followProlJmp(insts)) {
+	if (!followJmp(insts)) {
 		ErrorLog::singleton().push("Prologue jmp resolution failed", ErrorLevel::SEV);
 		return false;
 	}
 
 	// update given fn address to resolved one
 	m_fnAddress = insts.front().getAddress();
+
+	// --------------- END RECURSIVE JMP RESOLUTION ---------------------
 
 	std::cout << "Original function:" << std::endl << insts << std::endl;
 
@@ -71,11 +87,18 @@ bool PLH::x86Detour::hook() {
 
 	auto makeJmpFn = std::bind(&x86Detour::makeJmp, this, _1, _2);
 
+	// prol insts to fixup to point to tbl entries and the prol jmp tbl
 	insts_t writeLater;
-	auto prolTbl = buildProlJmpTbl(prologue, insts, writeLater, m_trampoline, minProlSz, roundProlSz, getJmpSize(), makeJmpFn);
+	insts_t prolTbl;
+	if (!buildProlJmpTbl(prologue, insts, writeLater, m_trampoline, minProlSz, roundProlSz, getJmpSize(), makeJmpFn, prolTbl)) {
+		ErrorLog::singleton().push("Function needs a prologue jmp table but it's too small to insert one", ErrorLevel::SEV);
+		return false;
+	}
 	trampolineSz = roundProlSz;
 
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
+	if (prolTbl.size() > 0)
+		std::cout << "Prologue Jmp Tbl:" << std::endl << prolTbl << std::endl;
 
 	{   // copy all the prologue stuff to trampoline
 		MemoryProtector prot(m_trampoline, trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
@@ -90,8 +113,8 @@ bool PLH::x86Detour::hook() {
 	auto prolJmp = makeJmp(m_fnAddress, m_fnCallback);
 	m_disasm.writeEncoding(prolJmp);
 
-	if(prolTbl)
-		m_disasm.writeEncoding(*prolTbl);
+	m_disasm.writeEncoding(writeLater);
+	m_disasm.writeEncoding(prolTbl);
 
 	// Nop the space between jmp and end of prologue
 	const uint8_t nopSz = (uint8_t) (roundProlSz - minProlSz);

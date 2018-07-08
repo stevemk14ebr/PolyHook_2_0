@@ -51,6 +51,23 @@ b:  7f f4                   jg     0x1
 */
 unsigned char hookMe3[] = { 0x55, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x90, 0x90, 0x7F, 0xF4 };
 
+void __declspec(naked) hookMeLoop() {
+	__asm {
+		xor eax, eax
+	start:
+		inc eax
+		cmp eax, 5
+		jle start
+		ret
+	}
+}
+uint64_t hookMeLoopTramp = NULL;
+
+void __stdcall h_hookMeLoop() {
+	std::cout << "Hook loop Called!" << std::endl;
+	((decltype(&hookMe1))(hookMeLoopTramp))();
+}
+
 TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 	PLH::CapstoneDisassembler dis(PLH::Mode::x86);
 
@@ -72,5 +89,13 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 		PLH::x86Detour detour((char*)&hookMe3, (char*)&h_nullstub, dis);
 		//hookMe1Tramp = detour.getTrampoline();
 		REQUIRE(detour.hook() == true);
+	}
+
+	SECTION("Loop") {
+		PLH::x86Detour detour((char*)&hookMeLoop, (char*)&h_hookMeLoop, dis);
+		REQUIRE(detour.hook() == true);
+		hookMeLoopTramp = detour.getTrampoline();
+
+		hookMeLoop();
 	}
 }

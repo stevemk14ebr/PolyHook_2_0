@@ -71,18 +71,18 @@ protected:
 	/**If function starts with a jump follow it until the first non-jump character recursively. This handles already hooked functions
 	and also compilers that emit jump tables on function call. Returns true if resolution was successful (nothing to resolve, or resolution worked),
 	false if resolution failed.**/
-	bool followProlJmp(insts_t& functionInsts, const uint8_t curDepth = 0, const uint8_t depth = 3);
+	bool followJmp(insts_t& functionInsts, const uint8_t curDepth = 0, const uint8_t depth = 3);
 
-	/**Build the jmp table needed for when insts point back into the prologue. Returns the instructions that make the jump table, modified the input prol to
+	/**Build the jmp table needed for when insts point back into the prologue. Returns the instructions that make the jump table, modifies the input prol to
 	the expanded size needed to insert the jump table**/
 	template<typename MakeJmpFn>
-	std::optional<insts_t> buildProlJmpTbl(insts_t& prol, const insts_t& func,
+	bool buildProlJmpTbl(insts_t& prol, const insts_t& func,
 		insts_t& writeLater,
 		const uint64_t trampAddr,
 		uint64_t& minProlSz,
 		uint64_t& roundProlSz,
 		const uint64_t jmpSz,
-		MakeJmpFn makeJmp);
+		MakeJmpFn makeJmp, insts_t& tbl);
 
 	template<typename MakeJmpFn>
 	std::optional<insts_t> makeTrampoline(insts_t& prologue, const uint64_t trampStart, const uint64_t roundProlSz, const uint8_t jmpSz,  MakeJmpFn makeJmp);
@@ -91,13 +91,14 @@ protected:
 };
 
 template<typename MakeJmpFn>
-std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t& func,
+bool PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t& func,
 	insts_t& writeLater,
 	const uint64_t trampAddr,
 	uint64_t& minProlSz,
 	uint64_t& roundProlSz,
 	const uint64_t jmpSz, 
-	MakeJmpFn makeJmp)
+	MakeJmpFn makeJmp,
+	insts_t& tbl)
 {
 	insts_t jmpsToFix;
 	const uint64_t prolStart = prol.front().getAddress();
@@ -116,12 +117,16 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 
 		insts_t srcs = branchMap.at(inst.getAddress());
 
+		uint8_t stepSz = 0;
 		bool needExp = false;
 		bool canJustStep = true;
 		for (const auto& src : srcs) {
 			/* just include the jmp if it's the only src and it's in the prol/exp. prol.*/
-			if (src.getAddress() > prol.back().getAddress() + inst.size())
+			if (src.getAddress() > prol.back().getAddress() + prol.back().size()) {
 				canJustStep = false;
+			}
+
+			stepSz = (uint8_t)src.size();
 
 			/* we could have srcs already within the prologue, expand if any src is outside*/
 			if (src.getAddress() > prol.back().getAddress())
@@ -133,15 +138,16 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 		   table, and doesn't need an entry in the prol tbl
 		*/
 		if (canJustStep && needExp) {
-			minProlSz += inst.size();
+			assert(stepSz > 0 && stepSz < 12);
+			minProlSz += stepSz;
 		} else if (needExp){
 			minProlSz += jmpSz;
 		}
 
-		// expand prol by one entry size
+		// expand prol by one entry size, may fail if prol to small
 		auto prolOpt = calcNearestSz(func, minProlSz, roundProlSz);
 		if (!prolOpt)
-			return std::nullopt;
+			return false;
 		prol = *prolOpt;
 	}
 
@@ -164,7 +170,6 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 
 	/* build the tbl entries and fix the srcs to point to them */
 	uint8_t tblIdx = 0;
-	insts_t tbl;
 	const uint64_t tblStart = prolStart + minProlSz;
 	for (auto& fix : jmpsToFix) {
 		const uint64_t tblAddr = tblStart + tblIdx * jmpSz;
@@ -176,7 +181,8 @@ std::optional<insts_t> PLH::Detour::buildProlJmpTbl(insts_t& prol, const insts_t
 		tblIdx++;
 	}
 	writeLater = jmpsToFix;
-	return tbl;
+
+	return true;
 }
 
 template<typename MakeJmpFn>
@@ -259,7 +265,7 @@ std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const
 *
 *                              Conditionally exists:
 *                              ----prologueJumpTable-----
-*                              |    jump_holder1       | -> points into Trampolinee.prologue
+*                              |    jump_holder1       | -> points into Trampoline.prologue
 *                              |    jump_holder2       | -> points into Trampoline.prologue
 *                              |       ...             |
 *                              ------------------------
