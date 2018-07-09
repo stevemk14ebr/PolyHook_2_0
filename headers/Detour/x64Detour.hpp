@@ -6,10 +6,16 @@
 #define POLYHOOK_2_X64DETOUR_HPP
 
 #include <sstream>
+#include <algorithm>
+#include <functional>
+using namespace std::placeholders;
 
 #include "headers/Detour/ADetour.hpp"
 #include "headers/Enums.hpp"
 #include "headers/Instruction.hpp"
+#include "headers/ADisassembler.hpp"
+#include "headers/ErrorLog.hpp"
+#include "headers/MemProtector.hpp"
 
 namespace PLH {
 
@@ -26,11 +32,13 @@ public:
 
     Mode getArchType() const;
 
-    insts_t makeMinimumJump(const uint64_t address, const uint64_t destination) const;
+    insts_t makeMinimumJump(const uint64_t address, const uint64_t destination, const uint64_t destHolder) const;
 
     insts_t makePreferredJump(const uint64_t address, const uint64_t destination) const;
 
-	uint8_t* makeTrampolineNear(const uint64_t hint, const uint64_t size) const;
+	uint8_t getMinJmpSize() const;
+
+	uint8_t getPrefJmpSize() const;
 private:
  
 };

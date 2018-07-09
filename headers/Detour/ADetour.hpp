@@ -90,54 +90,19 @@ protected:
 	void buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t &instsNeedingEntry, PLH::insts_t &instsNeedingReloc);
 
 	template<typename MakeJmpFn>
-	std::optional<insts_t> makeTrampoline(insts_t& prologue, const uint64_t roundProlSz, const uint8_t jmpSz,  MakeJmpFn makeJmp);
+	PLH::insts_t relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry);
 
     bool                    m_hooked;
 };
 
 template<typename MakeJmpFn>
-std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const uint64_t roundProlSz, const uint8_t jmpSz, MakeJmpFn makeJmp)
+PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry)
 {
-	assert(prologue.size() > 0);
-	const uint64_t prolStart = prologue.front().getAddress();
-
-	/** Make a guess for the number entries we need so we can try to allocate a trampoline. The allocation
-	address will change each attempt, which changes delta, which changes the number of needed entries. So
-	we just try until we hit that lucky number that works**/
-	uint8_t neededEntryCount = 5;
-	PLH::insts_t instsNeedingEntry;
-	PLH::insts_t instsNeedingReloc;
-	do {
-		if (m_trampoline != NULL) {
-			delete[] (unsigned char*)m_trampoline;
-			neededEntryCount = (uint8_t)instsNeedingEntry.size();
-		}
-
-		m_trampolineSz = (uint16_t)(roundProlSz + jmpSz * neededEntryCount);
-		m_trampoline = (uint64_t) new unsigned char[m_trampolineSz];
-
-		int64_t delta = m_trampoline - prolStart;
-
-		buildRelocationList(prologue, roundProlSz, delta, instsNeedingEntry, instsNeedingReloc);
-	} while (instsNeedingEntry.size() > neededEntryCount);
-
-	const int64_t delta = m_trampoline - prolStart;
-	MemoryProtector prot(m_trampoline, m_trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
-
-	// Insert jmp from trampoline -> prologue after overwritten section
-	const uint64_t jmpToProlAddr = m_trampoline + roundProlSz;	
-	{
-		auto jmpToProl = makeJmp(jmpToProlAddr, prologue.front().getAddress() + roundProlSz);
-		m_disasm.writeEncoding(jmpToProl);
-	}
-
-	uint64_t jmpTblCurAddr = jmpToProlAddr + jmpSz; // end of copied prol + space for jmp back to prol is start of tramp jump table
-	assert(jmpTblCurAddr > m_trampoline);
-
-	PLH::insts_t jmpTblEntries;
+	uint64_t jmpTblCurAddr = jmpTblStart;
+	insts_t jmpTblEntries;
 	for (auto& inst : prologue) {
 
-		if(std::find(instsNeedingEntry.begin(), instsNeedingEntry.end(), inst) != instsNeedingEntry.end()) {
+		if (std::find(instsNeedingEntry.begin(), instsNeedingEntry.end(), inst) != instsNeedingEntry.end()) {
 			assert(inst.hasDisplacement());
 			// make an entry pointing to where inst did point to
 			auto entry = makeJmp(jmpTblCurAddr, inst.getDestination());
@@ -149,24 +114,23 @@ std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const
 
 			m_disasm.writeEncoding(entry);
 			jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());
-		} else if (std::find(instsNeedingReloc.begin(), instsNeedingReloc.end(), inst) != instsNeedingReloc.end()) {
+		}
+		else if (std::find(instsNeedingReloc.begin(), instsNeedingReloc.end(), inst) != instsNeedingReloc.end()) {
 			assert(inst.hasDisplacement());
 
 			const uint64_t instsOldDest = inst.getDestination();
 			inst.setAddress(inst.getAddress() + delta);
 			inst.setDestination(instsOldDest);
-		} else {
+		}
+		else {
 			inst.setAddress(inst.getAddress() + delta);
 		}
 
 		m_disasm.writeEncoding(inst);
 	}
-
-	if (jmpTblEntries.size() > 0)
-		return jmpTblEntries;
-	else
-		return std::nullopt;
+	return jmpTblEntries;
 }
+
 /** Before Hook:                                                After hook:
 *
 * --------fnAddress--------                                    --------fnAddress--------
@@ -223,5 +187,3 @@ std::optional<PLH::insts_t> PLH::Detour::makeTrampoline(insts_t& prologue, const
 * **/
 }
 #endif //POLYHOOK_2_0_ADETOUR_HPP
-
-

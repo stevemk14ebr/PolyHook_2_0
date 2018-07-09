@@ -255,6 +255,13 @@ inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
 
 typedef std::vector<Instruction> insts_t;
 
+inline uint16_t calcInstsSz(const insts_t& insts) {
+	uint16_t sz = 0;
+	for (const auto& ins : insts)
+		sz += (uint16_t)ins.size();
+	return sz;
+}
+
 template <typename T>
 inline std::ostream& printInsts(std::ostream& out, const T& container)
 {
