@@ -91,8 +91,7 @@ bool PLH::x86Detour::hook() {
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 
 	{   // copy all the prologue stuff to trampoline
-		auto makeJmpFn = std::bind(&x86Detour::makeJmp, this, _1, _2);
-		auto jmpTblOpt = makeTrampoline(prologue, roundProlSz, getJmpSize(), makeJmpFn);
+		auto jmpTblOpt = makeTrampoline(prologue);
 
 		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz) << std::endl;
 		if (jmpTblOpt)
@@ -113,4 +112,50 @@ bool PLH::x86Detour::hook() {
 
 bool PLH::x86Detour::unHook() {
 	return true;
+}
+
+std::optional<PLH::insts_t> PLH::x86Detour::makeTrampoline(insts_t& prologue)
+{
+	assert(prologue.size() > 0);
+	const uint64_t prolStart = prologue.front().getAddress();
+	const uint16_t prolSz = calcInstsSz(prologue);
+
+	/** Make a guess for the number entries we need so we can try to allocate a trampoline. The allocation
+	address will change each attempt, which changes delta, which changes the number of needed entries. So
+	we just try until we hit that lucky number that works**/
+	uint8_t neededEntryCount = 5;
+	PLH::insts_t instsNeedingEntry;
+	PLH::insts_t instsNeedingReloc;
+	do {
+		if (m_trampoline != NULL) {
+			delete[](unsigned char*)m_trampoline;
+			neededEntryCount = (uint8_t)instsNeedingEntry.size();
+		}
+
+		// prol + jmp back to prol + N * jmpEntries
+		m_trampolineSz = (uint16_t)(prolSz + getJmpSize() + getJmpSize() * neededEntryCount);
+		m_trampoline = (uint64_t) new unsigned char[m_trampolineSz];
+
+		int64_t delta = m_trampoline - prolStart;
+
+		buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc);
+	} while (instsNeedingEntry.size() > neededEntryCount);
+
+	const int64_t delta = m_trampoline - prolStart;
+	MemoryProtector prot(m_trampoline, m_trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
+
+	// Insert jmp from trampoline -> prologue after overwritten section
+	const uint64_t jmpToProlAddr = m_trampoline + prolSz;
+	{
+		auto jmpToProl = makeJmp(jmpToProlAddr, prologue.front().getAddress() + prolSz);
+		m_disasm.writeEncoding(jmpToProl);
+	}
+
+	auto makeJmpFn = std::bind(&x86Detour::makeJmp, this, _1, _2);
+	uint64_t jmpTblStart = jmpToProlAddr + getJmpSize();
+	PLH::insts_t jmpTblEntries = relocateTrampoline(prologue, jmpTblStart, delta, getJmpSize(), makeJmpFn, instsNeedingReloc, instsNeedingEntry);
+	if (jmpTblEntries.size() > 0)
+		return jmpTblEntries;
+	else
+		return std::nullopt;
 }
