@@ -28,8 +28,17 @@ include_directories(${PROJECT_SOURCE_DIR})
 set(UNIT_TEST_SOURCES 
 		${PROJECT_SOURCE_DIR}/MainTests.cpp
         ${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp
-		${PROJECT_SOURCE_DIR}/UnitTests/TestMemProtector.cpp
-		${PROJECT_SOURCE_DIR}/UnitTests/TestDetour.cpp)
+		${PROJECT_SOURCE_DIR}/UnitTests/TestMemProtector.cpp)
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # 64 bits
+	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+		${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx64.cpp)
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    # 32 bits
+	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+		${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx86.cpp)
+endif()
 
 set(HEADER_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
@@ -55,7 +64,19 @@ set(CAPSTONE_LIB_PATH_86 ${PROJECT_SOURCE_DIR}/capstone/build32)
 #Find the absolute path to the lib (linux)
 #find_library(CAPSTONE_LIB NAMES libcapstone.a PATHS ${CAPSTONE_LIB_PATH})
 
-#Link the capstone lib according to config mode
-target_link_libraries(${PROJECT_NAME} debug ${CAPSTONE_LIB_PATH_86}/Debug/capstone.lib)
-target_link_libraries(${PROJECT_NAME} optimized ${CAPSTONE_LIB_PATH_86}/Release/capstone.lib)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # 64 bits
+	
+	#Link the capstone lib according to config mode
+	target_link_libraries(${PROJECT_NAME} debug ${CAPSTONE_LIB_PATH_64}/Debug/capstone.lib)
+	target_link_libraries(${PROJECT_NAME} optimized ${CAPSTONE_LIB_PATH_64}/Release/capstone.lib)
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    # 32 bits
+
+	#Link the capstone lib according to config mode
+	target_link_libraries(${PROJECT_NAME} debug ${CAPSTONE_LIB_PATH_86}/Debug/capstone.lib)
+	target_link_libraries(${PROJECT_NAME} optimized ${CAPSTONE_LIB_PATH_86}/Release/capstone.lib)
+endif()
+
+
 

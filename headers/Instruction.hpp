@@ -155,7 +155,7 @@ public:
         m_isRelative      = true;
         m_hasDisplacement = true;
 
-		const uint32_t dispSz = size() - getDisplacementOffset();
+		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
 			__debugbreak();
 			return;
@@ -173,7 +173,7 @@ public:
         m_isRelative      = false;
         m_hasDisplacement = true;
 
-		const uint32_t dispSz = size() - getDisplacementOffset();
+		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Absolute)) {
 			__debugbreak();
 			return;

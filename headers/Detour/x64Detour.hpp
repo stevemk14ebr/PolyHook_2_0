@@ -40,7 +40,7 @@ public:
 
 	uint8_t getPrefJmpSize() const;
 private:
- 
+	std::optional<insts_t> makeTrampoline(insts_t& prologue);
 };
 }
 #endif //POLYHOOK_2_X64DETOUR_HPP
