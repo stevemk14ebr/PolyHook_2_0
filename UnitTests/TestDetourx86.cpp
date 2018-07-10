@@ -3,7 +3,6 @@
 //
 #include <Catch.hpp>
 #include "headers/Detour/x86Detour.hpp"
-#include "headers/Detour/X64Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
 
 void __cdecl hookMe1() {

@@ -63,12 +63,8 @@ public:
     uint64_t getDestination() const {
         if (isDisplacementRelative()) {
 			uint64_t dest = m_address + m_displacement.Relative + size();
-			if (m_mode == Mode::x86)
-				dest &= 0xFFFFFFFF;
 			return dest;
         }
-		if (m_mode == Mode::x86)
-			return m_displacement.Absolute & 0xFFFFFFFF;
         return m_displacement.Absolute;
     }
 
