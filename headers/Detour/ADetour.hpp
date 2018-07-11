@@ -27,6 +27,22 @@
 
 namespace PLH {
 
+/**First param is an address to a function that you want to
+cast to the type of pFnCastTo. Second param must be a pointer 
+to function type**/
+template<typename T>
+T FnCast(uint64_t fnToCast, T pFnCastTo) {
+	return (T)fnToCast;
+}
+
+template<typename T>
+T FnCast(void* fnToCast, T pFnCastTo) {
+	return (T)fnToCast;
+}
+
+#include <functional>
+#include <vector>
+
 class Detour : public PLH::IHook
 {
 public:

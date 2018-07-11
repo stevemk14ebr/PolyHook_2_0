@@ -18,7 +18,7 @@ uint64_t hookMe1Tramp = NULL;
 
 void h_hookMe1() {
 	std::cout << "Hook 1 Called!" << std::endl;
-	return ((decltype(&hookMe1))(hookMe1Tramp))();
+	return PLH::FnCast(hookMe1Tramp, &hookMe1)();
 }
 
 void hookMe2() {
@@ -30,7 +30,7 @@ uint64_t hookMe2Tramp = NULL;
 
 void h_hookMe2() {
 	std::cout << "Hook 2 Called!" << std::endl;
-	return ((decltype(&hookMe2))(hookMe2Tramp))();
+	return PLH::FnCast(hookMe2Tramp, &hookMe2)();
 }
 
 unsigned char hookMe3[] = { 

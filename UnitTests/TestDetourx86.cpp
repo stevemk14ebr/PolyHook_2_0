@@ -18,7 +18,7 @@ uint64_t hookMe1Tramp = NULL;
 
 void __cdecl h_hookMe1() {
 	std::cout << "Hook 1 Called!" << std::endl;
-	return ((decltype(&hookMe1))(hookMe1Tramp))();
+	return PLH::FnCast(hookMe1Tramp, &hookMe1)();
 }
 
 /*  55                      push   ebp
@@ -64,7 +64,8 @@ uint64_t hookMeLoopTramp = NULL;
 
 void __stdcall h_hookMeLoop() {
 	std::cout << "Hook loop Called!" << std::endl;
-	((decltype(&hookMe1))(hookMeLoopTramp))();
+
+	PLH::FnCast(hookMeLoopTramp, &hookMeLoop)();
 }
 
 TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
