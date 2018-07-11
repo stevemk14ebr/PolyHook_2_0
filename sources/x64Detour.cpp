@@ -177,7 +177,6 @@ std::optional<PLH::insts_t> PLH::x64Detour::makeTrampoline(insts_t& prologue)
 	assert(prologue.size() > 0);
 	const uint64_t prolStart = prologue.front().getAddress();
 	const uint16_t prolSz = calcInstsSz(prologue);
-	//const uint8_t pushRaxSz = 1;
 	const uint8_t destHldrSz = 8;
 
 	/** Make a guess for the number entries we need so we can try to allocate a trampoline. The allocation
@@ -207,7 +206,7 @@ std::optional<PLH::insts_t> PLH::x64Detour::makeTrampoline(insts_t& prologue)
 
 	// Insert jmp from trampoline -> prologue after overwritten section
 	const uint64_t jmpToProlAddr = m_trampoline + prolSz;
-	const uint64_t jmpHolderCurAddr = m_trampoline + m_trampolineSz - 8;
+	const uint64_t jmpHolderCurAddr = m_trampoline + m_trampolineSz - destHldrSz;
 	{
 		auto jmpToProl = makeMinimumJump(jmpToProlAddr, prologue.front().getAddress() + prolSz, jmpHolderCurAddr);
 		
@@ -215,10 +214,10 @@ std::optional<PLH::insts_t> PLH::x64Detour::makeTrampoline(insts_t& prologue)
 		m_disasm.writeEncoding(jmpToProl);
 	}
 
+	// each jmp tbl entries holder is one slot down from the previous
 	auto calcJmpHolder = [=]() -> uint64_t {
 		static uint64_t captureAddr = jmpHolderCurAddr;
-		captureAddr -= 8;
-		std::cout << std::hex << "SOME SHIT " << captureAddr << std::dec << std::endl;
+		captureAddr -= destHldrSz;
 		return captureAddr;
 	};
 
