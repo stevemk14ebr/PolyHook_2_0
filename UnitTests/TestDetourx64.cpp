@@ -21,7 +21,43 @@ void h_hookMe1() {
 	return ((decltype(&hookMe1))(hookMe1Tramp))();
 }
 
-TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
+void hookMe2() {
+	for (int i = 0; i < 10; i++) {
+		printf("%d\n", i); 
+	}
+}
+uint64_t hookMe2Tramp = NULL;
+
+void h_hookMe2() {
+	std::cout << "Hook 2 Called!" << std::endl;
+	return ((decltype(&hookMe2))(hookMe2Tramp))();
+}
+
+unsigned char hookMe3[] = { 
+0x57, // push rdi
+0x48, 0x83, 0xec, 0x30, //sub rsp, 0x30
+0x74,0xf9, //je 0x0
+0x90, 0x90, 0x90, 0x90,
+0x90, 0x90, 0x90, 0x90,
+0x90, 0x90,
+0xc3
+};
+
+unsigned char hookMe4[] = {
+	0x57, // push rdi
+	0x48, 0x83, 0xec, 0x30, //sub rsp, 0x30
+	0x90, 0x90, 0x90, 0x90,
+	0x90, 0x90, 0x90, 0x90,
+	0x90, 0x90, 0x90, 0x90,
+	0x74,0xf2, //je 0x0
+	0xc3
+};
+
+void h_nullstub() {
+	volatile int i = 0;
+}
+
+TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 	PLH::CapstoneDisassembler dis(PLH::Mode::x64);
 
 	SECTION("Normal function") {
@@ -30,5 +66,23 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 		hookMe1Tramp = detour.getTrampoline();
 
 		hookMe1();
+	}
+
+	SECTION("Loop function") {
+		PLH::x64Detour detour((char*)&hookMe2, (char*)&h_hookMe2, dis);
+		REQUIRE(detour.hook() == true);
+		hookMe2Tramp = detour.getTrampoline();
+
+		hookMe2();
+	}
+
+	SECTION("Jmp into prol w/src in range") {
+		PLH::x64Detour detour((char*)&hookMe3, (char*)&h_nullstub, dis);
+		REQUIRE(detour.hook() == true);
+	}
+
+	SECTION("Jmp into prol w/src out of range") {
+		PLH::x64Detour detour((char*)&hookMe4, (char*)&h_nullstub, dis);
+		REQUIRE(detour.hook() == true);
 	}
 }

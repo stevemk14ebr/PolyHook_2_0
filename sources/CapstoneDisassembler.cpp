@@ -165,5 +165,18 @@ bool PLH::CapstoneDisassembler::isConditionalJump(const PLH::Instruction& instru
 
 bool PLH::CapstoneDisassembler::isFuncEnd(const PLH::Instruction& instruction) const {
 	// TODO: more?
+	/*
+	* 0xABABABAB : Used by Microsoft's HeapAlloc() to mark "no man's land" guard bytes after allocated heap memory
+	* 0xABADCAFE : A startup to this value to initialize all free memory to catch errant pointers
+	* 0xBAADF00D : Used by Microsoft's LocalAlloc(LMEM_FIXED) to mark uninitialised allocated heap memory
+	* 0xBADCAB1E : Error Code returned to the Microsoft eVC debugger when connection is severed to the debugger
+	* 0xBEEFCACE : Used by Microsoft .NET as a magic number in resource files
+	* 0xCCCCCCCC : Used by Microsoft's C++ debugging runtime library to mark uninitialised stack memory
+	* 0xCDCDCDCD : Used by Microsoft's C++ debugging runtime library to mark uninitialised heap memory
+	* 0xDDDDDDDD : Used by Microsoft's C++ debugging heap to mark freed heap memory
+	* 0xDEADDEAD : A Microsoft Windows STOP Error code used when the user manually initiates the crash.
+	* 0xFDFDFDFD : Used by Microsoft's C++ debugging heap to mark "no man's land" guard bytes before and after allocated heap memory
+	* 0xFEEEFEEE : Used by Microsoft's HeapFree() to mark freed heap memory
+	*/
 	return instruction.getMnemonic() == "ret";
 }
