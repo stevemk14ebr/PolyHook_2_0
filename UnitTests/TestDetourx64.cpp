@@ -9,6 +9,12 @@
 
 EffectTracker effects;
 
+/**These tests can spontaneously fail if the compiler desides to optimize away
+the handler or inline the function. NOINLINE attempts to fix the latter, the former 
+is out of our control but typically returning volatile things, volatile locals, and a 
+printf inside the body can mitigate this significantly. Do serious checking in debug 
+or releasewithdebinfo mode (relwithdebinfo optimizes sliiiightly less)**/
+
 NOINLINE void hookMe1() {
 	volatile int var = 1;
 	volatile int var2 = 0;
@@ -69,7 +75,9 @@ NOINLINE void h_nullstub() {
 #include <stdlib.h>
 uint64_t hookMallocTramp = NULL;
 NOINLINE void* h_hookMalloc(size_t size) {
+	volatile int i = 0;
 	effects.PeakEffect().trigger();
+	printf("called malloc");
 	return PLH::FnCast(hookMallocTramp, &malloc)(size);
 }
 

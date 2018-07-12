@@ -7,6 +7,12 @@
 
 #include "headers/tests/TestEffectTracker.hpp"
 
+/**These tests can spontaneously fail if the compiler desides to optimize away
+the handler or inline the function. NOINLINE attempts to fix the latter, the former
+is out of our control but typically returning volatile things, volatile locals, and a
+printf inside the body can mitigate this significantly. Do serious checking in debug
+or releasewithdebinfo mode (relwithdebinfo optimizes sliiiightly less)**/
+
 EffectTracker effects;
 
 NOINLINE int __cdecl hookMe1() {
