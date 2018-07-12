@@ -75,8 +75,13 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
         if (op.type == X86_OP_MEM) {
             // Are we relative to instruction pointer?
             // mem are types like jmp [rip + 0x4] where location is dereference-d
-            if (op.mem.base != getIpReg())
-                continue;
+			if (op.mem.base != getIpReg()) {
+				if (hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) && inst.getBytes().at(0) == 0xff && inst.getBytes().at(1) == 0x25) {
+					// far jmp 0xff, 0x25, holder jmp [0xdeadbeef]
+					inst.setAbsoluteDisplacement(*(uint32_t*)op.mem.disp);
+				}
+				continue;
+			} 
 
             const uint8_t Offset = x86.encoding.disp_offset;
             const uint8_t Size   = std::min<uint8_t>(x86.encoding.disp_size, 

@@ -5,6 +5,10 @@
 #include "headers/Detour/X64Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
 
+#include "headers/tests/TestEffectTracker.hpp"
+
+EffectTracker effects;
+
 void hookMe1() {
 	volatile int var = 1;
 	volatile int var2 = 0;
@@ -13,11 +17,14 @@ void hookMe1() {
 	var2 *= 30 / 3;
 	var = 2;
 	printf("%d %d\n", var, var2); // 2, 40
+	REQUIRE(var == 2);
+	REQUIRE(var2 == 40);
 }
 uint64_t hookMe1Tramp = NULL;
 
 void h_hookMe1() {
 	std::cout << "Hook 1 Called!" << std::endl;
+	effects.PeakEffect().trigger();
 	return PLH::FnCast(hookMe1Tramp, &hookMe1)();
 }
 
@@ -30,6 +37,7 @@ uint64_t hookMe2Tramp = NULL;
 
 void h_hookMe2() {
 	std::cout << "Hook 2 Called!" << std::endl;
+	effects.PeakEffect().trigger();
 	return PLH::FnCast(hookMe2Tramp, &hookMe2)();
 }
 
@@ -65,7 +73,9 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		REQUIRE(detour.hook() == true);
 		hookMe1Tramp = detour.getTrampoline();
 
+		effects.PushEffect();
 		hookMe1();
+		REQUIRE(effects.PopEffect().didExecute());
 	}
 
 	SECTION("Loop function") {
@@ -73,7 +83,9 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		REQUIRE(detour.hook() == true);
 		hookMe2Tramp = detour.getTrampoline();
 
+		effects.PushEffect();
 		hookMe2();
+		REQUIRE(effects.PopEffect().didExecute());
 	}
 
 	SECTION("Jmp into prol w/src in range") {
