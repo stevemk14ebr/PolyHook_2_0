@@ -9,6 +9,9 @@
 #include "headers/ADisassembler.hpp"
 #include "headers/Enums.hpp"
 
+#define NOINLINE __declspec(noinline)
+//__attribute__((noinline))
+
 namespace PLH {
 class IHook
 {

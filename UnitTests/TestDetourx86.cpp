@@ -9,7 +9,7 @@
 
 EffectTracker effects;
 
-void __cdecl hookMe1() {
+NOINLINE int __cdecl hookMe1() {
 	volatile int var = 1;
 	volatile int var2 = 0;
 	var2 += 3;
@@ -17,11 +17,13 @@ void __cdecl hookMe1() {
 	var2 *= 30 / 3;
 	var = 2;
 	printf("%d %d\n", var, var2); // 2, 40
+	return var;
 }
 
 uint64_t hookMe1Tramp = NULL;
-void __cdecl h_hookMe1() {
+NOINLINE int __cdecl h_hookMe1() {
 	std::cout << "Hook 1 Called!" << std::endl;
+
 	effects.PeakEffect().trigger();
 	return PLH::FnCast(hookMe1Tramp, &hookMe1)();
 }
@@ -39,7 +41,7 @@ f:  90                      nop
 10: 90                      nop
 11: 90                      nop */
 unsigned char hookMe2[] = {0x55, 0x8b, 0xec, 0x74, 0xFB, 0x74, 0xea, 0x74, 0xFA, 0x8b, 0xec,0x8b, 0xec,0x8b, 0xec,0x90, 0x90, 0x90, 0x90, 0x90 };
-void __cdecl h_nullstub() {
+NOINLINE void __cdecl h_nullstub() {
 	volatile int i = 0;
 }
 
@@ -55,7 +57,7 @@ b:  7f f4                   jg     0x1
 */
 unsigned char hookMe3[] = { 0x55, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x90, 0x90, 0x7F, 0xF4 };
 
-void __declspec(naked) hookMeLoop() {
+NOINLINE void __declspec(naked) hookMeLoop() {
 	__asm {
 		xor eax, eax
 	start:
@@ -67,7 +69,7 @@ void __declspec(naked) hookMeLoop() {
 }
 
 uint64_t hookMeLoopTramp = NULL;
-void __stdcall h_hookMeLoop() {
+NOINLINE void __stdcall h_hookMeLoop() {
 	std::cout << "Hook loop Called!" << std::endl;
 
 	effects.PeakEffect().trigger();
@@ -76,7 +78,7 @@ void __stdcall h_hookMeLoop() {
 
 #include <cstdarg>
 uint64_t hookPrintfTramp = NULL;
-int __cdecl h_hookPrintf(const char* format, ...) {
+NOINLINE int __cdecl h_hookPrintf(const char* format, ...) {
 	char buffer[512];
 	va_list args;
 	va_start(args, format);
@@ -92,11 +94,12 @@ int __cdecl h_hookPrintf(const char* format, ...) {
 double(*pFnPowDouble)(double, double) = &std::pow;
 
 uint64_t hookPowTramp = NULL;
-double __cdecl h_hookPow(double X, double Y) {
+NOINLINE double __cdecl h_hookPow(double X, double Y) {
 	effects.PeakEffect().trigger();
 
 	return PLH::FnCast(hookPowTramp, pFnPowDouble)(X, Y);
 }
+
 TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 	PLH::CapstoneDisassembler dis(PLH::Mode::x86);
 
@@ -106,7 +109,7 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 		hookMe1Tramp = detour.getTrampoline();
 
 		effects.PushEffect();
-		hookMe1();
+		volatile auto result = hookMe1();
 		REQUIRE(effects.PopEffect().didExecute());
 	}
 
@@ -144,8 +147,6 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 
 	// it's a pun...
 	SECTION("hook pow") {
-		
-
 		PLH::x86Detour detour((char*)pFnPowDouble, (char*)&h_hookPow, dis);
 		REQUIRE(detour.hook() == true);
 		hookPowTramp = detour.getTrampoline();

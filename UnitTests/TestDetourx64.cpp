@@ -9,7 +9,7 @@
 
 EffectTracker effects;
 
-void hookMe1() {
+NOINLINE void hookMe1() {
 	volatile int var = 1;
 	volatile int var2 = 0;
 	var2 += 3;
@@ -22,20 +22,20 @@ void hookMe1() {
 }
 uint64_t hookMe1Tramp = NULL;
 
-void h_hookMe1() {
+NOINLINE void h_hookMe1() {
 	std::cout << "Hook 1 Called!" << std::endl;
 	effects.PeakEffect().trigger();
 	return PLH::FnCast(hookMe1Tramp, &hookMe1)();
 }
 
-void hookMe2() {
+NOINLINE void hookMe2() {
 	for (int i = 0; i < 10; i++) {
 		printf("%d\n", i); 
 	}
 }
 uint64_t hookMe2Tramp = NULL;
 
-void h_hookMe2() {
+NOINLINE void h_hookMe2() {
 	std::cout << "Hook 2 Called!" << std::endl;
 	effects.PeakEffect().trigger();
 	return PLH::FnCast(hookMe2Tramp, &hookMe2)();
@@ -61,7 +61,7 @@ unsigned char hookMe4[] = {
 	0xc3
 };
 
-void h_nullstub() {
+NOINLINE void h_nullstub() {
 	volatile int i = 0;
 }
 
