@@ -99,3 +99,12 @@ void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 		}
 	}
 }
+
+bool PLH::Detour::unHook() {
+	MemoryProtector prot(m_fnAddress, PLH::calcInstsSz(m_originalInsts), ProtFlag::R | ProtFlag::W | ProtFlag::X);
+	m_disasm.writeEncoding(m_originalInsts);
+	delete[] (char*)m_trampoline;
+	*m_userTrampVar = NULL;
+	m_hooked = false;
+	return true;
+}

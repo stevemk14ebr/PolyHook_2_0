@@ -41,6 +41,7 @@ f:  90                      nop
 10: 90                      nop
 11: 90                      nop */
 unsigned char hookMe2[] = {0x55, 0x8b, 0xec, 0x74, 0xFB, 0x74, 0xea, 0x74, 0xFA, 0x8b, 0xec,0x8b, 0xec,0x8b, 0xec,0x90, 0x90, 0x90, 0x90, 0x90 };
+uint64_t nullTramp = NULL;
 NOINLINE void __cdecl h_nullstub() {
 	volatile int i = 0;
 }
@@ -100,46 +101,50 @@ NOINLINE double __cdecl h_hookPow(double X, double Y) {
 	return PLH::FnCast(hookPowTramp, pFnPowDouble)(X, Y);
 }
 
+#include <stdlib.h>
+uint64_t hookMallocTramp = NULL;
+NOINLINE void* h_hookMalloc(size_t size) {
+	effects.PeakEffect().trigger();
+	return PLH::FnCast(hookMallocTramp, &malloc)(size);
+}
+
 TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 	PLH::CapstoneDisassembler dis(PLH::Mode::x86);
 
 	SECTION("Normal function") {
-		PLH::x86Detour detour((char*)&hookMe1, (char*)&h_hookMe1, dis);
+		PLH::x86Detour detour((char*)&hookMe1, (char*)&h_hookMe1, &hookMe1Tramp, dis);
 		REQUIRE(detour.hook() == true);
-		hookMe1Tramp = detour.getTrampoline();
-
+	
 		effects.PushEffect();
 		volatile auto result = hookMe1();
 		REQUIRE(effects.PopEffect().didExecute());
 	}
 
 	SECTION("Jmp into prologue w/ src in range") {
-		PLH::x86Detour detour((char*)&hookMe2, (char*)&h_nullstub, dis);
-		//hookMe1Tramp = detour.getTrampoline();
+		PLH::x86Detour detour((char*)&hookMe2, (char*)&h_nullstub, &nullTramp, dis);
+		
 		REQUIRE(detour.hook() == true);
 	}
 
 	SECTION("Jmp into prologue w/ src out of range") {
-		PLH::x86Detour detour((char*)&hookMe3, (char*)&h_nullstub, dis);
+		PLH::x86Detour detour((char*)&hookMe3, (char*)&h_nullstub, &nullTramp, dis);
 		//hookMe1Tramp = detour.getTrampoline();
 		REQUIRE(detour.hook() == true);
 	}
 
 	SECTION("Loop") {
-		PLH::x86Detour detour((char*)&hookMeLoop, (char*)&h_hookMeLoop, dis);
+		PLH::x86Detour detour((char*)&hookMeLoop, (char*)&h_hookMeLoop, &hookMeLoopTramp, dis);
 		REQUIRE(detour.hook() == true);
-		hookMeLoopTramp = detour.getTrampoline();
-
+		
 		effects.PushEffect();
 		hookMeLoop();
 		REQUIRE(effects.PopEffect().didExecute());
 	}
 
 	SECTION("hook printf") {
-		PLH::x86Detour detour((char*)&printf, (char*)&h_hookPrintf, dis);
+		PLH::x86Detour detour((char*)&printf, (char*)&h_hookPrintf, &hookPrintfTramp, dis);
 		REQUIRE(detour.hook() == true);
-		hookPrintfTramp = detour.getTrampoline();
-
+		
 		effects.PushEffect();
 		printf("%s %f\n", "hi", .5f);
 		REQUIRE(effects.PopEffect().didExecute());
@@ -147,12 +152,22 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 
 	// it's a pun...
 	SECTION("hook pow") {
-		PLH::x86Detour detour((char*)pFnPowDouble, (char*)&h_hookPow, dis);
+		PLH::x86Detour detour((char*)pFnPowDouble, (char*)&h_hookPow, &hookPowTramp, dis);
 		REQUIRE(detour.hook() == true);
-		hookPowTramp = detour.getTrampoline();
-
+		
 		effects.PushEffect();
 		volatile double result = pFnPowDouble(2, 2);
+		REQUIRE(effects.PopEffect().didExecute());
+	}
+
+	SECTION("hook malloc") {
+		PLH::x86Detour detour((char*)&malloc, (char*)&h_hookMalloc, &hookMallocTramp, dis);
+		effects.PushEffect(); // catch does some allocations, push effect first so peak works
+		REQUIRE(detour.hook() == true);
+	
+		void* pMem = malloc(16);
+		free(pMem);
+		detour.unHook(); // unhook so we can popeffect safely w/o catch allocation happening again
 		REQUIRE(effects.PopEffect().didExecute());
 	}
 }

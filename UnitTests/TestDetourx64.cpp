@@ -61,17 +61,24 @@ unsigned char hookMe4[] = {
 	0xc3
 };
 
+uint64_t nullTramp = NULL;
 NOINLINE void h_nullstub() {
 	volatile int i = 0;
+}
+
+#include <stdlib.h>
+uint64_t hookMallocTramp = NULL;
+NOINLINE void* h_hookMalloc(size_t size) {
+	effects.PeakEffect().trigger();
+	return PLH::FnCast(hookMallocTramp, &malloc)(size);
 }
 
 TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 	PLH::CapstoneDisassembler dis(PLH::Mode::x64);
 
 	SECTION("Normal function") {
-		PLH::x64Detour detour((char*)&hookMe1, (char*)&h_hookMe1, dis);
+		PLH::x64Detour detour((char*)&hookMe1, (char*)&h_hookMe1, &hookMe1Tramp, dis);
 		REQUIRE(detour.hook() == true);
-		hookMe1Tramp = detour.getTrampoline();
 
 		effects.PushEffect();
 		hookMe1();
@@ -79,22 +86,32 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 	}
 
 	SECTION("Loop function") {
-		PLH::x64Detour detour((char*)&hookMe2, (char*)&h_hookMe2, dis);
+		PLH::x64Detour detour((char*)&hookMe2, (char*)&h_hookMe2, &hookMe2Tramp, dis);
 		REQUIRE(detour.hook() == true);
-		hookMe2Tramp = detour.getTrampoline();
-
+		
 		effects.PushEffect();
 		hookMe2();
 		REQUIRE(effects.PopEffect().didExecute());
 	}
 
 	SECTION("Jmp into prol w/src in range") {
-		PLH::x64Detour detour((char*)&hookMe3, (char*)&h_nullstub, dis);
+		PLH::x64Detour detour((char*)&hookMe3, (char*)&h_nullstub, &nullTramp, dis);
 		REQUIRE(detour.hook() == true);
 	}
 
 	SECTION("Jmp into prol w/src out of range") {
-		PLH::x64Detour detour((char*)&hookMe4, (char*)&h_nullstub, dis);
+		PLH::x64Detour detour((char*)&hookMe4, (char*)&h_nullstub, &nullTramp, dis);
 		REQUIRE(detour.hook() == true);
+	}
+
+	SECTION("hook malloc") {
+		PLH::x64Detour detour((char*)&malloc, (char*)&h_hookMalloc, &hookMallocTramp, dis);
+		effects.PushEffect(); // catch does some allocations, push effect first so peak works
+		REQUIRE(detour.hook() == true);
+
+		void* pMem = malloc(16);
+		free(pMem);
+		detour.unHook(); // unhook so we can popeffect safely w/o catch allocation happening again
+		REQUIRE(effects.PopEffect().didExecute());
 	}
 }

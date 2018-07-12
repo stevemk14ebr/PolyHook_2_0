@@ -3,11 +3,11 @@
 //
 #include "headers/Detour/x64Detour.hpp"
 
-PLH::x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, dis) {
+PLH::x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
 
 }
 
-PLH::x64Detour::x64Detour(const char* fnAddress, const char* fnCallback, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, dis) {
+PLH::x64Detour::x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
 
 }
 
@@ -145,6 +145,7 @@ bool PLH::x64Detour::hook() {
 		}
 	}
 
+	m_originalInsts = prologue;
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 
 	{   // copy all the prologue stuff to trampoline
@@ -155,6 +156,8 @@ bool PLH::x64Detour::hook() {
 		if (jmpTblOpt)
 			std::cout << "Trampoline Jmp Tbl:" << std::endl << *jmpTblOpt << std::endl;
 	}
+	
+	*m_userTrampVar = m_trampoline;
 
 	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
 	auto prolJmp = makePreferredJump(m_fnAddress, m_fnCallback);
@@ -165,10 +168,6 @@ bool PLH::x64Detour::hook() {
 	std::memset((char*)(m_fnAddress + minProlSz), 0x90, (size_t)nopSz);
 
 	m_hooked = true;
-	return true;
-}
-
-bool PLH::x64Detour::unHook() {
 	return true;
 }
 

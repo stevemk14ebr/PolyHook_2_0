@@ -22,13 +22,11 @@ namespace PLH {
 class x86Detour : public Detour
 {
 public:
-	x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, PLH::ADisassembler& dis);
+	x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
 
-	x86Detour(const char* fnAddress, const char* fnCallback, PLH::ADisassembler& dis);
+	x86Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
 
 	virtual bool hook() override;
-
-	virtual bool unHook() override;
 
     Mode getArchType() const;
 

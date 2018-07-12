@@ -3,11 +3,11 @@
 //
 #include "headers/Detour/x86Detour.hpp"
 
-PLH::x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, dis) {
+PLH::x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
 
 }
 
-PLH::x86Detour::x86Detour(const char* fnAddress, const char* fnCallback, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, dis) {
+PLH::x86Detour::x86Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
 
 }
 
@@ -88,6 +88,7 @@ bool PLH::x86Detour::hook() {
 		}
 	}
 
+	m_originalInsts = prologue;
 	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
 
 	{   // copy all the prologue stuff to trampoline
@@ -98,6 +99,8 @@ bool PLH::x86Detour::hook() {
 			std::cout << "Trampoline Jmp Tbl:" << std::endl << *jmpTblOpt << std::endl;
 	}
 
+	*m_userTrampVar = m_trampoline;
+
 	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
 	auto prolJmp = makeJmp(m_fnAddress, m_fnCallback);
 	m_disasm.writeEncoding(prolJmp);
@@ -107,10 +110,6 @@ bool PLH::x86Detour::hook() {
 	std::memset((char*)(m_fnAddress + minProlSz), 0x90, (size_t)nopSz);
 
 	m_hooked = true;
-	return true;
-}
-
-bool PLH::x86Detour::unHook() {
 	return true;
 }
 
