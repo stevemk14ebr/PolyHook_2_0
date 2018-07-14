@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.6)
 project(PolyHook_2)
 
+option(FEATURE_DETOURS "Implement detour functionality" ON)
+
 #set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 #set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 #set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
@@ -17,37 +19,43 @@ set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
 		${PROJECT_SOURCE_DIR}/headers/MemProtector.hpp
 		${PROJECT_SOURCE_DIR}/headers/MemAllocator.hpp)
 
-set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/Detour/ADetour.hpp
-        ${PROJECT_SOURCE_DIR}/headers/Detour/x64Detour.hpp
-        ${PROJECT_SOURCE_DIR}/headers/Detour/x86Detour.hpp)
-
-#TODO: Setup source groups using the header file variables above
-
-include_directories(${PROJECT_SOURCE_DIR})
+set(HEADER_IMP_SOURCES 
+		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
+		${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp)
 
 set(UNIT_TEST_SOURCES 
 		${PROJECT_SOURCE_DIR}/MainTests.cpp
         ${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp
 		${PROJECT_SOURCE_DIR}/UnitTests/TestMemProtector.cpp)
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    # 64 bits
-	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-		${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx64.cpp)
-elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    # 32 bits
-	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-		${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx86.cpp)
+# Headers, Sources, and Test for detours
+if(FEATURE_DETOURS MATCHES ON) 
+	set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/Detour/ADetour.hpp
+			${PROJECT_SOURCE_DIR}/headers/Detour/x64Detour.hpp
+			${PROJECT_SOURCE_DIR}/headers/Detour/x86Detour.hpp)
+
+	set(DETOUR_IMP_SOURCES 
+			${PROJECT_SOURCE_DIR}/sources/ADetour.cpp
+			${PROJECT_SOURCE_DIR}/sources/x64Detour.cpp
+			${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp)
+
+	set(HEADER_FILES ${HEADER_FILES} ${DETOUR_HEADER_FILES})
+	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${DETOUR_IMP_SOURCES})
+
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		# 64 bits
+		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+			${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx64.cpp)
+	elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+		# 32 bits
+		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+			${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx86.cpp)
+	endif()
 endif()
 
-set(HEADER_IMP_SOURCES 
-		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
-		${PROJECT_SOURCE_DIR}/sources/ADetour.cpp
-		${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp
-        ${PROJECT_SOURCE_DIR}/sources/x64Detour.cpp
-        ${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp)
+include_directories(${PROJECT_SOURCE_DIR})
 
-set(SOURCE_FILES_PLH ${UNIT_TEST_SOURCES} ${HEADER_IMP_SOURCES} ${HEADER_FILES} ${DETOUR_HEADER_FILES})
+set(SOURCE_FILES_PLH ${UNIT_TEST_SOURCES} ${HEADER_IMP_SOURCES} ${HEADER_FILES})
 
 add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
 target_compile_options(PolyHook_2 PRIVATE /std:c++latest)
@@ -78,6 +86,3 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 	target_link_libraries(${PROJECT_NAME} debug ${CAPSTONE_LIB_PATH_86}/Debug/capstone.lib)
 	target_link_libraries(${PROJECT_NAME} optimized ${CAPSTONE_LIB_PATH_86}/Release/capstone.lib)
 endif()
-
-
-
