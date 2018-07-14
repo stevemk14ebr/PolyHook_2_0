@@ -30,7 +30,7 @@ bool PLH::Detour::followJmp(PLH::insts_t& functionInsts,const uint8_t curDepth, 
 		return false;
 
 	// not a branching instruction, no resolution needed
-	if (!functionInsts.front().hasDisplacement()) {
+	if (!functionInsts.front().isBranching()) {
 		return true;
 	}
 	
@@ -84,7 +84,7 @@ void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 	const uint64_t prolStart = prologue.front().getAddress();
 
 	for (auto& inst : prologue) {
-		if (inst.hasDisplacement() &&
+		if (inst.isBranching() &&
 			(inst.getDestination() < prolStart ||
 				inst.getDestination() > prolStart + roundProlSz)) {
 

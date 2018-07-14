@@ -130,15 +130,13 @@ PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblS
 
 			m_disasm.writeEncoding(entry);
 			jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());
-		}
-		else if (std::find(instsNeedingReloc.begin(), instsNeedingReloc.end(), inst) != instsNeedingReloc.end()) {
+		} else if (std::find(instsNeedingReloc.begin(), instsNeedingReloc.end(), inst) != instsNeedingReloc.end()) {
 			assert(inst.hasDisplacement());
 
 			const uint64_t instsOldDest = inst.getDestination();
 			inst.setAddress(inst.getAddress() + delta);
 			inst.setDestination(instsOldDest);
-		}
-		else {
+		} else {
 			inst.setAddress(inst.getAddress() + delta);
 		}
 

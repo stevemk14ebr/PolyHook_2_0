@@ -73,7 +73,6 @@ NOINLINE void h_nullstub() {
 }
 
 #include <stdlib.h>
-OPTS_OFF
 uint64_t hookMallocTramp = NULL;
 NOINLINE void* h_hookMalloc(size_t size) {
 	volatile int i = 0;
@@ -81,7 +80,6 @@ NOINLINE void* h_hookMalloc(size_t size) {
 
 	return PLH::FnCast(hookMallocTramp, &malloc)(size);
 }
-OPTS_ON
 
 TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 	PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -117,8 +115,9 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 	SECTION("hook malloc") {
 		PLH::x64Detour detour((char*)&malloc, (char*)&h_hookMalloc, &hookMallocTramp, dis);
 		effects.PushEffect(); // catch does some allocations, push effect first so peak works
-		REQUIRE(detour.hook() == true);
-		
+		bool result = detour.hook();
+
+		REQUIRE(result == true);
 
 		void* pMem = malloc(16);
 		free(pMem);

@@ -69,7 +69,7 @@ public:
     }
 
 	void setDestination(const uint64_t dest) {
-		if (!hasDisplacement())
+		if (!isBranching())
 			return;
 
 		if (isDisplacementRelative()) {
@@ -105,6 +105,10 @@ public:
         m_dispOffset = offset;
     }
 
+	void setBranching(const bool status) {
+		m_isBranching = status;
+	}
+
 	/**Get the offset into the instruction bytes where displacement is encoded**/
     uint8_t getDisplacementOffset() const {
         return m_dispOffset;
@@ -119,6 +123,16 @@ public:
     bool hasDisplacement() const {
         return m_hasDisplacement;
     }
+
+	bool isBranching() const {
+		if (m_isBranching && m_isRelative) {
+			if (!m_hasDisplacement) {
+				__debugbreak();
+				assert(m_hasDisplacement);
+			}
+		}
+		return m_isBranching;
+	}
 
     const std::vector<uint8_t>& getBytes() const {
         return m_bytes;
@@ -219,6 +233,7 @@ private:
     uint8_t      m_dispOffset;    //Offset into the byte array where displacement is encoded
     bool         m_isRelative;    //Does the displacement need to be added to the address to retrieve where it points too?
     bool         m_hasDisplacement; //Does this instruction have the displacement fields filled (only call + jmp types do)
+	bool		 m_isBranching; //Does this instrunction jmp/call or otherwise change control flow
 
     std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
     std::string          m_mnemonic; //If you don't know what these two are then gtfo of this source code :)
