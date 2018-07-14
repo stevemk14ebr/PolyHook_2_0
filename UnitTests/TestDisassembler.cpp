@@ -117,6 +117,26 @@ TEST_CASE("Test Capstone Disassembler x64", "[ADisassembler],[CapstoneDisassembl
 		}
 	}
 
+	SECTION("Verify branching, relative fields") {
+		PLH::insts_t insts = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
+			(uint64_t)&x64ASM.front() + x64ASM.size());
+
+		REQUIRE(insts.at(0).hasDisplacement() == false);
+		REQUIRE(insts.at(0).isBranching() == false);
+
+		REQUIRE(insts.at(1).hasDisplacement() == false);
+		REQUIRE(insts.at(1).isBranching() == false);
+
+		REQUIRE(insts.at(8).hasDisplacement());
+		REQUIRE(insts.at(8).isBranching());
+
+		REQUIRE(insts.at(9).hasDisplacement());
+		REQUIRE(insts.at(9).isBranching());
+
+		REQUIRE(insts.at(10).isBranching());
+		REQUIRE(insts.at(10).hasDisplacement());
+	}
+
 	SECTION("Test garbage instructions") {
 		char randomBuf[500];
 		for (int i = 0; i < 500; i++)
@@ -208,6 +228,23 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
 			insts = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 				(uint64_t)&x86ASM.front() + x86ASM.size());
 		}
+	}
+
+	SECTION("Verify branching, relative fields") {
+		PLH::insts_t insts = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+			(uint64_t)&x86ASM.front() + x86ASM.size());
+
+		REQUIRE(insts.at(4).isBranching());
+		REQUIRE(insts.at(4).hasDisplacement());
+
+		REQUIRE(insts.at(5).isBranching() == false);
+		REQUIRE(insts.at(5).hasDisplacement() == false);
+
+		REQUIRE(insts.at(6).isBranching());
+		REQUIRE(insts.at(6).hasDisplacement());
+
+		REQUIRE(insts.at(7).isBranching());
+		REQUIRE(insts.at(7).hasDisplacement());
 	}
 
 	SECTION("Test garbage instructions") {

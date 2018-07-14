@@ -69,7 +69,7 @@ public:
     }
 
 	void setDestination(const uint64_t dest) {
-		if (!isBranching())
+		if (!isBranching() || !hasDisplacement())
 			return;
 
 		if (isDisplacementRelative()) {
@@ -232,7 +232,7 @@ private:
     Displacement m_displacement;  //Where an instruction points too (valid for jmp + call types)
     uint8_t      m_dispOffset;    //Offset into the byte array where displacement is encoded
     bool         m_isRelative;    //Does the displacement need to be added to the address to retrieve where it points too?
-    bool         m_hasDisplacement; //Does this instruction have the displacement fields filled (only call + jmp types do)
+    bool         m_hasDisplacement; //Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
 	bool		 m_isBranching; //Does this instrunction jmp/call or otherwise change control flow
 
     std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction

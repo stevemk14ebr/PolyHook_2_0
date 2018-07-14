@@ -29,7 +29,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 		InsVec.push_back(Inst);
 
 		// update jump map if the instruction is jump/call
-		if (Inst.isBranching()) {
+		if (Inst.isBranching() && Inst.hasDisplacement()) {
 			// search back, check if new instruction points to older ones (one to one)
 			auto destInst = std::find_if(InsVec.begin(), InsVec.end(), [=](const Instruction& oldIns) {
 				return oldIns.getAddress() == Inst.getDestination();
@@ -42,7 +42,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 
 		// search forward, check if old instructions now point to new one (many to one possible)
 		for (const Instruction& oldInst : InsVec) {
-			if (oldInst.isBranching() && oldInst.getDestination() == Inst.getAddress()) {
+			if (oldInst.isBranching() && oldInst.hasDisplacement() && oldInst.getDestination() == Inst.getAddress()) {
 				updateBranchMap(Inst.getAddress(), oldInst);
 			}
 		}
@@ -94,8 +94,6 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
 			break;
         } else if (op.type == X86_OP_IMM) {
             // IMM types are like call 0xdeadbeef where they jmp straight to some location
-            if (!branches)
-                continue;
 			
             const uint8_t Offset = x86.encoding.imm_offset;
             const uint8_t Size   = std::min<uint8_t>(x86.encoding.imm_size, 

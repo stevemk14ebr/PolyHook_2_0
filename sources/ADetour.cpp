@@ -33,6 +33,11 @@ bool PLH::Detour::followJmp(PLH::insts_t& functionInsts,const uint8_t curDepth, 
 	if (!functionInsts.front().isBranching()) {
 		return true;
 	}
+
+	// might be a mem type like jmp rax, not supported
+	if (!functionInsts.front().hasDisplacement()) {
+		return false;
+	}
 	
 	uint64_t dest = functionInsts.front().getDestination();
 	functionInsts = m_disasm.disassemble(dest, dest, dest + 100);
@@ -84,7 +89,7 @@ void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 	const uint64_t prolStart = prologue.front().getAddress();
 
 	for (auto& inst : prologue) {
-		if (inst.isBranching() &&
+		if (inst.isBranching() && inst.hasDisplacement() &&
 			(inst.getDestination() < prolStart ||
 				inst.getDestination() > prolStart + roundProlSz)) {
 
