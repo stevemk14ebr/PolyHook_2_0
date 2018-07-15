@@ -25,7 +25,7 @@ bool PLH::HWBreakPointHook::hook() {
 
 	bool freeReg = false;
 	for(m_regIdx = 0; m_regIdx < 4; m_regIdx++) {
-		if ((ctx.Dr7 & (1 << (m_regIdx * 2))) == 0) {
+		if ((ctx.Dr7 & (1ULL << (m_regIdx * 2))) == 0) {
 			freeReg = true;
 			break;
 		}
@@ -53,7 +53,7 @@ bool PLH::HWBreakPointHook::hook() {
 		break;
 	}
 
-	ctx.Dr7 |= 1 << (2 * m_regIdx);
+	ctx.Dr7 |= 1ULL << (2 * m_regIdx);
 
 	// undefined, suspendthread needed
 	if (!SetThreadContext(GetCurrentThread(), &ctx)) {
@@ -72,7 +72,7 @@ bool PLH::HWBreakPointHook::unHook() {
 		return false;
 	}
 
-	ctx.Dr7 &= ~(1 << (2 * m_regIdx));
+	ctx.Dr7 &= ~(1ULL << (2 * m_regIdx));
 
 	//Still need to call suspend thread
 	if (!SetThreadContext(GetCurrentThread(), &ctx)) {
@@ -83,7 +83,7 @@ bool PLH::HWBreakPointHook::unHook() {
 }
 
 LONG PLH::HWBreakPointHook::OnException(EXCEPTION_POINTERS* ExceptionInfo) {
-	ExceptionInfo->ContextRecord->Dr7 &= ~(1 << (2 * m_regIdx));
+	ExceptionInfo->ContextRecord->Dr7 &= ~(1ULL << (2 * m_regIdx));
 	ExceptionInfo->ContextRecord->XIP = (decltype(ExceptionInfo->ContextRecord->XIP))m_fnCallback;
 	return EXCEPTION_CONTINUE_EXECUTION;
 }

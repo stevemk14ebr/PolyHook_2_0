@@ -26,8 +26,10 @@ std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& funct
 }
 
 bool PLH::Detour::followJmp(PLH::insts_t& functionInsts, const uint8_t curDepth, const uint8_t depth) {
-	if (functionInsts.size() <= 0 || curDepth >= depth)
+	if (functionInsts.size() <= 0 || curDepth >= depth) {
+		ErrorLog::singleton().push("Couldn't decompile instructions at followed jmp", ErrorLevel::WARN);
 		return false;
+	}
 
 	// not a branching instruction, no resolution needed
 	if (!functionInsts.front().isBranching()) {
@@ -36,6 +38,7 @@ bool PLH::Detour::followJmp(PLH::insts_t& functionInsts, const uint8_t curDepth,
 
 	// might be a mem type like jmp rax, not supported
 	if (!functionInsts.front().hasDisplacement()) {
+		ErrorLog::singleton().push("Branching instruction without displacement encountered", ErrorLevel::WARN);
 		return false;
 	}
 
