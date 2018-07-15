@@ -21,12 +21,13 @@ std::shared_ptr<PLH::BreakPointHook> bpHook; // must be ptr because we need to c
 NOINLINE int hookMeCallback() {
 	auto protObj = bpHook->getProtectionObject();
 	volatile int i = 0;
+	i += 1;
 
 	effects2.PeakEffect().trigger();
 	return hookMe(); // just call original yourself now
 }
 
-TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
+TEST_CASE("Testing Software Breakpoint", "[AVehHook],[BreakpointHook]") {
 	SECTION("Verify callback is executed") {
 		bpHook = std::make_shared<PLH::BreakPointHook>((char*)&hookMe, (char*)&hookMeCallback);
 		REQUIRE(bpHook->hook() == true);

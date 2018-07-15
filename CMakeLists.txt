@@ -58,17 +58,20 @@ endif()
 if(FEATURE_EXCEPTION MATCHES ON)
 	set(EXCEPTION_HEADER_FILES 
 		${PROJECT_SOURCE_DIR}/headers/Exceptions/AVehHook.hpp
-		${PROJECT_SOURCE_DIR}/headers/Exceptions/BreakPointHook.hpp)
+		${PROJECT_SOURCE_DIR}/headers/Exceptions/BreakPointHook.hpp
+		${PROJECT_SOURCE_DIR}/headers/Exceptions/HWBreakPointHook.hpp)
 
 	set(EXCEPTION_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/AVehHook.cpp
-		${PROJECT_SOURCE_DIR}/sources/BreakPointHook.cpp)
+		${PROJECT_SOURCE_DIR}/sources/BreakPointHook.cpp
+		${PROJECT_SOURCE_DIR}/sources/HWBreakPointHook.cpp)
 
 	set(HEADER_FILES ${HEADER_FILES} ${EXCEPTION_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${EXCEPTION_IMP_SOURCES})
 
 	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-			${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp)
+			${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR})
@@ -79,7 +82,7 @@ add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
 target_compile_options(PolyHook_2 PRIVATE /std:c++latest)
 if(MSVC)
   target_compile_options(PolyHook_2 PRIVATE /W4 /WX /Z7)
-  target_link_libraries(PolyHook_2 optimized -DEBUG)
+  target_link_libraries(PolyHook_2 optimized -DEBUG) # need that pdb for release
 else(MSVC)
   target_compile_options(PolyHook_2 PRIVATE -Wall -Wextra -pedantic -Werror)
 endif(MSVC)

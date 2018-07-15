@@ -1,5 +1,5 @@
-#ifndef POLYHOOK_2_0_BPHOOK_HPP
-#define POLYHOOK_2_0_BPHOOK_HPP
+#ifndef POLYHOOK_2_0_HWBPHOOK_HPP
+#define POLYHOOK_2_0_HWBPHOOK_HPP
 
 #include <cassert>
 
@@ -8,10 +8,10 @@
 
 namespace PLH {
 
-class BreakPointHook : public AVehHook {
+class HWBreakPointHook : public AVehHook {
 public:
-	BreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback);
-	BreakPointHook(const char* fnAddress, const char* fnCallback);
+	HWBreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback);
+	HWBreakPointHook(const char* fnAddress, const char* fnCallback);
 	virtual bool hook() override;
 	virtual bool unHook() override;
 	auto getProtectionObject() {
@@ -22,9 +22,10 @@ public:
 private:
 	uint64_t m_fnCallback;
 	uint64_t m_fnAddress;
-	uint8_t m_origByte;
-	
+	uint8_t m_regIdx;
+
 	LONG OnException(EXCEPTION_POINTERS* ExceptionInfo) override;
 };
 }
+
 #endif
