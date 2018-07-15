@@ -10,13 +10,6 @@
 
 namespace PLH {
 
-#define OVERLOADED_MACRO(M, ...) _OVR(M, _COUNT_ARGS(__VA_ARGS__)) (__VA_ARGS__)
-#define _OVR(macroName, number_of_args)   _OVR_EXPAND(macroName, number_of_args)
-#define _OVR_EXPAND(macroName, number_of_args)    macroName##number_of_args
-
-#define _COUNT_ARGS(...)  _ARG_PATTERN_MATCH(__VA_ARGS__, 9,8,7,6,5,4,3,2,1)
-#define _ARG_PATTERN_MATCH(_1,_2,_3,_4,_5,_6,_7,_8,_9, N, ...)   N
-
 enum class Platform {
 	WIN,
 	UNIX
@@ -65,14 +58,23 @@ static inline char* AlignDownwards(const char* stack, size_t align) {
 	return reinterpret_cast<char*>(addr);
 }
 
-template <typename T, T> struct proxy;
-
-template <typename T, typename R, typename... Args, R(T::*mf)(Args...)>
-struct proxy<R(T::*)(Args...), mf> {
-	typedef R(*TCallback)(Args...);
-	static R call(T* obj, Args&&... args) {
-		return (*obj.*mf)(std::forward<Args>(args)...);
+template<typename Func>
+class FinalAction {
+public:
+	FinalAction(Func f) :FinalActionFunc(std::move(f)) {}
+	~FinalAction() {
+		FinalActionFunc();
 	}
+private:
+	Func FinalActionFunc;
+
+	/*Uses RAII to call a final function on destruction
+	C++ 11 version of java's finally (kindof)*/
 };
+
+template <typename F>
+static inline FinalAction<F> finally(F f) {
+	return FinalAction<F>(f);
+}
 }
 #endif //POLYHOOK_2_0_MISC_HPP

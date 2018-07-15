@@ -26,8 +26,8 @@ bool PLH::BreakPointHook::unHook() {
 }
 
 LONG PLH::BreakPointHook::OnException(EXCEPTION_POINTERS* ExceptionInfo) {
-	uint64_t ip = ExceptionInfo->ContextRecord->XIP;
 	unHook();
-	
+	ExceptionInfo->ContextRecord->XIP = (decltype(ExceptionInfo->ContextRecord->XIP))m_fnCallback;
 	return EXCEPTION_CONTINUE_EXECUTION;
 }
+
