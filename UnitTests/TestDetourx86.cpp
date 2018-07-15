@@ -153,6 +153,7 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 
 		effects.PushEffect();
 		printf("%s %f\n", "hi", .5f);
+		detour.unHook();
 		REQUIRE(effects.PopEffect().didExecute());
 	}
 
@@ -163,6 +164,7 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 
 		effects.PushEffect();
 		volatile double result = pFnPowDouble(2, 2);
+		detour.unHook();
 		REQUIRE(effects.PopEffect().didExecute());
 	}
 

@@ -1,27 +1,19 @@
-#pragma once
+#ifndef POLYHOOK_2_0_EFFECTSTRACKER_HPP
+#define POLYHOOK_2_0_EFFECTSTRACKER_HPP
+
 #include <vector>
 
 #include "../UID.hpp"
 
 class Effect {
 public:
-	Effect() : m_uid(UID::singleton()) {
-		m_executed = false;
-	}
+	Effect();
 
-	Effect& operator=(const Effect& rhs) {
-		m_uid = rhs.m_uid;
-		m_executed = rhs.m_executed;
-		return *this;
-	}
+	Effect& operator=(const Effect& rhs);
 
-	void trigger() {
-		m_executed = true;
-	}
+	void trigger();
 
-	bool didExecute() {
-		return m_executed;
-	}
+	bool didExecute();
 private:
 	bool m_executed;
 	UID m_uid;
@@ -30,19 +22,10 @@ private:
 /**Track if some side effect happened.**/
 class EffectTracker {
 public:
-	void PushEffect() {
-		m_effectQ.push_back(Effect());
-	}
-
-	Effect PopEffect() {
-		Effect effect = m_effectQ.back();
-		m_effectQ.pop_back();
-		return effect;
-	}
-
-	Effect& PeakEffect() {
-		return m_effectQ.back();
-	}
+	void PushEffect();
+	Effect PopEffect();
+	Effect& PeakEffect();
 private:
 	std::vector<Effect> m_effectQ;
 };
+#endif

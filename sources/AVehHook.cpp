@@ -4,10 +4,12 @@ PLH::RefCounter PLH::AVehHook::m_refCount;
 void* PLH::AVehHook::m_hHandler;
 std::map<uint64_t, PLH::AVehHook*> PLH::AVehHook::m_impls;
 
+//https://reverseengineering.stackexchange.com/questions/14992/what-are-the-vectored-continue-handlers
 PLH::AVehHook::AVehHook() {
 	if (m_refCount.m_count == 0) {
 		m_hHandler = AddVectoredExceptionHandler(1, &AVehHook::Handler);
 		if (m_hHandler == NULL) {
+			std::cout << "VEH FAILED!" << std::endl;
 			ErrorLog::singleton().push("Failed to add VEH", ErrorLevel::SEV);
 		}
 	}
@@ -33,6 +35,7 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	DWORD ExceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 	uint64_t ip = ExceptionInfo->ContextRecord->XIP;
 	
+	printf("Got top level exception\n");
 	switch (ExceptionCode) {
 	case EXCEPTION_BREAKPOINT:
 	case EXCEPTION_SINGLE_STEP:

@@ -22,7 +22,8 @@ set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
 
 set(HEADER_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
-		${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp)
+		${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp
+		${PROJECT_SOURCE_DIR}/sources/TestEffectTracker.cpp)
 
 set(UNIT_TEST_SOURCES 
 		${PROJECT_SOURCE_DIR}/MainTests.cpp
@@ -65,6 +66,9 @@ if(FEATURE_EXCEPTION MATCHES ON)
 
 	set(HEADER_FILES ${HEADER_FILES} ${EXCEPTION_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${EXCEPTION_IMP_SOURCES})
+
+	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+			${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR})

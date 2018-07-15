@@ -2,6 +2,7 @@
 #define POLYHOOK_2_0_BPHOOK_HPP
 
 #include <cassert>
+
 #include "headers/Exceptions/AVehHook.hpp"
 #pragma warning(disable: 4189)
 
@@ -9,11 +10,15 @@ namespace PLH {
 class BreakPointHook : public AVehHook {
 public:
 	BreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback);
+	BreakPointHook(const char* fnAddress, const char* fnCallback);
 	virtual bool hook() override;
 	virtual bool unHook() override;
 private:
 	uint64_t m_fnCallback;
-	LONG OnException(EXCEPTION_POINTERS* ExceptionInfo) const override;
+	uint64_t m_fnAddress;
+	uint8_t m_origByte;
+	
+	LONG OnException(EXCEPTION_POINTERS* ExceptionInfo) override;
 };
 }
 #endif

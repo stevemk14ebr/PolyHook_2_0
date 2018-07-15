@@ -37,7 +37,7 @@ public:
 	}
 protected:
 	// May not allocate or acquire synchonization objects in this
-	virtual LONG OnException(EXCEPTION_POINTERS* ExceptionInfo) const = 0;
+	virtual LONG OnException(EXCEPTION_POINTERS* ExceptionInfo) = 0;
 
 	static RefCounter m_refCount;
 	static void* m_hHandler;

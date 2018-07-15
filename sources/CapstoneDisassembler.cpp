@@ -94,6 +94,8 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
 			break;
 		} else if (op.type == X86_OP_IMM) {
 			// IMM types are like call 0xdeadbeef where they jmp straight to some location
+			if (!branches)
+				break;
 
 			const uint8_t Offset = x86.encoding.imm_offset;
 			const uint8_t Size = std::min<uint8_t>(x86.encoding.imm_size,
@@ -142,6 +144,8 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
 	if (displacement < immDestination) {
 		inst.setRelativeDisplacement(displacement);
 	} else {
+		if (((uint64_t)displacement) != ((uint64_t)immDestination))
+			__debugbreak();
 		assert(((uint64_t)displacement) == ((uint64_t)immDestination));
 		inst.setAbsoluteDisplacement((uint64_t)displacement);
 	}
