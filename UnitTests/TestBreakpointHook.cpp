@@ -8,21 +8,6 @@
 #include "headers/Exceptions/BreakPointHook.hpp"
 #include "headers/tests/TestEffectTracker.hpp"
 
-template <typename T>
-struct return_type;
-template <typename R, typename... Args>
-struct return_type<R(*)(Args...)> { using type = R; };
-template <typename R, typename C, typename... Args>
-struct return_type<R(C::*)(Args...)> { using type = R; };
-template <typename R, typename C, typename... Args>
-struct return_type<R(C::*)(Args...) const> { using type = R; };
-template <typename R, typename C, typename... Args>
-struct return_type<R(C::*)(Args...) volatile> { using type = R; };
-template <typename R, typename C, typename... Args>
-struct return_type<R(C::*)(Args...) const volatile> { using type = R; };
-template <typename T>
-using return_type_t = typename return_type<T>::type;
-
 EffectTracker effects2;
 
 NOINLINE int hookMe() {
@@ -32,7 +17,7 @@ NOINLINE int hookMe() {
 	return i;
 }
 
-std::shared_ptr<PLH::BreakPointHook> bpHook;
+std::shared_ptr<PLH::BreakPointHook> bpHook; // must be ptr because we need to call getProtectionObject
 NOINLINE int hookMeCallback() {
 	auto protObj = bpHook->getProtectionObject();
 	volatile int i = 0;
