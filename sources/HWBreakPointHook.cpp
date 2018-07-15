@@ -53,6 +53,8 @@ bool PLH::HWBreakPointHook::hook() {
 		break;
 	}
 
+	ctx.Dr7 &= ~(3ULL << (16 + 4 * m_regIdx)); //00b at 16-17, 20-21, 24-25, 28-29 is execute bp
+	ctx.Dr7 &= ~(3ULL << (18 + 4 * m_regIdx)); // size of 1 (val 0), at 18-19, 22-23, 26-27, 30-31
 	ctx.Dr7 |= 1ULL << (2 * m_regIdx);
 
 	// undefined, suspendthread needed
