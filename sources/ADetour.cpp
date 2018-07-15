@@ -1,7 +1,7 @@
 #include "headers/Detour/ADetour.hpp"
 
 std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& functionInsts, const uint64_t prolOvrwStartOffset,
-	uint64_t& prolOvrwEndOffset) {
+													   uint64_t& prolOvrwEndOffset) {
 
 	uint64_t     prolLen = 0;
 	PLH::insts_t instructionsInRange;
@@ -25,7 +25,7 @@ std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& funct
 	return std::nullopt;
 }
 
-bool PLH::Detour::followJmp(PLH::insts_t& functionInsts,const uint8_t curDepth, const uint8_t depth) {
+bool PLH::Detour::followJmp(PLH::insts_t& functionInsts, const uint8_t curDepth, const uint8_t depth) {
 	if (functionInsts.size() <= 0 || curDepth >= depth)
 		return false;
 
@@ -38,22 +38,20 @@ bool PLH::Detour::followJmp(PLH::insts_t& functionInsts,const uint8_t curDepth, 
 	if (!functionInsts.front().hasDisplacement()) {
 		return false;
 	}
-	
+
 	uint64_t dest = functionInsts.front().getDestination();
 	functionInsts = m_disasm.disassemble(dest, dest, dest + 100);
 	return followJmp(functionInsts, curDepth + 1); // recurse
 }
 
 bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
-	const insts_t& func,
-	uint64_t& minProlSz,
-	uint64_t& roundProlSz)
-{
+									 const insts_t& func,
+									 uint64_t& minProlSz,
+									 uint64_t& roundProlSz) {
 	const uint64_t prolStart = prol.front().getAddress();
 	branch_map_t branchMap = m_disasm.getBranchMap();
 
-	for (size_t i = 0; i < prol.size(); i++)
-	{
+	for (size_t i = 0; i < prol.size(); i++) {
 		auto inst = prol.at(i);
 
 		// is there a jump pointing at the current instruction?
@@ -80,8 +78,7 @@ bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
 	return true;
 }
 
-void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t& instsNeedingEntry, PLH::insts_t& instsNeedingReloc)
-{
+void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t& instsNeedingEntry, PLH::insts_t& instsNeedingReloc) {
 	assert(instsNeedingEntry.size() == 0);
 	assert(instsNeedingReloc.size() == 0);
 	assert(prologue.size() > 0);
@@ -91,7 +88,7 @@ void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 	for (auto& inst : prologue) {
 		if (inst.isBranching() && inst.hasDisplacement() &&
 			(inst.getDestination() < prolStart ||
-				inst.getDestination() > prolStart + roundProlSz)) {
+			inst.getDestination() > prolStart + roundProlSz)) {
 
 			// can inst just be re-encoded or do we need a tbl entry
 			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
@@ -108,7 +105,7 @@ void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 bool PLH::Detour::unHook() {
 	MemoryProtector prot(m_fnAddress, PLH::calcInstsSz(m_originalInsts), ProtFlag::R | ProtFlag::W | ProtFlag::X);
 	m_disasm.writeEncoding(m_originalInsts);
-	delete[] (char*)m_trampoline;
+	delete[](char*)m_trampoline;
 	*m_userTrampVar = NULL;
 	m_hooked = false;
 	return true;

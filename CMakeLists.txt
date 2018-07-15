@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 project(PolyHook_2)
 
 option(FEATURE_DETOURS "Implement detour functionality" ON)
+option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
 
 #set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 #set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
@@ -51,6 +52,19 @@ if(FEATURE_DETOURS MATCHES ON)
 		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
 			${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx86.cpp)
 	endif()
+endif()
+
+if(FEATURE_EXCEPTION MATCHES ON)
+	set(EXCEPTION_HEADER_FILES 
+		${PROJECT_SOURCE_DIR}/headers/Exceptions/AVehHook.hpp
+		${PROJECT_SOURCE_DIR}/headers/Exceptions/BreakPointHook.hpp)
+
+	set(EXCEPTION_IMP_SOURCES 
+		${PROJECT_SOURCE_DIR}/sources/AVehHook.cpp
+		${PROJECT_SOURCE_DIR}/sources/BreakPointHook.cpp)
+
+	set(HEADER_FILES ${HEADER_FILES} ${EXCEPTION_HEADER_FILES})
+	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${EXCEPTION_IMP_SOURCES})
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR})

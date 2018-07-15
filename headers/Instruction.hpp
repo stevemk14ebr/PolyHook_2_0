@@ -16,40 +16,38 @@
 #include "headers/UID.hpp"
 #include "headers/Enums.hpp"
 namespace PLH {
-class Instruction
-{
+class Instruction {
 public:
-    union Displacement
-    {
-        int64_t  Relative;
-        uint64_t Absolute;
-    };
+	union Displacement {
+		int64_t  Relative;
+		uint64_t Absolute;
+	};
 
-    Instruction(uint64_t address,
-                const Displacement& displacement,
-                const uint8_t displacementOffset,
-                const bool isRelative,
-                const std::vector<uint8_t>& bytes,
-                const std::string& mnemonic,
-                const std::string& opStr,
-			    Mode mode) : m_uid(UID::singleton()) {
-
-        Init(address, displacement, displacementOffset, isRelative, bytes, mnemonic, opStr, false, m_uid, mode);
-    }
-
-    Instruction(uint64_t address,
-                const Displacement& displacement,
-                const uint8_t displacementOffset,
-                bool isRelative,
-                uint8_t bytes[],
-                size_t arrLen,
-                const std::string& mnemonic,
-                const std::string& opStr,
+	Instruction(uint64_t address,
+				const Displacement& displacement,
+				const uint8_t displacementOffset,
+				const bool isRelative,
+				const std::vector<uint8_t>& bytes,
+				const std::string& mnemonic,
+				const std::string& opStr,
 				Mode mode) : m_uid(UID::singleton()) {
 
-        std::vector<uint8_t> Arr(bytes, bytes + arrLen);
-        Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr, false, m_uid, mode);
-    }
+		Init(address, displacement, displacementOffset, isRelative, bytes, mnemonic, opStr, false, m_uid, mode);
+	}
+
+	Instruction(uint64_t address,
+				const Displacement& displacement,
+				const uint8_t displacementOffset,
+				bool isRelative,
+				uint8_t bytes[],
+				size_t arrLen,
+				const std::string& mnemonic,
+				const std::string& opStr,
+				Mode mode) : m_uid(UID::singleton()) {
+
+		std::vector<uint8_t> Arr(bytes, bytes + arrLen);
+		Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr, false, m_uid, mode);
+	}
 
 	Instruction& operator=(const Instruction& rhs) {
 		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative,
@@ -60,13 +58,13 @@ public:
 	/**Get the address of where the instruction points if it's a branching instruction
 	* @Notes: Handles eip/rip & immediate branches correctly
 	* **/
-    uint64_t getDestination() const {
-        if (isDisplacementRelative()) {
+	uint64_t getDestination() const {
+		if (isDisplacementRelative()) {
 			uint64_t dest = m_address + m_displacement.Relative + size();
 			return dest;
-        }
-        return m_displacement.Absolute;
-    }
+		}
+		return m_displacement.Absolute;
+	}
 
 	void setDestination(const uint64_t dest) {
 		if (!isBranching() || !hasDisplacement())
@@ -85,44 +83,44 @@ public:
 	}
 
 	/**Get the address of the instruction in memory**/
-    uint64_t getAddress() const {
-        return m_address;
-    }
+	uint64_t getAddress() const {
+		return m_address;
+	}
 
 	/**Set a new address of the instruction in memory
 	@Notes: Doesn't move the instruction, marks it for move on writeEncoding and relocates if appropriate**/
-    void setAddress(const uint64_t address) {
-        m_address = address;
-    }
+	void setAddress(const uint64_t address) {
+		m_address = address;
+	}
 
 	/**Get the displacement from current address**/
-    Displacement getDisplacement() const {
-        return m_displacement;
-    }
+	Displacement getDisplacement() const {
+		return m_displacement;
+	}
 
 	/**Set where in the instruction bytes the offset is encoded**/
-    void setDisplacementOffset(const uint8_t offset) {
-        m_dispOffset = offset;
-    }
+	void setDisplacementOffset(const uint8_t offset) {
+		m_dispOffset = offset;
+	}
 
 	void setBranching(const bool status) {
 		m_isBranching = status;
 	}
 
 	/**Get the offset into the instruction bytes where displacement is encoded**/
-    uint8_t getDisplacementOffset() const {
-        return m_dispOffset;
-    }
+	uint8_t getDisplacementOffset() const {
+		return m_dispOffset;
+	}
 
 	/**Check if displacement is relative to eip/rip**/
-    bool isDisplacementRelative() const {
-        return m_isRelative;
-    }
+	bool isDisplacementRelative() const {
+		return m_isRelative;
+	}
 
 	/**Check if the instruction is a type with valid displacement**/
-    bool hasDisplacement() const {
-        return m_hasDisplacement;
-    }
+	bool hasDisplacement() const {
+		return m_hasDisplacement;
+	}
 
 	bool isBranching() const {
 		if (m_isBranching && m_isRelative) {
@@ -134,36 +132,36 @@ public:
 		return m_isBranching;
 	}
 
-    const std::vector<uint8_t>& getBytes() const {
-        return m_bytes;
-    }
+	const std::vector<uint8_t>& getBytes() const {
+		return m_bytes;
+	}
 
 	/**Get short symbol name of instruction**/
-    std::string getMnemonic() const {
-        return m_mnemonic;
-    }
+	std::string getMnemonic() const {
+		return m_mnemonic;
+	}
 
 	/**Get symbol name and parameters**/
-    std::string getFullName() const {
-        return m_mnemonic + " " + m_opStr;
-    }
+	std::string getFullName() const {
+		return m_mnemonic + " " + m_opStr;
+	}
 
 	size_t getDispSize() {
 		// jmp (e9 eb be ad de) = 5 bytes, 1 disp off, 4 disp sz
 		return size() - getDisplacementOffset();
 	}
 
-    size_t size() const {
-        return m_bytes.size();
-    }
+	size_t size() const {
+		return m_bytes.size();
+	}
 
-    void setRelativeDisplacement(const int64_t displacement) {
-        /**Update our class' book-keeping of this stuff and then modify the byte array.
-         * This doesn't actually write the changes to the executeable code, it writes to our
-         * copy of the bytes**/
-        m_displacement.Relative = displacement;
-        m_isRelative      = true;
-        m_hasDisplacement = true;
+	void setRelativeDisplacement(const int64_t displacement) {
+		/**Update our class' book-keeping of this stuff and then modify the byte array.
+		 * This doesn't actually write the changes to the executeable code, it writes to our
+		 * copy of the bytes**/
+		m_displacement.Relative = displacement;
+		m_isRelative = true;
+		m_hasDisplacement = true;
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
@@ -172,16 +170,16 @@ public:
 		}
 
 		assert(getDisplacementOffset() + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Relative));
-        std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Relative, dispSz);
-    }
+		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Relative, dispSz);
+	}
 
-    void setAbsoluteDisplacement(const uint64_t displacement) {
-         /**Update our class' book-keeping of this stuff and then modify the byte array.
-         * This doesn't actually write the changes to the executeable code, it writes to our
-         * copy of the bytes**/
+	void setAbsoluteDisplacement(const uint64_t displacement) {
+		/**Update our class' book-keeping of this stuff and then modify the byte array.
+		* This doesn't actually write the changes to the executeable code, it writes to our
+		* copy of the bytes**/
 		m_displacement.Absolute = displacement;
-        m_isRelative      = false;
-        m_hasDisplacement = true;
+		m_isRelative = false;
+		m_hasDisplacement = true;
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Absolute)) {
@@ -190,8 +188,8 @@ public:
 		}
 
 		assert(getDisplacementOffset() + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Absolute));
-        std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, dispSz);
-    }
+		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, dispSz);
+	}
 
 	long getUID() const {
 		return m_uid.val;
@@ -204,40 +202,40 @@ public:
 		return (T)(to - (from + insSize));
 	}
 private:
-    void Init(const uint64_t address,
-              const Displacement& displacement,
-              const uint8_t displacementOffset,
-              const bool isRelative,
-              const std::vector<uint8_t>& bytes,
-              const std::string& mnemonic,
-              const std::string& opStr,
+	void Init(const uint64_t address,
+			  const Displacement& displacement,
+			  const uint8_t displacementOffset,
+			  const bool isRelative,
+			  const std::vector<uint8_t>& bytes,
+			  const std::string& mnemonic,
+			  const std::string& opStr,
 			  const bool hasDisp,
 			  const UID id,
 			  Mode mode) {
-        m_address         = address;
-        m_displacement    = displacement;
-        m_dispOffset      = displacementOffset;
-        m_isRelative      = isRelative;
+		m_address = address;
+		m_displacement = displacement;
+		m_dispOffset = displacementOffset;
+		m_isRelative = isRelative;
 		m_hasDisplacement = hasDisp;
 
-        m_bytes           = bytes;
-        m_mnemonic        = mnemonic;
-        m_opStr           = opStr;
-       
+		m_bytes = bytes;
+		m_mnemonic = mnemonic;
+		m_opStr = opStr;
+
 		m_uid = id;
 		m_mode = mode;
-    }
+	}
 
-    uint64_t     m_address;       //Address the instruction is at
-    Displacement m_displacement;  //Where an instruction points too (valid for jmp + call types)
-    uint8_t      m_dispOffset;    //Offset into the byte array where displacement is encoded
-    bool         m_isRelative;    //Does the displacement need to be added to the address to retrieve where it points too?
-    bool         m_hasDisplacement; //Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
+	uint64_t     m_address;       //Address the instruction is at
+	Displacement m_displacement;  //Where an instruction points too (valid for jmp + call types)
+	uint8_t      m_dispOffset;    //Offset into the byte array where displacement is encoded
+	bool         m_isRelative;    //Does the displacement need to be added to the address to retrieve where it points too?
+	bool         m_hasDisplacement; //Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
 	bool		 m_isBranching; //Does this instrunction jmp/call or otherwise change control flow
 
-    std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
-    std::string          m_mnemonic; //If you don't know what these two are then gtfo of this source code :)
-    std::string          m_opStr;
+	std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
+	std::string          m_mnemonic; //If you don't know what these two are then gtfo of this source code :)
+	std::string          m_opStr;
 
 	Mode m_mode;
 
@@ -250,18 +248,18 @@ inline bool operator==(const Instruction& lhs, const Instruction& rhs) {
 
 
 inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
-    std::stringstream byteStream;
-    for (std::size_t  i = 0; i < obj.size(); i++)
-        byteStream << std::hex << std::setfill('0') << std::setw(2) << (unsigned)obj.getBytes()[i] << " ";
+	std::stringstream byteStream;
+	for (std::size_t i = 0; i < obj.size(); i++)
+		byteStream << std::hex << std::setfill('0') << std::setw(2) << (unsigned)obj.getBytes()[i] << " ";
 
-    os << std::hex << obj.getAddress() << " [" << obj.size() << "]: ";
-    os << std::setfill(' ') << std::setw(30) << std::left << byteStream.str();
-    os << obj.getFullName();
+	os << std::hex << obj.getAddress() << " [" << obj.size() << "]: ";
+	os << std::setfill(' ') << std::setw(30) << std::left << byteStream.str();
+	os << obj.getFullName();
 
-    if (obj.hasDisplacement() && obj.isDisplacementRelative())
-        os << " -> " << obj.getDestination();
-    os << std::dec;
-    return os;
+	if (obj.hasDisplacement() && obj.isDisplacementRelative())
+		os << " -> " << obj.getDestination();
+	os << std::dec;
+	return os;
 }
 
 typedef std::vector<Instruction> insts_t;
@@ -274,9 +272,8 @@ inline uint16_t calcInstsSz(const insts_t& insts) {
 }
 
 template <typename T>
-inline std::ostream& printInsts(std::ostream& out, const T& container)
-{
-	for (auto ii = container.cbegin(); ii != container.cend(); ++ii){
+inline std::ostream& printInsts(std::ostream& out, const T& container) {
+	for (auto ii = container.cbegin(); ii != container.cend(); ++ii) {
 		out << *ii << std::endl;
 	}
 	return out;

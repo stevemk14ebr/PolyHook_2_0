@@ -1,5 +1,4 @@
-class MemAllocator
-{
+class MemAllocator {
 public:
 
 };

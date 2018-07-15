@@ -23,31 +23,30 @@ _Pragma("GCC optimize (\"O0\")")
 #endif
 
 namespace PLH {
-class IHook
-{
+class IHook {
 public:
-    IHook() {
-        m_debugSet = false;
-    }
+	IHook() {
+		m_debugSet = false;
+	}
 
-    IHook(IHook&& other) = default; //move
-    IHook& operator=(IHook&& other) = default;//move assignment
-    IHook(const IHook& other) = delete; //copy
-    IHook& operator=(const IHook& other) = delete; //copy assignment
-    virtual ~IHook() = default;
+	IHook(IHook&& other) = default; //move
+	IHook& operator=(IHook&& other) = default;//move assignment
+	IHook(const IHook& other) = delete; //copy
+	IHook& operator=(const IHook& other) = delete; //copy assignment
+	virtual ~IHook() = default;
 
-    virtual bool hook() = 0;
+	virtual bool hook() = 0;
 
-    virtual bool unHook() = 0;
+	virtual bool unHook() = 0;
 
-    virtual HookType getType() const = 0;
+	virtual HookType getType() const = 0;
 
-    virtual void setDebug(const bool state) {
-        m_debugSet = state;
-    }
+	virtual void setDebug(const bool state) {
+		m_debugSet = state;
+	}
 
 protected:
-    bool m_debugSet;
+	bool m_debugSet;
 };
 }
 #endif //POLYHOOK_2_0_IHOOK_HPP

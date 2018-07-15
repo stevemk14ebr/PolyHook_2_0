@@ -5,7 +5,7 @@
 #include <Windows.h>
 
 PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
-	return static_cast<PLH::ProtFlag >(
+	return static_cast<PLH::ProtFlag>(
 		static_cast<std::uint8_t>(lhs) |
 		static_cast<std::uint8_t>(rhs));
 }
@@ -15,7 +15,7 @@ bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
 		static_cast<std::uint8_t>(rhs);
 }
 
-std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag flags){
+std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag flags) {
 	if (flags == PLH::ProtFlag::UNSET) {
 		os << "UNSET";
 		return os;

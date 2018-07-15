@@ -1,8 +1,7 @@
 #include "Catch.hpp"
 #include "headers/MemProtector.hpp"
 
-TEST_CASE("Test protflag translation", "[MemProtector],[Enums]")
-{
+TEST_CASE("Test protflag translation", "[MemProtector],[Enums]") {
 	SECTION("flags to native") {
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X) == PAGE_EXECUTE);
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::R) == PAGE_READONLY);
@@ -57,4 +56,4 @@ TEST_CASE("Test setting page protections", "[MemProtector]") {
 		REQUIRE(prot2.originalProt() == (PLH::ProtFlag::X | PLH::ProtFlag::R | PLH::ProtFlag::W));
 	}
 	VirtualFree(page, 4 * 1024, MEM_RELEASE);
-} 
+}

@@ -17,16 +17,15 @@
 
 namespace PLH {
 
-class CapstoneDisassembler : public ADisassembler
-{
+class CapstoneDisassembler : public ADisassembler {
 public:
-    CapstoneDisassembler(PLH::Mode mode) : ADisassembler(mode) {
-        cs_mode capmode = (mode == PLH::Mode::x64 ? CS_MODE_64 : CS_MODE_32);
+	CapstoneDisassembler(PLH::Mode mode) : ADisassembler(mode) {
+		cs_mode capmode = (mode == PLH::Mode::x64 ? CS_MODE_64 : CS_MODE_32);
 		if (cs_open(CS_ARCH_X86, capmode, &m_capHandle) != CS_ERR_OK)
 			printf("error opening cap\n");
 
-        cs_option(m_capHandle, CS_OPT_DETAIL, CS_OPT_ON);
-    }
+		cs_option(m_capHandle, CS_OPT_DETAIL, CS_OPT_ON);
+	}
 
 	~CapstoneDisassembler() {
 		if (m_capHandle)
@@ -34,46 +33,46 @@ public:
 		m_capHandle = NULL;
 	}
 
-    virtual std::vector<PLH::Instruction>
-    disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end) override;
+	virtual std::vector<PLH::Instruction>
+		disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end) override;
 
-    virtual void writeEncoding(const PLH::Instruction& instruction) const override;
+	virtual void writeEncoding(const PLH::Instruction& instruction) const override;
 
-    virtual bool isConditionalJump(const PLH::Instruction& instruction) const override;
+	virtual bool isConditionalJump(const PLH::Instruction& instruction) const override;
 
 	virtual bool isFuncEnd(const PLH::Instruction& instructioni) const override;
 private:
-    x86_reg getIpReg() const {
-        if (m_mode == PLH::Mode::x64)
-            return X86_REG_RIP;
-        else //if(m_Mode == PLH::ADisassembler::Mode::x86)
-            return X86_REG_EIP;
-    }
+	x86_reg getIpReg() const {
+		if (m_mode == PLH::Mode::x64)
+			return X86_REG_RIP;
+		else //if(m_Mode == PLH::ADisassembler::Mode::x86)
+			return X86_REG_EIP;
+	}
 
-    bool hasGroup(const cs_insn* inst, const x86_insn_group grp) const {
-        uint8_t GrpSize = inst->detail->groups_count;
+	bool hasGroup(const cs_insn* inst, const x86_insn_group grp) const {
+		uint8_t GrpSize = inst->detail->groups_count;
 
-        for (int i = 0; i < GrpSize; i++) {
-            if (inst->detail->groups[i] == grp)
-                return true;
-        }
-        return false;
-    }
+		for (int i = 0; i < GrpSize; i++) {
+			if (inst->detail->groups[i] == grp)
+				return true;
+		}
+		return false;
+	}
 
-    void setDisplacementFields(Instruction& inst, const cs_insn* capInst) const;
+	void setDisplacementFields(Instruction& inst, const cs_insn* capInst) const;
 
-    /* For immediate types capstone gives us only the final destination, but *we* care about the base + displacement values.
-     * Immediates can be encoded either as some value relative to a register, or a straight up hardcoded address, we need
-     * to figure out which so that we can do code relocation later. To deconstruct the info we need first we read the imm value byte
-     * by byte out of the instruction, if that value is less than what capstone told us is the destination then we know that it is relative and we have to add the base.
-     * Otherwise if our retreived displacement is equal to the given destination then it is a true absolute jmp/call (only possible in x64),
-     * if it's greater then something broke.*/
-    void copyDispSX(PLH::Instruction& inst,
-                            const uint8_t offset,
-                            const uint8_t size,
-                            const int64_t immDestination) const;
+	/* For immediate types capstone gives us only the final destination, but *we* care about the base + displacement values.
+	 * Immediates can be encoded either as some value relative to a register, or a straight up hardcoded address, we need
+	 * to figure out which so that we can do code relocation later. To deconstruct the info we need first we read the imm value byte
+	 * by byte out of the instruction, if that value is less than what capstone told us is the destination then we know that it is relative and we have to add the base.
+	 * Otherwise if our retreived displacement is equal to the given destination then it is a true absolute jmp/call (only possible in x64),
+	 * if it's greater then something broke.*/
+	void copyDispSX(PLH::Instruction& inst,
+					const uint8_t offset,
+					const uint8_t size,
+					const int64_t immDestination) const;
 
-    csh m_capHandle;
+	csh m_capHandle;
 };
 }
 #endif //POLYHOOK_2_0_CAPSTONEDISASSEMBLER_HPP

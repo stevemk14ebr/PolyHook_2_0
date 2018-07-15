@@ -19,8 +19,7 @@ using namespace std::placeholders;
 
 namespace PLH {
 
-class x86Detour : public Detour
-{
+class x86Detour : public Detour {
 public:
 	x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
 
@@ -28,9 +27,9 @@ public:
 
 	virtual bool hook() override;
 
-    Mode getArchType() const;
+	Mode getArchType() const;
 
-    insts_t makeJmp(const uint64_t address, const uint64_t destination) const;
+	insts_t makeJmp(const uint64_t address, const uint64_t destination) const;
 
 	uint8_t getJmpSize() const;
 private:

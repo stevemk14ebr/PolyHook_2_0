@@ -12,7 +12,7 @@ PLH::x86Detour::x86Detour(const char* fnAddress, const char* fnCallback, uint64_
 }
 
 PLH::Mode PLH::x86Detour::getArchType() const {
-    return PLH::Mode::x86;
+	return PLH::Mode::x86;
 }
 
 PLH::insts_t PLH::x86Detour::makeJmp(const uint64_t address, const uint64_t destination) const {
@@ -26,7 +26,7 @@ PLH::insts_t PLH::x86Detour::makeJmp(const uint64_t address, const uint64_t dest
 	std::stringstream ss;
 	ss << std::hex << destination;
 
-	return { Instruction(address, disp, 1, true, bytes, "jmp", ss.str(), Mode::x86) };
+	return {Instruction(address, disp, 1, true, bytes, "jmp", ss.str(), Mode::x86)};
 }
 
 uint8_t PLH::x86Detour::getJmpSize() const {
@@ -106,15 +106,14 @@ bool PLH::x86Detour::hook() {
 	m_disasm.writeEncoding(prolJmp);
 
 	// Nop the space between jmp and end of prologue
-	const uint8_t nopSz = (uint8_t) (roundProlSz - minProlSz);
+	const uint8_t nopSz = (uint8_t)(roundProlSz - minProlSz);
 	std::memset((char*)(m_fnAddress + minProlSz), 0x90, (size_t)nopSz);
 
 	m_hooked = true;
 	return true;
 }
 
-std::optional<PLH::insts_t> PLH::x86Detour::makeTrampoline(insts_t& prologue)
-{
+std::optional<PLH::insts_t> PLH::x86Detour::makeTrampoline(insts_t& prologue) {
 	assert(prologue.size() > 0);
 	const uint64_t prolStart = prologue.front().getAddress();
 	const uint16_t prolSz = calcInstsSz(prologue);

@@ -5,16 +5,17 @@
 #ifndef POLYHOOK_2_0_ADETOUR_HPP
 #define POLYHOOK_2_0_ADETOUR_HPP
 
+#include <functional>
 #include <optional>
 #include <cassert>
+#include <vector>
 #include <map>
 
 #include "headers/ADisassembler.hpp"
+#include "headers/MemProtector.hpp"
+#include "headers/ErrorLog.hpp"
 #include "headers/IHook.hpp"
 #include "headers/Enums.hpp"
-#include "headers/ErrorLog.hpp"
-#include "headers/MemProtector.hpp"
-#include <optional>
 
 #pragma warning(disable:4100)
 #pragma warning(disable:4189)
@@ -29,7 +30,7 @@
 namespace PLH {
 
 /**First param is an address to a function that you want to
-cast to the type of pFnCastTo. Second param must be a pointer 
+cast to the type of pFnCastTo. Second param must be a pointer
 to function type**/
 template<typename T>
 T FnCast(uint64_t fnToCast, T pFnCastTo) {
@@ -43,35 +44,27 @@ T FnCast(void* fnToCast, T pFnCastTo) {
 
 // Cast a member function pointer that cannot have a reference taken to a void *
 template <typename RET_TYPE, typename CLASS, typename...ARGs>
-void* MemFnPtr(RET_TYPE(CLASS::*&&pOriginalFunction)(ARGs...))
-{
-	union
-	{
+void* MemFnPtr(RET_TYPE(CLASS::*&&pOriginalFunction)(ARGs...)) {
+	union {
 		RET_TYPE(CLASS::*pMemFn)(ARGs...);
 		void* voidPtr;
-	} cast = { pOriginalFunction };
+	} cast = {pOriginalFunction};
 	static_assert(sizeof(cast.pMemFn) == sizeof(cast.voidPtr), "Cannot cast this member function pointer to a void*.  Not the same size.");
 	return cast.voidPtr;
 }
 
 // Cast a member function pointer to a void*&
 template <typename RET_TYPE, typename CLASS, typename...ARGs>
-void*& MemFnPtr(RET_TYPE(CLASS::*&pOriginalFunction)(ARGs...))
-{
-	union
-	{
+void*& MemFnPtr(RET_TYPE(CLASS::*&pOriginalFunction)(ARGs...)) {
+	union {
 		RET_TYPE(CLASS::*&pMemFn)(ARGs...);
 		void*& voidPtr;
-	} cast = { pOriginalFunction };
+	} cast = {pOriginalFunction};
 	static_assert(sizeof(cast.pMemFn) == sizeof(cast.voidPtr), "Cannot cast this member function pointer to a void*.  Not the same size.");
 	return cast.voidPtr;
 }
 
-#include <functional>
-#include <vector>
-
-class Detour : public PLH::IHook
-{
+class Detour : public PLH::IHook {
 public:
 	Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : m_disasm(dis) {
 		assert(fnAddress != 0 && fnCallback != 0);
@@ -101,8 +94,8 @@ public:
 
 	virtual Mode getArchType() const = 0;
 protected:
-    uint64_t                m_fnAddress;
-    uint64_t                m_fnCallback;
+	uint64_t                m_fnAddress;
+	uint64_t                m_fnCallback;
 	uint64_t				m_trampoline;
 	uint16_t			    m_trampolineSz;
 	uint64_t*				m_userTrampVar;
@@ -113,7 +106,7 @@ protected:
 	/**Walks the given vector of instructions and sets roundedSz to the lowest size possible that doesn't split any instructions and is greater than minSz.
 	If end of function is encountered before this condition an empty optional is returned. Returns instructions in the range start to adjusted end**/
 	std::optional<insts_t> calcNearestSz(const insts_t& functionInsts, const uint64_t minSz,
-			uint64_t& roundedSz);
+										 uint64_t& roundedSz);
 
 	/**If function starts with a jump follow it until the first non-jump instruction, recursively. This handles already hooked functions
 	and also compilers that emit jump tables on function call. Returns true if resolution was successful (nothing to resolve, or resolution worked),
@@ -122,24 +115,23 @@ protected:
 
 	/**Expand the prologue up to the address of the last jmp that points back into the prologue. This
 	is necessary because we modify the location of things in the prologue, so re-entrant jmps point
-	to the wrong place. Therefore we move all of it to the trampoline where there is ample space to 
+	to the wrong place. Therefore we move all of it to the trampoline where there is ample space to
 	relocate and create jmp tbl entries**/
 	bool expandProlSelfJmps(insts_t& prol,
-		const insts_t& func,
-		uint64_t& minProlSz,
-		uint64_t& roundProlSz);
+							const insts_t& func,
+							uint64_t& minProlSz,
+							uint64_t& roundProlSz);
 
 	void buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t &instsNeedingEntry, PLH::insts_t &instsNeedingReloc);
 
 	template<typename MakeJmpFn>
 	PLH::insts_t relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry);
 
-    bool                    m_hooked;
+	bool                    m_hooked;
 };
 
 template<typename MakeJmpFn>
-PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry)
-{
+PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry) {
 	uint64_t jmpTblCurAddr = jmpTblStart;
 	insts_t jmpTblEntries;
 	for (auto& inst : prologue) {

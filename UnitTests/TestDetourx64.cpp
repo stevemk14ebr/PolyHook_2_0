@@ -10,9 +10,9 @@
 EffectTracker effects;
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
-the handler or inline the function. NOINLINE attempts to fix the latter, the former 
-is out of our control but typically returning volatile things, volatile locals, and a 
-printf inside the body can mitigate this significantly. Do serious checking in debug 
+the handler or inline the function. NOINLINE attempts to fix the latter, the former
+is out of our control but typically returning volatile things, volatile locals, and a
+printf inside the body can mitigate this significantly. Do serious checking in debug
 or releasewithdebinfo mode (relwithdebinfo optimizes sliiiightly less)**/
 
 NOINLINE void hookMe1() {
@@ -36,7 +36,7 @@ NOINLINE void h_hookMe1() {
 
 NOINLINE void hookMe2() {
 	for (int i = 0; i < 10; i++) {
-		printf("%d\n", i); 
+		printf("%d\n", i);
 	}
 }
 uint64_t hookMe2Tramp = NULL;
@@ -47,7 +47,7 @@ NOINLINE void h_hookMe2() {
 	return PLH::FnCast(hookMe2Tramp, &hookMe2)();
 }
 
-unsigned char hookMe3[] = { 
+unsigned char hookMe3[] = {
 0x57, // push rdi 
 0x74,0xf9,
 0x74, 0xf0,//je 0x0
@@ -96,7 +96,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 	SECTION("Loop function") {
 		PLH::x64Detour detour((char*)&hookMe2, (char*)&h_hookMe2, &hookMe2Tramp, dis);
 		REQUIRE(detour.hook() == true);
-		
+
 		effects.PushEffect();
 		hookMe2();
 		REQUIRE(effects.PopEffect().didExecute());

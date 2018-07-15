@@ -15,49 +15,48 @@ bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs);
 std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag v);
 
 namespace PLH {
-	int	TranslateProtection(const PLH::ProtFlag flags);
-	ProtFlag TranslateProtection(const int prot);
+int	TranslateProtection(const PLH::ProtFlag flags);
+ProtFlag TranslateProtection(const int prot);
 
-	class MemoryProtector
-	{
-	public:
-		MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot, bool unsetOnDestroy = true) {
-			m_address = address;
-			m_length = length;
-			unsetLater = unsetOnDestroy;
+class MemoryProtector {
+public:
+	MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot, bool unsetOnDestroy = true) {
+		m_address = address;
+		m_length = length;
+		unsetLater = unsetOnDestroy;
 
-			m_origProtection = PLH::ProtFlag::UNSET;
-			m_origProtection = protect(address, length, TranslateProtection(prot));
-		}
+		m_origProtection = PLH::ProtFlag::UNSET;
+		m_origProtection = protect(address, length, TranslateProtection(prot));
+	}
 
-		PLH::ProtFlag originalProt() {
-			return m_origProtection;
-		}
+	PLH::ProtFlag originalProt() {
+		return m_origProtection;
+	}
 
-		bool isGood() {
-			return status;
-		}
+	bool isGood() {
+		return status;
+	}
 
-		~MemoryProtector() {
-			if(m_origProtection == PLH::ProtFlag::UNSET || !unsetLater)
-				return;
+	~MemoryProtector() {
+		if (m_origProtection == PLH::ProtFlag::UNSET || !unsetLater)
+			return;
 
-			protect(m_address, m_length, TranslateProtection(m_origProtection));
-		}
-	private:
-		PLH::ProtFlag protect(const uint64_t address, const uint64_t length, int prot) {
-			DWORD orig;
-			DWORD dwProt = prot;
-			status = VirtualProtect((char*)address, (SIZE_T)length, dwProt, &orig) != 0;
-			return TranslateProtection(orig);
-		}
+		protect(m_address, m_length, TranslateProtection(m_origProtection));
+	}
+private:
+	PLH::ProtFlag protect(const uint64_t address, const uint64_t length, int prot) {
+		DWORD orig;
+		DWORD dwProt = prot;
+		status = VirtualProtect((char*)address, (SIZE_T)length, dwProt, &orig) != 0;
+		return TranslateProtection(orig);
+	}
 
-		PLH::ProtFlag m_origProtection;
+	PLH::ProtFlag m_origProtection;
 
-		uint64_t m_address;
-		uint64_t m_length;
-		bool status;
-		bool unsetLater;
-	};
+	uint64_t m_address;
+	uint64_t m_length;
+	bool status;
+	bool unsetLater;
+};
 }
 #endif //POLYHOOK_2_MEMORYPROTECTOR_HPP
