@@ -42,28 +42,6 @@ T FnCast(void* fnToCast, T pFnCastTo) {
 	return (T)fnToCast;
 }
 
-// Cast a member function pointer that cannot have a reference taken to a void *
-template <typename RET_TYPE, typename CLASS, typename...ARGs>
-void* MemFnPtr(RET_TYPE(CLASS::*&&pOriginalFunction)(ARGs...)) {
-	union {
-		RET_TYPE(CLASS::*pMemFn)(ARGs...);
-		void* voidPtr;
-	} cast = {pOriginalFunction};
-	static_assert(sizeof(cast.pMemFn) == sizeof(cast.voidPtr), "Cannot cast this member function pointer to a void*.  Not the same size.");
-	return cast.voidPtr;
-}
-
-// Cast a member function pointer to a void*&
-template <typename RET_TYPE, typename CLASS, typename...ARGs>
-void*& MemFnPtr(RET_TYPE(CLASS::*&pOriginalFunction)(ARGs...)) {
-	union {
-		RET_TYPE(CLASS::*&pMemFn)(ARGs...);
-		void*& voidPtr;
-	} cast = {pOriginalFunction};
-	static_assert(sizeof(cast.pMemFn) == sizeof(cast.voidPtr), "Cannot cast this member function pointer to a void*.  Not the same size.");
-	return cast.voidPtr;
-}
-
 class Detour : public PLH::IHook {
 public:
 	Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : m_disasm(dis) {

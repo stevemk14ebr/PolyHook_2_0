@@ -36,6 +36,7 @@ TEST_CASE("Testing Hardware Breakpoints", "[AVehHook],[HWBreakPointHook]") {
 		REQUIRE(hookMeHWBP() == 3);
 		REQUIRE(effects3.PopEffect().didExecute());
 		hwBpHook->unHook();
+		hwBpHook.reset();
 	}
 
 	SECTION("Verify multiple calls in a row reprotect") {

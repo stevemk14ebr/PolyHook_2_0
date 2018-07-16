@@ -33,9 +33,11 @@ TEST_CASE("Testing Software Breakpoint", "[AVehHook],[BreakpointHook]") {
 		REQUIRE(bpHook->hook() == true);
 		
 		effects2.PushEffect();
+
 		REQUIRE(hookMe() == 3);
 		REQUIRE(effects2.PopEffect().didExecute());
 		bpHook->unHook();
+		bpHook.reset();
 	}
 
 	SECTION("Verify multiple calls in a row reprotect") {

@@ -22,7 +22,7 @@ public:
 	}
 
 	void push(const Error& err) {
-		std::cout << "[!] ERROR:" << err.msg << std::endl;
+		std::cout << "[!]ERROR:" << err.msg << std::endl;
 		m_log.push_back(err);
 	}
 

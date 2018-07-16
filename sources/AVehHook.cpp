@@ -35,14 +35,33 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	DWORD ExceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 	uint64_t ip = ExceptionInfo->ContextRecord->XIP;
 	
-	printf("Got top level exception\n");
+	printf("Got top level exception: %I64X %X\n", ip, ExceptionCode);
 	switch (ExceptionCode) {
+	case 0xE06D7363:
+		std::cout << "C++ exception thrown" << std::endl;
+		break;
 	case EXCEPTION_BREAKPOINT:
+		printf("Exception Breakpoint\n");
 	case EXCEPTION_SINGLE_STEP:
-	case EXCEPTION_GUARD_PAGE:
+		printf("Exception SS\n");
 		// lookup which instance to forward exception to
 		if (m_impls.find(ip) != m_impls.end()) {
+			printf("Dispatching\n");
 			return m_impls.at(ip)->OnException(ExceptionInfo);
+		}
+		break;
+	case EXCEPTION_GUARD_PAGE:
+		printf("Exception guard page\n");
+
+		// dispatch to handler impl if found
+		if (m_impls.find(ip) != m_impls.end()) {
+			return m_impls.at(ip)->OnException(ExceptionInfo);
+		}
+
+		decltype(m_impls)::iterator it;
+		for (it = m_impls.begin(); it != m_impls.end(); it++) {
+			if (AreInSamePage(it->first, ip))
+				return EXCEPTION_CONTINUE_EXECUTION;
 		}
 	}
 	return EXCEPTION_CONTINUE_SEARCH;

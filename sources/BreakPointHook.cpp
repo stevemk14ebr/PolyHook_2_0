@@ -3,13 +3,19 @@
 PLH::BreakPointHook::BreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback) : AVehHook() {
 	m_fnCallback = fnCallback;
 	m_fnAddress = fnAddress;
+	assert(m_impls.find(m_fnAddress) == m_impls.end());
 	m_impls[fnAddress] = this;
 }
 
 PLH::BreakPointHook::BreakPointHook(const char* fnAddress, const char* fnCallback) : AVehHook() {
 	m_fnCallback = (uint64_t)fnCallback;
 	m_fnAddress = (uint64_t)fnAddress;
+	assert(m_impls.find(m_fnAddress) == m_impls.end());
 	m_impls[(uint64_t)fnAddress] = this;
+}
+
+PLH::BreakPointHook::~BreakPointHook() {
+	m_impls.erase(m_fnAddress);
 }
 
 bool PLH::BreakPointHook::hook() {
@@ -26,6 +32,9 @@ bool PLH::BreakPointHook::unHook() {
 }
 
 LONG PLH::BreakPointHook::OnException(EXCEPTION_POINTERS* ExceptionInfo) {
+	if (ExceptionInfo->ExceptionRecord->ExceptionCode != EXCEPTION_BREAKPOINT)
+		return EXCEPTION_CONTINUE_SEARCH;
+
 	unHook();
 	ExceptionInfo->ContextRecord->XIP = (decltype(ExceptionInfo->ContextRecord->XIP))m_fnCallback;
 	return EXCEPTION_CONTINUE_EXECUTION;

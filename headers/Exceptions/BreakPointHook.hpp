@@ -12,6 +12,8 @@ class BreakPointHook : public AVehHook {
 public:
 	BreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback);
 	BreakPointHook(const char* fnAddress, const char* fnCallback);
+	~BreakPointHook();
+
 	virtual bool hook() override;
 	virtual bool unHook() override;
 	auto getProtectionObject() {

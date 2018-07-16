@@ -1,17 +1,21 @@
 #include "headers/Exceptions/HWBreakPointHook.hpp"
 
-#include "headers/Exceptions/BreakPointHook.hpp"
-
 PLH::HWBreakPointHook::HWBreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback) : AVehHook() {
 	m_fnCallback = fnCallback;
 	m_fnAddress = fnAddress;
+	assert(m_impls.find(m_fnAddress) == m_impls.end());
 	m_impls[fnAddress] = this;
 }
 
 PLH::HWBreakPointHook::HWBreakPointHook(const char* fnAddress, const char* fnCallback) : AVehHook() {
 	m_fnCallback = (uint64_t)fnCallback;
 	m_fnAddress = (uint64_t)fnAddress;
+	assert(m_impls.find(m_fnAddress) == m_impls.end());
 	m_impls[(uint64_t)fnAddress] = this;
+}
+
+PLH::HWBreakPointHook::~HWBreakPointHook() {
+	m_impls.erase(m_fnAddress);
 }
 
 bool PLH::HWBreakPointHook::hook() {
@@ -85,6 +89,9 @@ bool PLH::HWBreakPointHook::unHook() {
 }
 
 LONG PLH::HWBreakPointHook::OnException(EXCEPTION_POINTERS* ExceptionInfo) {
+	if (ExceptionInfo->ExceptionRecord->ExceptionCode != EXCEPTION_SINGLE_STEP)
+		return EXCEPTION_CONTINUE_EXECUTION;
+
 	ExceptionInfo->ContextRecord->Dr7 &= ~(1ULL << (2 * m_regIdx));
 	ExceptionInfo->ContextRecord->XIP = (decltype(ExceptionInfo->ContextRecord->XIP))m_fnCallback;
 	return EXCEPTION_CONTINUE_EXECUTION;
