@@ -59,22 +59,19 @@ if(FEATURE_EXCEPTION MATCHES ON)
 	set(EXCEPTION_HEADER_FILES 
 		${PROJECT_SOURCE_DIR}/headers/Exceptions/AVehHook.hpp
 		${PROJECT_SOURCE_DIR}/headers/Exceptions/BreakPointHook.hpp
-		${PROJECT_SOURCE_DIR}/headers/Exceptions/HWBreakPointHook.hpp
-		${PROJECT_SOURCE_DIR}/headers/Exceptions/PageFaultHook.hpp)
+		${PROJECT_SOURCE_DIR}/headers/Exceptions/HWBreakPointHook.hpp)
 
 	set(EXCEPTION_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/AVehHook.cpp
 		${PROJECT_SOURCE_DIR}/sources/BreakPointHook.cpp
-		${PROJECT_SOURCE_DIR}/sources/HWBreakPointHook.cpp
-		${PROJECT_SOURCE_DIR}/sources/PageFaultHook.cpp)
+		${PROJECT_SOURCE_DIR}/sources/HWBreakPointHook.cpp)
 
 	set(HEADER_FILES ${HEADER_FILES} ${EXCEPTION_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${EXCEPTION_IMP_SOURCES})
 
 	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
 			${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestPageFaultHook.cpp)
+			${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR})
