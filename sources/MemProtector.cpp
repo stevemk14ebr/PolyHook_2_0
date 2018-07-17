@@ -56,7 +56,7 @@ int PLH::TranslateProtection(const PLH::ProtFlag flags) {
 	if (flags == PLH::ProtFlag::R)
 		NativeFlag = PAGE_READONLY;
 
-	if (flags == PLH::ProtFlag::W)
+	if (flags == PLH::ProtFlag::W || (flags == (PLH::ProtFlag::R | PLH::ProtFlag::W)))
 		NativeFlag = PAGE_READWRITE;
 
 	if ((flags & PLH::ProtFlag::X) && (flags & PLH::ProtFlag::R))

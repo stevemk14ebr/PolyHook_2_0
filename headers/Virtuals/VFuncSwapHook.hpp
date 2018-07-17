@@ -1,5 +1,5 @@
-#ifndef POLYHOOK_2_0_VTBLSWAPHOOK_HPP
-#define POLYHOOK_2_0_VTBLSWAPHOOK_HPP
+#ifndef POLYHOOK_2_0_VFUNCSWAPHOOK_HPP
+#define POLYHOOK_2_0_VFUNCSWAPHOOK_HPP
 
 #include <cassert>
 #include <map>
@@ -11,11 +11,11 @@
 namespace PLH {
 typedef std::map<uint16_t, uint64_t> VFuncMap;
 
-class VTableSwapHook : public PLH::IHook {
+class VFuncSwapHook : public PLH::IHook {
 public:
-	VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap);
-	VTableSwapHook(const char* Class, const VFuncMap& redirectMap);
-	~VTableSwapHook();
+	VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap);
+	VFuncSwapHook(const char* Class, const VFuncMap& redirectMap);
+	~VFuncSwapHook();
 
 	VFuncMap getOriginals() const;
 
@@ -26,11 +26,8 @@ public:
 	}
 private:
 	uint16_t countVFuncs();
-
-	uintptr_t* m_newVtable;
-	uintptr_t* m_origVtable;
-
 	uint64_t  m_class;
+	uintptr_t* m_vtable;
 
 	uint16_t  m_vFuncCount;
 

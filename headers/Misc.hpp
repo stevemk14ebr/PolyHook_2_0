@@ -76,5 +76,16 @@ template <typename F>
 static inline FinalAction<F> finally(F f) {
 	return FinalAction<F>(f);
 }
+
+//Credit to Dogmatt on unknowncheats.me for IsValidPtr
+// and https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/virtual-address-spaces
+#ifdef _WIN64
+#define _PTR_MAX_VALUE ((void*)0x000F000000000000)
+#else
+#define _PTR_MAX_VALUE ((void*)0xFFF00000)
+#endif
+
+inline bool IsValidPtr(void* p) { return (p >= (void*)0x10000) && (p < _PTR_MAX_VALUE) && p != nullptr; }
+
 }
 #endif //POLYHOOK_2_0_MISC_HPP

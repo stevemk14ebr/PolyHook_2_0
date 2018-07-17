@@ -77,16 +77,19 @@ endif()
 
 if(FEATURE_VIRTUALS MATCHES ON)
 	set(VIRTUAL_HEADER_FILES 
-		${PROJECT_SOURCE_DIR}/headers/Virtuals/VTableSwapHook.hpp)
+		${PROJECT_SOURCE_DIR}/headers/Virtuals/VTableSwapHook.hpp
+		${PROJECT_SOURCE_DIR}/headers/Virtuals/VFuncSwapHook.hpp)
 
 	set(VIRTUAL_IMP_SOURCES
-		${PROJECT_SOURCE_DIR}/sources/VTableSwapHook.cpp)
+		${PROJECT_SOURCE_DIR}/sources/VTableSwapHook.cpp
+		${PROJECT_SOURCE_DIR}/sources/VFuncSwapHook.cpp)
 
 	set(HEADER_FILES ${HEADER_FILES} ${VIRTUAL_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${VIRTUAL_IMP_SOURCES})
 
 	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-			${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp)
+			${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestVFuncSwapHook.cpp)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR})
