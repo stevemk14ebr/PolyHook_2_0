@@ -26,24 +26,6 @@ public:
 	uint16_t m_count;
 };
 
-static inline bool AreInSamePage(const uint64_t Addr1, const uint64_t Addr2) {
-	//If VQ fails, be safe and say they are in same page
-	MEMORY_BASIC_INFORMATION mbi1;
-	ZeroMemory(&mbi1, sizeof(mbi1));
-	if (!VirtualQuery(&Addr1, &mbi1, sizeof(mbi1)))
-		return true;
-
-	MEMORY_BASIC_INFORMATION mbi2;
-	ZeroMemory(&mbi2, sizeof(mbi2));
-	if (!VirtualQuery(&Addr2, &mbi2, sizeof(mbi2)))
-		return true;
-
-	if (mbi1.BaseAddress == mbi2.BaseAddress)
-		return true;
-
-	return false;
-}
-
 class AVehHook;
 class AVehHook : public IHook {
 public:

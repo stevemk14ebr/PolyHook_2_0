@@ -3,6 +3,7 @@ project(PolyHook_2)
 
 option(FEATURE_DETOURS "Implement detour functionality" ON)
 option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
+option(FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 
 #set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 #set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
@@ -72,6 +73,20 @@ if(FEATURE_EXCEPTION MATCHES ON)
 	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
 			${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp
 			${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp)
+endif()
+
+if(FEATURE_VIRTUALS MATCHES ON)
+	set(VIRTUAL_HEADER_FILES 
+		${PROJECT_SOURCE_DIR}/headers/Virtuals/VTableSwapHook.hpp)
+
+	set(VIRTUAL_IMP_SOURCES
+		${PROJECT_SOURCE_DIR}/sources/VTableSwapHook.cpp)
+
+	set(HEADER_FILES ${HEADER_FILES} ${VIRTUAL_HEADER_FILES})
+	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${VIRTUAL_IMP_SOURCES})
+
+	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+			${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR})

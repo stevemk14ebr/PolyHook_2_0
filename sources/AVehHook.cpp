@@ -4,7 +4,7 @@ PLH::RefCounter PLH::AVehHook::m_refCount;
 void* PLH::AVehHook::m_hHandler;
 std::map<uint64_t, PLH::AVehHook*> PLH::AVehHook::m_impls;
 
-//https://reverseengineering.stackexchange.com/questions/14992/what-are-the-vectored-continue-handlers
+// https://reverseengineering.stackexchange.com/questions/14992/what-are-the-vectored-continue-handlers
 PLH::AVehHook::AVehHook() {
 	if (m_refCount.m_count == 0) {
 		m_hHandler = AddVectoredExceptionHandler(1, &AVehHook::Handler);
@@ -50,19 +50,6 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 			return m_impls.at(ip)->OnException(ExceptionInfo);
 		}
 		break;
-	case EXCEPTION_GUARD_PAGE:
-		printf("Exception guard page\n");
-
-		// dispatch to handler impl if found
-		if (m_impls.find(ip) != m_impls.end()) {
-			return m_impls.at(ip)->OnException(ExceptionInfo);
-		}
-
-		decltype(m_impls)::iterator it;
-		for (it = m_impls.begin(); it != m_impls.end(); it++) {
-			if (AreInSamePage(it->first, ip))
-				return EXCEPTION_CONTINUE_EXECUTION;
-		}
 	}
 	return EXCEPTION_CONTINUE_SEARCH;
 }

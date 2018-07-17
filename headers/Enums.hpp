@@ -13,6 +13,7 @@ namespace PLH {
 enum class HookType {
 	Detour,
 	VEHHOOK,
+	VTableSwap,
 	UNKNOWN
 	//#if(ARCH_WIN)
 	//    ,VFuncSwap,
