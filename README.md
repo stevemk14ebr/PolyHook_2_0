@@ -1,5 +1,5 @@
 # PolyHook 2.0
-Cross-platform, Cross-Architecture, C+11, x86/x64 Hooking Libary v2.0
+C+11, x86/x64 Hooking Libary v2.0
 
 # Build
 
@@ -16,6 +16,9 @@ cmake .. -DCAPSTONE_BUILD_TESTS=OFF -DCMAKE_GENERATOR_PLATFORM=x64
 cmake --build . --config Release
 cmake --build . --config Debug
 ```
+
+# Future
+Linux support
 
 # License
 This project is dual-licensed.
