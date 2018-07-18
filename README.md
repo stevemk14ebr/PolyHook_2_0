@@ -16,7 +16,9 @@ cmake .. -DCAPSTONE_BUILD_TESTS=OFF -DCMAKE_GENERATOR_PLATFORM=x64
 cmake --build . --config Release
 cmake --build . --config Debug
 ```
-#Features
+Read the tests for docs for now until i write some. They are extensive
+
+# Features
 1) Inline hook (x86/x64 Detour)
     - Places a jmp to a callback at the prologue, and the allocates a trampoline to continue execution of the original function
     - Follows already hooked functions
@@ -40,6 +42,7 @@ cmake --build . --config Debug
     * Resolves loaded modules through PEB, finds IAT, then swaps the thunk pointer to the callback. 
     
 # Extras
+- THOROUGHLY unit tested, hundreds of tests, using the fantastic library Catch
 - Fully wrapped capstone engine to emit instruction objects. Capstone branch encoding features upstreamed to next and current submodule tagged to next
 - Fully wrapped VirtualProtect into an OS agnostic call. Linux implementation is in the git history and will be exposed later once stable and more complete
 
