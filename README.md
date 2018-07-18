@@ -1,5 +1,5 @@
 # PolyHook 2.0
-C+11, x86/x64 Hooking Libary v2.0
+C+17, x86/x64 Hooking Libary v2.0
 
 # Build
 ```
