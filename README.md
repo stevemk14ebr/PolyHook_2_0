@@ -2,20 +2,13 @@
 C+11, x86/x64 Hooking Libary v2.0
 
 # Build
-
 ```
-cd capstone
-mkdir build && mkdir build64
-cd build
-cmake .. -DCAPSTONE_BUILD_TESTS=OFF
-cmake --build . --config Release
-cmake --build . --config Debug
-
-cd ../build64
-cmake .. -DCAPSTONE_BUILD_TESTS=OFF -DCMAKE_GENERATOR_PLATFORM=x64
-cmake --build . --config Release
-cmake --build . --config Debug
+git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
+git submodule update --init --recursive
 ```
+Then run buildcapstone.bat and open this in VS2017 now that it has cmake support. Or generate a cmake project with 
+```cmake -G```. I recommend VS2017 very much.
+
 Read the tests for docs for now until i write some. They are extensive
 
 # Features
@@ -45,6 +38,9 @@ Read the tests for docs for now until i write some. They are extensive
 - THOROUGHLY unit tested, hundreds of tests, using the fantastic library Catch
 - Fully wrapped capstone engine to emit instruction objects. Capstone branch encoding features upstreamed to next and current submodule tagged to next
 - Fully wrapped VirtualProtect into an OS agnostic call. Linux implementation is in the git history and will be exposed later once stable and more complete
+
+# Notes
+- Breakpoint tests must not be run under a debugger. They are commented out by default now.
 
 # Future
 Linux support
