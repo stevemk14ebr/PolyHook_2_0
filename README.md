@@ -13,7 +13,8 @@ Read the tests for docs for now until i write some. They are extensive
 
 # Features
 1) Inline hook (x86/x64 Detour)
-    - Places a jmp to a callback at the prologue, and the allocates a trampoline to continue execution of the original function
+    - Places a jmp to a callback at the prologue, and then allocates a trampoline to continue execution of the original function
+    - Operates entirely on an intermediate instruction object, disassembler engine is swappable, capstone included by default
     - Follows already hooked functions
     - Resolves indirect calls such as through the iat and hooks underlying function
     - Relocates prologue and resolves all position dependent code
@@ -21,7 +22,6 @@ Read the tests for docs for now until i write some. They are extensive
       - Jmps from moved prologue back to original section are resolved
       - Relocations inside the moved section are resolved
     - x64 trampoline is not restricted to +- 2GB, can be anywhere, avoids shadow space + no registers spoiled
-    - Disassembler engine is swappable, capstone included by default
 
 2) Virtual Function Swap (VFuncSwap)
     * Swaps the pointers at given indexs in a C++ VTable to point to a callbacks
