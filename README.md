@@ -41,6 +41,7 @@ cmake --build . --config Debug
     
 # Extras
 - Fully wrapped capstone engine to emit instruction objects. Capstone branch encoding features upstreamed to next and current submodule tagged to next
+- Fully wrapped VirtualProtect into an OS agnostic call. Linux implementation is in the git history and will be exposed later
 
 # Future
 Linux support
