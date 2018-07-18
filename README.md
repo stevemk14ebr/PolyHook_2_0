@@ -46,5 +46,9 @@ cmake --build . --config Debug
 # Future
 Linux support
 
+# Donate
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)]
+https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=M2K8DQUNDUGMW&lc=US&item_name=PolyHook%20Donation&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted
+
 # License
 MIT - Please consider donating
