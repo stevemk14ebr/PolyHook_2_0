@@ -13,11 +13,9 @@ typedef std::map<uint16_t, uint64_t> VFuncMap;
 
 class VFuncSwapHook : public PLH::IHook {
 public:
-	VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap);
-	VFuncSwapHook(const char* Class, const VFuncMap& redirectMap);
+	VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* origVFuncs);
+	VFuncSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* origVFuncs);
 	~VFuncSwapHook();
-
-	VFuncMap getOriginals() const;
 
 	virtual bool hook() override;
 	virtual bool unHook() override;
@@ -34,6 +32,7 @@ private:
 	// index -> ptr val 
 	VFuncMap m_redirectMap;
 	VFuncMap m_origVFuncs;
+	VFuncMap* m_userOrigMap;
 	bool m_Hooked;
 };
 }

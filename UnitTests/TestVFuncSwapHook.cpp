@@ -38,9 +38,8 @@ TEST_CASE("VFuncSwap tests", "[VFuncSwap]") {
 
 	SECTION("Verify vfunc redirected") {
 		PLH::VFuncMap redirect = {{(uint16_t)0, (uint64_t)&hkVirtNoParams2}};
-		PLH::VFuncSwapHook hook((char*)ClassToHook.get(), redirect);
+		PLH::VFuncSwapHook hook((char*)ClassToHook.get(), redirect, &origVFuncs2);
 		REQUIRE(hook.hook());
-		origVFuncs2 = hook.getOriginals();
 		REQUIRE(origVFuncs2.size() == 1);
 
 		vFuncSwapEffects.PushEffect();
@@ -51,9 +50,8 @@ TEST_CASE("VFuncSwap tests", "[VFuncSwap]") {
 
 	SECTION("Verify multiple vfunc redirected") {
 		PLH::VFuncMap redirect = {{(uint16_t)0, (uint64_t)&hkVirtNoParams2},{(uint16_t)1, (uint64_t)&hkVirt2NoParams2}};
-		PLH::VFuncSwapHook hook((char*)ClassToHook.get(), redirect);
+		PLH::VFuncSwapHook hook((char*)ClassToHook.get(), redirect, &origVFuncs2);
 		REQUIRE(hook.hook());
-		origVFuncs2 = hook.getOriginals();
 		REQUIRE(origVFuncs2.size() == 2);
 
 		vFuncSwapEffects.PushEffect();

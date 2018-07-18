@@ -1,15 +1,15 @@
 #include "headers/Virtuals/VFuncSwapHook.hpp"
 
-PLH::VFuncSwapHook::VFuncSwapHook(const char* Class, const VFuncMap& redirectMap) {
+PLH::VFuncSwapHook::VFuncSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap) {
 	m_class = (uint64_t)Class;
 	m_redirectMap = redirectMap;
-	
+	m_userOrigMap = userOrigMap;
 }
 
-PLH::VFuncSwapHook::VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap) {
+PLH::VFuncSwapHook::VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap) {
 	m_class = Class;
 	m_redirectMap = redirectMap;
-	
+	m_userOrigMap = userOrigMap;
 }
 
 PLH::VFuncSwapHook::~VFuncSwapHook() {
@@ -17,6 +17,7 @@ PLH::VFuncSwapHook::~VFuncSwapHook() {
 }
 
 bool PLH::VFuncSwapHook::hook() {
+	assert(m_userOrigMap != nullptr);
 	MemoryProtector prot(m_class, sizeof(void*), ProtFlag::R | ProtFlag::W);
 	m_vtable = *(uintptr_t**)m_class;
 	m_vFuncCount = countVFuncs();
@@ -31,6 +32,7 @@ bool PLH::VFuncSwapHook::hook() {
 
 		// redirect ptr at VTable[i]
 		m_origVFuncs[p.first] = (uint64_t)m_vtable[p.first];
+		(*m_userOrigMap)[p.first] = (uint64_t)m_vtable[p.first];
 		m_vtable[p.first] = (uintptr_t)p.second;
 	}
 
@@ -39,6 +41,7 @@ bool PLH::VFuncSwapHook::hook() {
 }
 
 bool PLH::VFuncSwapHook::unHook() {
+	assert(m_userOrigMap != nullptr);
 	assert(m_Hooked);
 	if (!m_Hooked)
 		return false;
@@ -52,6 +55,7 @@ bool PLH::VFuncSwapHook::unHook() {
 		m_vtable[p.first] = (uintptr_t)p.second;
 	}
 
+	m_userOrigMap = nullptr;
 	return true;
 }
 
@@ -63,8 +67,4 @@ uint16_t PLH::VFuncSwapHook::countVFuncs() {
 			break;
 	}
 	return count;
-}
-
-PLH::VFuncMap PLH::VFuncSwapHook::getOriginals() const {
-	return m_origVFuncs;
 }

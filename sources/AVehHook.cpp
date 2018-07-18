@@ -9,7 +9,6 @@ PLH::AVehHook::AVehHook() {
 	if (m_refCount.m_count == 0) {
 		m_hHandler = AddVectoredExceptionHandler(1, &AVehHook::Handler);
 		if (m_hHandler == NULL) {
-			std::cout << "VEH FAILED!" << std::endl;
 			ErrorLog::singleton().push("Failed to add VEH", ErrorLevel::SEV);
 		}
 	}
@@ -35,18 +34,14 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	DWORD ExceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 	uint64_t ip = ExceptionInfo->ContextRecord->XIP;
 	
-	printf("Got top level exception: %I64X %X\n", ip, ExceptionCode);
 	switch (ExceptionCode) {
-	case 0xE06D7363:
+	case 0xE06D7363: // oooh aaahh a magic value
 		std::cout << "C++ exception thrown" << std::endl;
 		break;
 	case EXCEPTION_BREAKPOINT:
-		printf("Exception Breakpoint\n");
 	case EXCEPTION_SINGLE_STEP:
-		printf("Exception SS\n");
 		// lookup which instance to forward exception to
 		if (m_impls.find(ip) != m_impls.end()) {
-			printf("Dispatching\n");
 			return m_impls.at(ip)->OnException(ExceptionInfo);
 		}
 		break;

@@ -69,8 +69,6 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunk(const std::string& dllName, const s
 		if (moduleName != L"" && (my_wide_stricmp(baseModuleName.c_str(), moduleName.c_str()) != 0))
 			continue;
 
-		std::wcout << "module name: " << baseModuleName << std::endl;
-
 		pThunk = FindIatThunkInModule(dte->DllBase, dllName, apiName);
 		if (pThunk != nullptr)
 			return pThunk;
@@ -101,7 +99,6 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunkInModule(void* moduleBase, const std
 	// import entry with null fields marks end
 	for (uint_fast16_t i = 0; pImports[i].Name != NULL; i++) {
 		std::string curDllName(RVA2VA(PCHAR, moduleBase, pImports[i].Name));
-		std::cout << "dll name: " << curDllName << " mine: "  << dllName <<  std::endl;
 		if (my_narrow_stricmp(curDllName.c_str(), dllName.c_str()) != 0)
 			continue;
 		
@@ -129,7 +126,6 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunkInModule(void* moduleBase, const std
 				RVA2VA(uintptr_t, moduleBase, pOriginalThunk->u1.AddressOfData);
 
 			std::string curApiName = std::string(pImport->Name);
-			std::cout << curApiName << std::endl;
 			if (my_narrow_stricmp(curApiName.c_str(), apiName.c_str()) != 0)
 				continue;
 
