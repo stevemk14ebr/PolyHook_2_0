@@ -4,6 +4,7 @@ project(PolyHook_2)
 option(FEATURE_DETOURS "Implement detour functionality" ON)
 option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
 option(FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
+option(FEATURE_PE "Implement all win pe hooking functionality" ON)
 
 #set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 #set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
@@ -18,8 +19,7 @@ set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
         ${PROJECT_SOURCE_DIR}/headers/Misc.hpp
 		${PROJECT_SOURCE_DIR}/headers/UID.hpp
 		${PROJECT_SOURCE_DIR}/headers/ErrorLog.hpp
-		${PROJECT_SOURCE_DIR}/headers/MemProtector.hpp
-		${PROJECT_SOURCE_DIR}/headers/MemAllocator.hpp)
+		${PROJECT_SOURCE_DIR}/headers/MemProtector.hpp)
 
 set(HEADER_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
@@ -92,15 +92,32 @@ if(FEATURE_VIRTUALS MATCHES ON)
 			${PROJECT_SOURCE_DIR}/UnitTests/TestVFuncSwapHook.cpp)
 endif()
 
+if(FEATURE_PE MATCHES ON)
+	set(PE_HEADER_FILES
+		${PROJECT_SOURCE_DIR}/headers/PE/IatHook.hpp
+		${PROJECT_SOURCE_DIR}/headers/PE/PEB.hpp)
+
+	set(PE_IMP_SOURCES 
+		${PROJECT_SOURCE_DIR}/sources/IatHook.cpp)
+
+	set(HEADER_FILES ${HEADER_FILES} ${PE_HEADER_FILES})
+	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${PE_IMP_SOURCES})
+
+	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+			${PROJECT_SOURCE_DIR}/UnitTests/TestIatHook.cpp)
+endif()
+
 include_directories(${PROJECT_SOURCE_DIR})
 
 set(SOURCE_FILES_PLH ${UNIT_TEST_SOURCES} ${HEADER_IMP_SOURCES} ${HEADER_FILES})
 
 add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
+
+# require c++ 17 (for std::optional) and add WALL + PDB flags
 target_compile_options(PolyHook_2 PRIVATE /std:c++latest)
 if(MSVC)
   target_compile_options(PolyHook_2 PRIVATE /W4 /WX /Z7)
-  target_link_libraries(PolyHook_2 optimized -DEBUG) # need that pdb for release
+  target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
 else(MSVC)
   target_compile_options(PolyHook_2 PRIVATE -Wall -Wextra -pedantic -Werror)
 endif(MSVC)

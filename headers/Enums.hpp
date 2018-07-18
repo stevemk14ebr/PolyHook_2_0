@@ -14,14 +14,8 @@ enum class HookType {
 	Detour,
 	VEHHOOK,
 	VTableSwap,
+	IAT,
 	UNKNOWN
-	//#if(ARCH_WIN)
-	//    ,VFuncSwap,
-	//    VFuncDetour,
-	//    VTableSwap,
-	//    IAT,
-	//    VEH,
-	//#endif
 };
 
 //unsafe enum by design to allow binary OR
