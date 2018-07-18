@@ -18,9 +18,9 @@ Read the tests for docs for now until i write some. They are extensive
     - Follows already hooked functions
     - Resolves indirect calls such as through the iat and hooks underlying function
     - Relocates prologue and resolves all position dependent code
-      - Branches of into overwritten section are resolved
-      - Jmps from moved prologue back to original section are resolved
-      - Relocations inside the moved section are resolved
+      - Branches into overwritten section are resolved to the new moved location
+      - Jmps from moved prologue back to original section are resolved through a jmp table
+      - Relocations inside the moved section are resolved (not using relocation table, disassembles using engine)
     - x64 trampoline is not restricted to +- 2GB, can be anywhere, avoids shadow space + no registers spoiled
     - If inline hook fails at an intermediate step the original function will not be malformed. All writes are batched until after we know later steps succeed.
 
