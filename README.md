@@ -56,3 +56,11 @@ https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=M2K8DQUNDUGMW&lc=U
 
 # License
 MIT - Please consider donating
+
+# Resource &/| references
+evolution536 on Unknowncheats.me
+https://github.com/DarthTon/Blackbone
+https://www.codeproject.com/Articles/44326/MinHook-The-Minimalistic-x-x-API-Hooking-Libra
+https://wiki.osdev.org/CPU_Registers_x86#Debug_Registers
+https://reverseengineering.stackexchange.com/questions/14992/what-are-the-vectored-continue-handlers
+
