@@ -68,3 +68,6 @@ https://wiki.osdev.org/CPU_Registers_x86#Debug_Registers
 
 https://reverseengineering.stackexchange.com/questions/14992/what-are-the-vectored-continue-handlers
 
+https://web.archive.org/web/20170126064234/https://modexp.wordpress.com/2017/01/15/shellcode-resolving-api-addresses/
+
+https://github.com/odzhan/shellcode/blob/master/os/win/getapi/dynamic/getapi.c
