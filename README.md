@@ -1,7 +1,7 @@
 # PolyHook 2.0
 C+17, x86/x64 Hooking Libary v2.0
 
-Article 1: https://github.com/stevemk14ebr/PolyHook_2_0
+Article 1: https://www.codeproject.com/articles/1100579/polyhook-the-cplusplus-x-x-hooking-library
 
 Article 2: https://www.codeproject.com/Articles/1252212/PolyHook-2-Cplusplus17-x86-x64-Hooking-Library
 
