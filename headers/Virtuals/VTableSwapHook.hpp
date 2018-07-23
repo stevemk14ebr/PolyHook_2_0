@@ -2,6 +2,7 @@
 #define POLYHOOK_2_0_VTBLSWAPHOOK_HPP
 
 #include <cassert>
+#include <memory>
 #include <map>
 
 #include "headers/IHook.hpp"
@@ -15,9 +16,9 @@ class VTableSwapHook : public PLH::IHook {
 public:
 	VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap);
 	VTableSwapHook(const char* Class, const VFuncMap& redirectMap);
-	~VTableSwapHook();
+	~VTableSwapHook() = default;
 
-	VFuncMap getOriginals() const;
+	const VFuncMap& getOriginals() const;
 
 	virtual bool hook() override;
 	virtual bool unHook() override;
@@ -27,7 +28,7 @@ public:
 private:
 	uint16_t countVFuncs();
 
-	uintptr_t* m_newVtable;
+	std::unique_ptr<uintptr_t[]> m_newVtable;
 	uintptr_t* m_origVtable;
 
 	uint64_t  m_class;
