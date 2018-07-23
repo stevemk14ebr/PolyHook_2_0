@@ -1,20 +1,14 @@
 #include "headers/Virtuals/VFuncSwapHook.hpp"
 
-PLH::VFuncSwapHook::VFuncSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap) {
-	m_class = (uint64_t)Class;
-	m_redirectMap = redirectMap;
-	m_userOrigMap = userOrigMap;
-}
+PLH::VFuncSwapHook::VFuncSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap)
+    : VFuncSwapHook((uint64_t)Class, redirectMap, userOrigMap)
+{}
 
-PLH::VFuncSwapHook::VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap) {
-	m_class = Class;
-	m_redirectMap = redirectMap;
-	m_userOrigMap = userOrigMap;
-}
-
-PLH::VFuncSwapHook::~VFuncSwapHook() {
-	
-}
+PLH::VFuncSwapHook::VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap) 
+	: m_class(Class)
+	, m_redirectMap(redirectMap)
+	, m_userOrigMap(userOrigMap)
+{}
 
 bool PLH::VFuncSwapHook::hook() {
 	assert(m_userOrigMap != nullptr);
