@@ -1,5 +1,5 @@
 # PolyHook 2.0
-C+17, x86/x64 Hooking Libary v2.0
+C++17, x86/x64 Hooking Libary v2.0
 
 Article 1: https://www.codeproject.com/articles/1100579/polyhook-the-cplusplus-x-x-hooking-library
 
