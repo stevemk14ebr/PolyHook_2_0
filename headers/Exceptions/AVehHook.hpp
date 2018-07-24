@@ -19,18 +19,13 @@ namespace PLH {
 
 class RefCounter {
 public:
-	RefCounter() {
-		m_count = 0;
-	}
-
-	uint16_t m_count;
+	uint16_t m_count = 0;
 };
 
-class AVehHook;
 class AVehHook : public IHook {
 public:
 	AVehHook();
-	~AVehHook();
+	virtual ~AVehHook();
 
 	virtual HookType getType() const {
 		return HookType::VEHHOOK;

@@ -36,13 +36,15 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	
 	switch (ExceptionCode) {
 	case 0xE06D7363: // oooh aaahh a magic value
-		std::cout << "C++ exception thrown" << std::endl;
+        std::cout << "C++ exception thrown" << std::endl;
 		break;
 	case EXCEPTION_BREAKPOINT:
 	case EXCEPTION_SINGLE_STEP:
 		// lookup which instance to forward exception to
-		if (m_impls.find(ip) != m_impls.end()) {
-			return m_impls.at(ip)->OnException(ExceptionInfo);
+        const auto it = m_impls.find(ip);
+
+		if (it != m_impls.end()) {
+			return it->second->OnException(ExceptionInfo);
 		}
 		break;
 	}

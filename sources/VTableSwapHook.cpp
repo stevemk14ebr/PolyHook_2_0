@@ -1,23 +1,13 @@
 #include "headers/Virtuals/VTableSwapHook.hpp"
 
-PLH::VTableSwapHook::VTableSwapHook(const char* Class, const VFuncMap& redirectMap) {
-	m_class = (uint64_t)Class;
-	m_redirectMap = redirectMap;
-	m_newVtable = nullptr;
-}
+PLH::VTableSwapHook::VTableSwapHook(const char* Class, const VFuncMap& redirectMap) 
+	: VTableSwapHook((uint64_t)Class, redirectMap)
+{}
 
-PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap) {
-	m_class = Class;
-	m_redirectMap = redirectMap;
-	m_newVtable = nullptr;
-}
-
-PLH::VTableSwapHook::~VTableSwapHook() {
-	if (m_newVtable != nullptr) {
-		delete[] m_newVtable;
-		m_newVtable = nullptr;
-	}
-}
+PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap) 
+	: m_class(Class)
+	, m_redirectMap(redirectMap)
+{}
 
 bool PLH::VTableSwapHook::hook() {
 	MemoryProtector prot(m_class, sizeof(void*), ProtFlag::R | ProtFlag::W);
@@ -26,12 +16,10 @@ bool PLH::VTableSwapHook::hook() {
 	if (m_vFuncCount <= 0)
 		return false;
 
-	m_newVtable = (uintptr_t*) new uintptr_t[m_vFuncCount];
-	if (m_newVtable == nullptr)
-		return false;
+	m_newVtable.reset(new uintptr_t[m_vFuncCount]);
 
 	// deep copy orig vtable into new
-	memcpy(m_newVtable, m_origVtable, sizeof(uintptr_t) * m_vFuncCount);
+	memcpy(m_newVtable.get(), m_origVtable, sizeof(uintptr_t) * m_vFuncCount);
 
 	for (const auto& p : m_redirectMap) {
 		assert(p.first < m_vFuncCount);
@@ -43,7 +31,7 @@ bool PLH::VTableSwapHook::hook() {
 		m_newVtable[p.first] = (uintptr_t)p.second;
 	}
 
-	*(uint64_t**)m_class = (uint64_t*)m_newVtable;
+	*(uint64_t**)m_class = (uint64_t*)m_newVtable.get();
 	m_Hooked = true;
 	return true;
 }
@@ -56,14 +44,10 @@ bool PLH::VTableSwapHook::unHook() {
 	MemoryProtector prot(m_class, sizeof(void*), ProtFlag::R | ProtFlag::W);
 	*(uint64_t**)m_class = (uint64_t*)m_origVtable;
 	
-	if (m_newVtable != nullptr) {
-		delete[] m_newVtable;
-		m_newVtable = nullptr;
-	}
+	m_newVtable.reset();
 
 	m_Hooked = false;
 	m_origVtable = nullptr;
-	m_newVtable = nullptr;
 	return true;
 }
 
@@ -77,6 +61,6 @@ uint16_t PLH::VTableSwapHook::countVFuncs() {
 	return count;
 }
 
-PLH::VFuncMap PLH::VTableSwapHook::getOriginals() const {
+const PLH::VFuncMap& PLH::VTableSwapHook::getOriginals() const {
 	return m_origVFuncs;
 }

@@ -1,20 +1,16 @@
 #include "headers/PE/IatHook.hpp"
 
-PLH::IatHook::IatHook(const std::string& dllName, const std::string& apiName, const char* fnCallback, uint64_t* userOrigVar, const std::wstring moduleName) {
-	m_moduleName = moduleName;
-	m_dllName = dllName;
-	m_apiName = apiName;
-	m_userOrigVar = userOrigVar;
-	m_fnCallback = (uint64_t)fnCallback;
-}
+PLH::IatHook::IatHook(const std::string& dllName, const std::string& apiName, const char* fnCallback, uint64_t* userOrigVar, const std::wstring& moduleName) 
+	: IatHook(dllName, apiName, (uint64_t)fnCallback, userOrigVar, moduleName)
+{}
 
-PLH::IatHook::IatHook(const std::string& dllName, const std::string& apiName, const uint64_t fnCallback, uint64_t* userOrigVar, const std::wstring moduleName) {
-	m_moduleName = moduleName;
-	m_dllName = dllName;
-	m_apiName = apiName;
-	m_userOrigVar = userOrigVar;
-	m_fnCallback = (uint64_t)fnCallback;
-}
+PLH::IatHook::IatHook(const std::string& dllName, const std::string& apiName, const uint64_t fnCallback, uint64_t* userOrigVar, const std::wstring& moduleName) 
+	: m_moduleName(moduleName)
+    , m_dllName(dllName)
+    , m_apiName(apiName)
+    , m_userOrigVar(userOrigVar)
+    , m_fnCallback(fnCallback)
+{}
 
 bool PLH::IatHook::hook() {
 	assert(m_userOrigVar != nullptr);
@@ -63,10 +59,11 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunk(const std::string& dllName, const s
 		 dte->DllBase != NULL;
 		 dte = (LDR_DATA_TABLE_ENTRY*)dte->InLoadOrderLinks.Flink) {
 
+		// TODO: create stricmp for UNICODE_STRING because this is really bad for performance
 		std::wstring baseModuleName(dte->BaseDllName.Buffer, dte->BaseDllName.Length / sizeof(wchar_t));
 
 		// try all modules if none given, otherwise only try specified
-		if (moduleName != L"" && (my_wide_stricmp(baseModuleName.c_str(), moduleName.c_str()) != 0))
+		if (!moduleName.empty() && (my_wide_stricmp(baseModuleName.c_str(), moduleName.c_str()) != 0))
 			continue;
 
 		pThunk = FindIatThunkInModule(dte->DllBase, dllName, apiName);
@@ -98,8 +95,8 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunkInModule(void* moduleBase, const std
 
 	// import entry with null fields marks end
 	for (uint_fast16_t i = 0; pImports[i].Name != NULL; i++) {
-		std::string curDllName(RVA2VA(PCHAR, moduleBase, pImports[i].Name));
-		if (my_narrow_stricmp(curDllName.c_str(), dllName.c_str()) != 0)
+        if(my_narrow_stricmp(RVA2VA(PCHAR, moduleBase, pImports[i].Name),
+                             dllName.c_str()) != 0)
 			continue;
 		
 		// Original holds the API Names
@@ -125,8 +122,7 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunkInModule(void* moduleBase, const std
 			PIMAGE_IMPORT_BY_NAME pImport = (PIMAGE_IMPORT_BY_NAME)
 				RVA2VA(uintptr_t, moduleBase, pOriginalThunk->u1.AddressOfData);
 
-			std::string curApiName = std::string(pImport->Name);
-			if (my_narrow_stricmp(curApiName.c_str(), apiName.c_str()) != 0)
+            if(my_narrow_stricmp(pImport->Name, apiName.c_str()) != 0)
 				continue;
 
 			return pThunk;
