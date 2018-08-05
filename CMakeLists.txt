@@ -5,10 +5,8 @@ option(FEATURE_DETOURS "Implement detour functionality" ON)
 option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
 option(FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 option(FEATURE_PE "Implement all win pe hooking functionality" ON)
-
-#set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
-#set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
-#set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+option(BUILD_DLL "Build dll & lib instead of tests" OFF)
+option(BUILD_STATIC "If BUILD_DLL is set, create the type that can be statically linked" ON)
 
 #IDE's like it when header file are included as source files
 set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
@@ -45,14 +43,17 @@ if(FEATURE_DETOURS MATCHES ON)
 	set(HEADER_FILES ${HEADER_FILES} ${DETOUR_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${DETOUR_IMP_SOURCES})
 
-	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-		# 64 bits
-		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-			${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx64.cpp)
-	elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-		# 32 bits
-		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-			${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx86.cpp)
+	# only build tests if making exe
+	if(BUILD_DLL MATCHES ON)
+		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+			# 64 bits
+			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx64.cpp)
+		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+			# 32 bits
+			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx86.cpp)
+		endif()
 	endif()
 endif()
 
@@ -70,9 +71,12 @@ if(FEATURE_EXCEPTION MATCHES ON)
 	set(HEADER_FILES ${HEADER_FILES} ${EXCEPTION_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${EXCEPTION_IMP_SOURCES})
 
-	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-			${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp)
+	# only build tests if making exe
+	if(BUILD_DLL MATCHES ON)
+		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+				${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp
+				${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp)
+	endif()
 endif()
 
 if(FEATURE_VIRTUALS MATCHES ON)
@@ -87,9 +91,12 @@ if(FEATURE_VIRTUALS MATCHES ON)
 	set(HEADER_FILES ${HEADER_FILES} ${VIRTUAL_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${VIRTUAL_IMP_SOURCES})
 
-	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-			${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestVFuncSwapHook.cpp)
+	# only build tests if making exe
+	if(BUILD_DLL MATCHES ON)
+		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
+				${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp
+				${PROJECT_SOURCE_DIR}/UnitTests/TestVFuncSwapHook.cpp)
+	endif()
 endif()
 
 if(FEATURE_PE MATCHES ON)
@@ -103,24 +110,35 @@ if(FEATURE_PE MATCHES ON)
 	set(HEADER_FILES ${HEADER_FILES} ${PE_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${PE_IMP_SOURCES})
 
-	set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
-			${PROJECT_SOURCE_DIR}/UnitTests/TestIatHook.cpp)
+	# only build tests if making exe
+	if(BUILD_DLL MATCHES ON)
+		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+				${PROJECT_SOURCE_DIR}/UnitTests/TestIatHook.cpp)
+	endif()
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR})
 
 set(SOURCE_FILES_PLH ${UNIT_TEST_SOURCES} ${HEADER_IMP_SOURCES} ${HEADER_FILES})
 
-add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
+
+if(BUILD_DLL MATCHES ON) 
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+	if(BUILD_STATIC MATCHES ON)
+	    add_library(PolyHook_2 STATIC ${SOURCE_FILES_PLH})
+	else()
+	    add_library(PolyHook_2 SHARED ${SOURCE_FILES_PLH})
+	endif()
+else()
+    add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
+endif()
 
 # require c++ 17 (for std::optional) and add WALL + PDB flags
 target_compile_options(PolyHook_2 PRIVATE /std:c++latest)
 if(MSVC)
   target_compile_options(PolyHook_2 PRIVATE /W4 /WX /Z7)
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
-else(MSVC)
-  target_compile_options(PolyHook_2 PRIVATE -Wall -Wextra -pedantic -Werror)
-endif(MSVC)
+endif()
 
 #Set this variable to hold the path to capstone directory
 set(CAPSTONE_LIB_PATH_64 ${PROJECT_SOURCE_DIR}/capstone/build64)

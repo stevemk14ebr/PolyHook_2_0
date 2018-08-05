@@ -5,7 +5,7 @@
       "name": "x86-Debug",
       "generator": "Visual Studio 15 2017",
       "configurationType": "Debug",
-      "buildRoot": "${projectDir}\\build\\${name}",
+      "buildRoot": "${projectDir}\\build32\\Debug",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-m -v:minimal",
       "ctestCommandArgs": ""
@@ -14,7 +14,7 @@
       "name": "x86-Release",
       "generator": "Visual Studio 15 2017",
       "configurationType": "Release",
-      "buildRoot": "${projectDir}\\build\\${name}",
+      "buildRoot": "${projectDir}\\build32\\Release",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-m -v:minimal",
       "ctestCommandArgs": ""
@@ -23,7 +23,7 @@
       "name": "x86-ReleaseWithDebInfo",
       "generator": "Visual Studio 15 2017",
       "configurationType": "RelWithDebInfo",
-      "buildRoot": "${projectDir}\\build\\${name}",
+      "buildRoot": "${projectDir}\\build32\\ReleaseWithDebInfo",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-m -v:minimal",
       "ctestCommandArgs": ""
@@ -32,7 +32,7 @@
       "name": "x64-Debug",
       "generator": "Visual Studio 15 2017 Win64",
       "configurationType": "Debug",
-      "buildRoot": "${projectDir}\\build\\${name}",
+      "buildRoot": "${projectDir}\\build64\\Debug",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-m -v:minimal",
       "ctestCommandArgs": ""
@@ -41,7 +41,7 @@
       "name": "x64-Release",
       "generator": "Visual Studio 15 2017 Win64",
       "configurationType": "Release",
-      "buildRoot": "${projectDir}\\build\\${name}",
+      "buildRoot": "${projectDir}\\build64\\Release",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-m -v:minimal",
       "ctestCommandArgs": ""
@@ -50,7 +50,7 @@
       "name": "x64-ReleaseWithDebInfo",
       "generator": "Visual Studio 15 2017 Win64",
       "configurationType": "RelWithDebInfo",
-      "buildRoot": "${projectDir}\\build\\${name}",
+      "buildRoot": "${projectDir}\\build64\\ReleaseWithDebInfo",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-m -v:minimal",
       "ctestCommandArgs": ""
