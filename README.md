@@ -61,7 +61,7 @@ Running Total: $10
 MIT - Please consider donating
 
 # Resource &/| references
-evolution536 on Unknowncheats.me
+evolution536, DarthTon, IChooseYou on Unknowncheats.me
 
 https://github.com/DarthTon/Blackbone
 
