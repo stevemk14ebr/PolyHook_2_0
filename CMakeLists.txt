@@ -101,10 +101,12 @@ endif()
 
 if(FEATURE_PE MATCHES ON)
 	set(PE_HEADER_FILES
+		${PROJECT_SOURCE_DIR}/headers/PE/EatHook.hpp
 		${PROJECT_SOURCE_DIR}/headers/PE/IatHook.hpp
 		${PROJECT_SOURCE_DIR}/headers/PE/PEB.hpp)
 
 	set(PE_IMP_SOURCES 
+		${PROJECT_SOURCE_DIR}/sources/EatHook.cpp
 		${PROJECT_SOURCE_DIR}/sources/IatHook.cpp)
 
 	set(HEADER_FILES ${HEADER_FILES} ${PE_HEADER_FILES})
@@ -113,6 +115,7 @@ if(FEATURE_PE MATCHES ON)
 	# only build tests if making exe
 	if(BUILD_DLL MATCHES OFF)
 		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+				${PROJECT_SOURCE_DIR}/UnitTests/TestEatHook.cpp
 				${PROJECT_SOURCE_DIR}/UnitTests/TestIatHook.cpp)
 	endif()
 endif()
