@@ -5,7 +5,7 @@
 
 EffectTracker eatEffectTracker;
 
-typedef void(__stdcall* tEatTestExport)();
+typedef void(* tEatTestExport)();
 tEatTestExport oEatTestExport;
 
 extern "C" __declspec(dllexport) NOINLINE void EatTestExport()
