@@ -40,6 +40,8 @@ Read the tests for docs for now until i write some. They are extensive
    * Sets the debug registers of the CPU to add a HW execution BP for the calling thread. The callback is called in the exception handler. Remember HW BP's are per thread, calling thread determines which thread bp is for
 6) Import Address Table Hook (IatHook)
     * Resolves loaded modules through PEB, finds IAT, then swaps the thunk pointer to the callback. 
+7) Export Address Table Hook (EatHook)
+    * Resolves loaded modules through PEB, finds EAT, then swaps pointer to export to the callback.
     
 # Extras
 - THOROUGHLY unit tested, hundreds of tests, using the fantastic library Catch
@@ -62,6 +64,8 @@ MIT - Please consider donating
 
 # Resource &/| references
 evolution536, DarthTon, IChooseYou on Unknowncheats.me
+
+@Ochii & https://www.unknowncheats.me/forum/c-and-c/50426-eat-hooking-dlls.html for EAT implementation
 
 https://github.com/DarthTon/Blackbone
 
