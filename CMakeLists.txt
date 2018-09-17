@@ -44,7 +44,7 @@ if(FEATURE_DETOURS MATCHES ON)
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${DETOUR_IMP_SOURCES})
 
 	# only build tests if making exe
-	if(BUILD_DLL MATCHES ON)
+	if(BUILD_DLL MATCHES OFF)
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 			# 64 bits
 			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
@@ -72,7 +72,7 @@ if(FEATURE_EXCEPTION MATCHES ON)
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${EXCEPTION_IMP_SOURCES})
 
 	# only build tests if making exe
-	if(BUILD_DLL MATCHES ON)
+	if(BUILD_DLL MATCHES OFF)
 		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
 				${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp
 				${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp)
@@ -92,7 +92,7 @@ if(FEATURE_VIRTUALS MATCHES ON)
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${VIRTUAL_IMP_SOURCES})
 
 	# only build tests if making exe
-	if(BUILD_DLL MATCHES ON)
+	if(BUILD_DLL MATCHES OFF)
 		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
 				${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp
 				${PROJECT_SOURCE_DIR}/UnitTests/TestVFuncSwapHook.cpp)
@@ -101,18 +101,21 @@ endif()
 
 if(FEATURE_PE MATCHES ON)
 	set(PE_HEADER_FILES
+		${PROJECT_SOURCE_DIR}/headers/PE/EatHook.hpp
 		${PROJECT_SOURCE_DIR}/headers/PE/IatHook.hpp
 		${PROJECT_SOURCE_DIR}/headers/PE/PEB.hpp)
 
 	set(PE_IMP_SOURCES 
+		${PROJECT_SOURCE_DIR}/sources/EatHook.cpp
 		${PROJECT_SOURCE_DIR}/sources/IatHook.cpp)
 
 	set(HEADER_FILES ${HEADER_FILES} ${PE_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${PE_IMP_SOURCES})
 
 	# only build tests if making exe
-	if(BUILD_DLL MATCHES ON)
+	if(BUILD_DLL MATCHES OFF)
 		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+				${PROJECT_SOURCE_DIR}/UnitTests/TestEatHook.cpp
 				${PROJECT_SOURCE_DIR}/UnitTests/TestIatHook.cpp)
 	endif()
 endif()

@@ -15,6 +15,7 @@ enum class HookType {
 	VEHHOOK,
 	VTableSwap,
 	IAT,
+	EAT,
 	UNKNOWN
 };
 
