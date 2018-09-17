@@ -19,7 +19,7 @@ NOINLINE void hkEatTestExport()
 
 TEST_CASE("Eat Hook Tests", "[EatHook]") {
 	SECTION("Verify if export is found and hooked") {
-		PLH::EatHook hook(L"PolyHook_2.exe", "EatTestExport", (char*)&hkEatTestExport, (uint64_t*)&oEatTestExport);
+		PLH::EatHook hook("EatTestExport", L"", (char*)&hkEatTestExport, (uint64_t*)&oEatTestExport);
 		REQUIRE(hook.hook());
 
 		tEatTestExport pExport = (tEatTestExport)GetProcAddress(GetModuleHandle(nullptr), "EatTestExport");
@@ -27,6 +27,19 @@ TEST_CASE("Eat Hook Tests", "[EatHook]") {
 
 		eatEffectTracker.PushEffect();
 		pExport();	
+		REQUIRE(eatEffectTracker.PopEffect().didExecute());
+		REQUIRE(hook.unHook());
+	}
+
+	SECTION("Verify if export is found and hooked when module explicitly named") {
+		PLH::EatHook hook("EatTestExport", L"Polyhook_2.exe", (char*)&hkEatTestExport, (uint64_t*)&oEatTestExport);
+		REQUIRE(hook.hook());
+
+		tEatTestExport pExport = (tEatTestExport)GetProcAddress(GetModuleHandle(nullptr), "EatTestExport");
+		REQUIRE(pExport);
+
+		eatEffectTracker.PushEffect();
+		pExport();
 		REQUIRE(eatEffectTracker.PopEffect().didExecute());
 		REQUIRE(hook.unHook());
 	}

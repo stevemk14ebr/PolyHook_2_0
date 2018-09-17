@@ -15,18 +15,18 @@
 namespace PLH {
 class EatHook : public IHook {
 public:
-	EatHook(const std::wstring& dllName, const std::string& apiName, const char* fnCallback, uint64_t* userOrigVar);
-	EatHook(const std::wstring& dllName, const std::string& apiName, const uint64_t fnCallback, uint64_t* userOrigVar);
+	EatHook(const std::string& apiName, const std::wstring& moduleName, const char* fnCallback, uint64_t* userOrigVar);
+	EatHook(const std::string& apiName, const std::wstring& moduleName, const uint64_t fnCallback, uint64_t* userOrigVar);
 	virtual bool hook() override;
 	virtual bool unHook() override;
 	virtual HookType getType() const override {
 		return HookType::EAT;
 	}
 private:
-	PDWORD FindEatFunction(const std::wstring& dllName, const std::string& apiName);
-	PDWORD FindEatFunctionInModule(const std::string& apiName);
+	uint32_t* FindEatFunction(const std::string& apiName, const std::wstring& moduleName = L"");
+	uint32_t* FindEatFunctionInModule(const std::string& apiName);
 
-	std::wstring m_dllName;
+	std::wstring m_moduleName;
 	std::string m_apiName;
 
 	uint64_t m_fnCallback;

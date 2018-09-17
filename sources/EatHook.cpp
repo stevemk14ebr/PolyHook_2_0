@@ -1,19 +1,19 @@
 #include "headers/PE/EatHook.hpp"
 
-PLH::EatHook::EatHook(const std::wstring& dllName, const std::string& apiName, const char* fnCallback, uint64_t* userOrigVar)
-	: EatHook(dllName, apiName, (uint64_t)fnCallback, userOrigVar)
+PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName, const char* fnCallback, uint64_t* userOrigVar)
+	: EatHook(apiName, moduleName, (uint64_t)fnCallback, userOrigVar)
 {}
 
-PLH::EatHook::EatHook(const std::wstring& dllName, const std::string& apiName, const uint64_t fnCallback, uint64_t* userOrigVar)
-	: m_dllName(dllName)
-    , m_apiName(apiName)
+PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName, const uint64_t fnCallback, uint64_t* userOrigVar)
+	: m_apiName(apiName)
+	, m_moduleName(moduleName)
     , m_userOrigVar(userOrigVar)
     , m_fnCallback(fnCallback)
 {}
 
 bool PLH::EatHook::hook() {
 	assert(m_userOrigVar != nullptr);
-	PDWORD pExport = FindEatFunction(m_dllName, m_apiName);
+	uint32_t* pExport = FindEatFunction(m_apiName, m_moduleName);
 	if (pExport == nullptr)
 		return false;
 
@@ -21,7 +21,7 @@ bool PLH::EatHook::hook() {
 	// any EAT entry must be an offset
 	MemoryProtector prot((uint64_t)pExport, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W);
 	m_origFunc = *pExport;
-	*pExport = (DWORD)(m_fnCallback - m_moduleBase);
+	*pExport = (uint32_t)(m_fnCallback - m_moduleBase);
 	m_hooked = true;
 	*m_userOrigVar = m_origFunc;
 	return true;
@@ -33,25 +33,25 @@ bool PLH::EatHook::unHook() {
 	if (!m_hooked)
 		return false;
 
-	PDWORD pExport = FindEatFunction(m_dllName, m_apiName);
+	uint32_t* pExport = FindEatFunction(m_apiName, m_moduleName);
 	if (pExport == nullptr)
 		return false;
 
 	MemoryProtector prot((uint64_t)pExport, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W);
-	*pExport = (DWORD)m_origFunc;
+	*pExport = (uint32_t)m_origFunc;
 	m_hooked = false;
 	*m_userOrigVar = NULL;
 	return true;
 }
 
-PDWORD PLH::EatHook::FindEatFunction(const std::wstring& dllName, const std::string& apiName) {
+uint32_t* PLH::EatHook::FindEatFunction(const std::string& apiName, const std::wstring& moduleName) {
 #if defined(_WIN64)
 	PEB* peb = (PPEB)__readgsqword(0x60);
 #else
 	PEB* peb = (PPEB)__readfsdword(0x30);
 #endif
 
-	PDWORD pExportAddress = nullptr;
+	uint32_t* pExportAddress = nullptr;
 	PEB_LDR_DATA* ldr = (PPEB_LDR_DATA)peb->Ldr;
 
 	// find loaded module from peb
@@ -62,7 +62,8 @@ PDWORD PLH::EatHook::FindEatFunction(const std::wstring& dllName, const std::str
 		// TODO: create stricmp for UNICODE_STRING because this is really bad for performance
 		std::wstring baseModuleName(dte->BaseDllName.Buffer, dte->BaseDllName.Length / sizeof(wchar_t));
 
-		if (my_wide_stricmp(baseModuleName.c_str(), dllName.c_str()) != 0)
+		// try all modules if none given, otherwise only try specified
+		if (!moduleName.empty() && (my_wide_stricmp(baseModuleName.c_str(), moduleName.c_str()) != 0))
 			continue;
 
 		m_moduleBase = (uint64_t)dte->DllBase;
@@ -78,7 +79,7 @@ PDWORD PLH::EatHook::FindEatFunction(const std::wstring& dllName, const std::str
 	return pExportAddress;
 }
 
-PDWORD PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
+uint32_t* PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
 	assert(m_moduleBase != NULL);
 	if (m_moduleBase == NULL)
 		return NULL;
@@ -94,18 +95,18 @@ PDWORD PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
 
 	IMAGE_EXPORT_DIRECTORY* pExports = RVA2VA(IMAGE_EXPORT_DIRECTORY*, m_moduleBase, pDataDir[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
 
-	PDWORD pAddressOfFunctions = RVA2VA(PDWORD, m_moduleBase, pExports->AddressOfFunctions);
-	PDWORD pAddressOfNames = RVA2VA(PDWORD, m_moduleBase, pExports->AddressOfNames);
-	PWORD pAddressOfNameOrdinals = RVA2VA(PWORD, m_moduleBase, pExports->AddressOfNameOrdinals);
+	uint32_t* pAddressOfFunctions = RVA2VA(uint32_t*, m_moduleBase, pExports->AddressOfFunctions);
+	uint32_t* pAddressOfNames = RVA2VA(uint32_t*, m_moduleBase, pExports->AddressOfNames);
+	uint16_t* pAddressOfNameOrdinals = RVA2VA(uint16_t*, m_moduleBase, pExports->AddressOfNameOrdinals);
 
-	for (DWORD i = 0; i < pExports->NumberOfFunctions; i++)
+	for (uint32_t i = 0; i < pExports->NumberOfFunctions; i++)
 	{	
-        if(my_narrow_stricmp(RVA2VA(PCHAR, m_moduleBase, pAddressOfNames[i]),
+        if(my_narrow_stricmp(RVA2VA(char*, m_moduleBase, pAddressOfNames[i]),
                              apiName.c_str()) != 0)
 			continue;	 				
 
-		WORD iExportOrdinal = RVA2VA(WORD, m_moduleBase, pAddressOfNameOrdinals[i]);
-		PDWORD pExportAddress = &pAddressOfFunctions[iExportOrdinal];
+		uint16_t iExportOrdinal = RVA2VA(uint16_t, m_moduleBase, pAddressOfNameOrdinals[i]);
+		uint32_t* pExportAddress = &pAddressOfFunctions[iExportOrdinal];
 
 		return pExportAddress;
 	}
