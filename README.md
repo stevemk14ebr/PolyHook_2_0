@@ -8,6 +8,7 @@ Article 2: https://www.codeproject.com/Articles/1252212/PolyHook-2-Cplusplus17-x
 # Build
 ```
 git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
+cd PolyHook_2_0
 git submodule update --init --recursive
 ```
 Then run buildcapstone.bat and open this in VS2017 now that it has cmake support. Or generate a cmake project with 
