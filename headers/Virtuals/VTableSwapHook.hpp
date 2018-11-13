@@ -16,7 +16,7 @@ class VTableSwapHook : public PLH::IHook {
 public:
 	VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap);
 	VTableSwapHook(const char* Class, const VFuncMap& redirectMap);
-	~VTableSwapHook() = default;
+	virtual ~VTableSwapHook() = default;
 
 	const VFuncMap& getOriginals() const;
 

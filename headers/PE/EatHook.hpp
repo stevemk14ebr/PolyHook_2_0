@@ -17,8 +17,10 @@ class EatHook : public IHook {
 public:
 	EatHook(const std::string& apiName, const std::wstring& moduleName, const char* fnCallback, uint64_t* userOrigVar);
 	EatHook(const std::string& apiName, const std::wstring& moduleName, const uint64_t fnCallback, uint64_t* userOrigVar);
+	virtual ~EatHook();
 	virtual bool hook() override;
 	virtual bool unHook() override;
+	
 	virtual HookType getType() const override {
 		return HookType::EAT;
 	}
@@ -32,6 +34,9 @@ private:
 	uint64_t m_fnCallback;
 	uint64_t m_origFunc;
 	uint64_t* m_userOrigVar;
+
+	// only used if EAT offset points >= 2GB
+	uint8_t* m_trampoline;
 
 	bool m_hooked;
 	uint64_t m_moduleBase;

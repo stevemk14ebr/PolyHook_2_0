@@ -22,7 +22,20 @@ public:
 	}
 
 	void push(const Error& err) {
-		std::cout << "[!]ERROR:" << err.msg << std::endl;
+		switch (err.lvl) {
+		case ErrorLevel::INFO:
+			std::cout << "[+] Info: " << err.msg << std::endl;
+			break;
+		case ErrorLevel::WARN:
+			std::cout << "[!] Warn: " << err.msg << std::endl;
+			break;
+		case ErrorLevel::SEV:
+			std::cout << "[!] Error: " << err.msg << std::endl;
+			break;
+		default:
+			std::cout << "Unsupported error message logged " << err.msg << std::endl;
+		}
+		
 		m_log.push_back(err);
 	}
 

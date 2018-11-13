@@ -27,7 +27,7 @@ public:
 		cs_option(m_capHandle, CS_OPT_DETAIL, CS_OPT_ON);
 	}
 
-	~CapstoneDisassembler() {
+	virtual ~CapstoneDisassembler() {
 		if (m_capHandle)
 			cs_close(&m_capHandle);
 		m_capHandle = NULL;

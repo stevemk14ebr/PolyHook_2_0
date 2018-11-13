@@ -44,3 +44,34 @@ TEST_CASE("Eat Hook Tests", "[EatHook]") {
 		REQUIRE(hook.unHook());
 	}
 }
+
+typedef  int(__stdcall* tEatMessageBox)(HWND    hWnd,
+	LPCTSTR lpText,
+	LPCTSTR lpCaption,
+	UINT    uType);
+tEatMessageBox  oEatMessageBox;
+
+int __stdcall hkEatMessageBox(HWND    hWnd,
+	LPCTSTR lpText,
+	LPCTSTR lpCaption,
+	UINT    uType)
+{
+	UNREFERENCED_PARAMETER(lpText);
+	UNREFERENCED_PARAMETER(lpCaption);
+	UNREFERENCED_PARAMETER(uType);
+	UNREFERENCED_PARAMETER(hWnd);
+
+	MessageBox(0, "My Hook", "text", 0);
+	eatEffectTracker.PeakEffect().trigger();
+	return 1;
+}
+
+TEST_CASE("Eat winapi tests", "[EatHook]") {
+	PLH::EatHook hook("MessageBoxA", L"User32.dll", (char*)&hkEatMessageBox, (uint64_t*)&oEatMessageBox);
+	REQUIRE(hook.hook());
+
+	eatEffectTracker.PushEffect();
+	MessageBoxA(0, "test", "test", 0);
+	REQUIRE(eatEffectTracker.PopEffect().didExecute());
+	hook.unHook();
+}

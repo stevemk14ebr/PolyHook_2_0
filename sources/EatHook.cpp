@@ -8,8 +8,16 @@ PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName
 	: m_apiName(apiName)
 	, m_moduleName(moduleName)
     , m_userOrigVar(userOrigVar)
-    , m_fnCallback(fnCallback)
+    , m_fnCallback(fnCallback),
+	m_trampoline(nullptr)
 {}
+
+PLH::EatHook::~EatHook() {
+	if (m_trampoline != nullptr) {
+		delete[] m_trampoline;
+		m_trampoline = nullptr;
+	}
+}
 
 bool PLH::EatHook::hook() {
 	assert(m_userOrigVar != nullptr);
@@ -17,11 +25,22 @@ bool PLH::EatHook::hook() {
 	if (pExport == nullptr)
 		return false;
 
+	uint64_t offset = m_fnCallback - m_moduleBase;
+
+	/* account for when offset to our function is beyond EAT slots size. We
+	instead allocate a small trampoline within +- 2GB which will do the full
+	width jump to the final destination, and point the EAT to the stub.*/
+	if (offset > std::numeric_limits<uint32_t>::max()) {
+		ErrorLog::singleton().push("EAT hook offset is > 32bit's. Allocation of trampoline necessary", ErrorLevel::INFO);
+		m_trampoline = new uint8_t[32];
+		return false;
+	}
+
 	// Just like IAT, EAT is by default a writeable section
 	// any EAT entry must be an offset
 	MemoryProtector prot((uint64_t)pExport, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W);
 	m_origFunc = *pExport;
-	*pExport = (uint32_t)(m_fnCallback - m_moduleBase);
+	*pExport = (uint32_t)offset;
 	m_hooked = true;
 	*m_userOrigVar = m_origFunc;
 	return true;
@@ -66,6 +85,8 @@ uint32_t* PLH::EatHook::FindEatFunction(const std::string& apiName, const std::w
 		if (!moduleName.empty() && (my_wide_stricmp(baseModuleName.c_str(), moduleName.c_str()) != 0))
 			continue;
 
+		std::wcout << moduleName << L" Found module" << std::endl;
+
 		m_moduleBase = (uint64_t)dte->DllBase;
 
 		pExportAddress = FindEatFunctionInModule(apiName);
@@ -105,6 +126,7 @@ uint32_t* PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
                              apiName.c_str()) != 0)
 			continue;	 				
 
+		std::cout << RVA2VA(char*, m_moduleBase, pAddressOfNames[i]) << std::endl;
 		uint16_t iExportOrdinal = RVA2VA(uint16_t, m_moduleBase, pAddressOfNameOrdinals[i]);
 		uint32_t* pExportAddress = &pAddressOfFunctions[iExportOrdinal];
 

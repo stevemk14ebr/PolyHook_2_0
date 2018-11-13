@@ -17,6 +17,7 @@ class IatHook : public IHook {
 public:
 	IatHook(const std::string& dllName, const std::string& apiName, const char* fnCallback, uint64_t* userOrigVar, const std::wstring& moduleName);
 	IatHook(const std::string& dllName, const std::string& apiName, const uint64_t fnCallback, uint64_t* userOrigVar, const std::wstring& moduleName);
+	virtual ~IatHook() = default;
 	virtual bool hook() override;
 	virtual bool unHook() override;
 	virtual HookType getType() const override {

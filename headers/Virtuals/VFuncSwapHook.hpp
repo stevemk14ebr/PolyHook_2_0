@@ -15,7 +15,7 @@ class VFuncSwapHook : public PLH::IHook {
 public:
 	VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* origVFuncs);
 	VFuncSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* origVFuncs);
-	~VFuncSwapHook() = default;
+	virtual ~VFuncSwapHook() = default;
 
 	virtual bool hook() override;
 	virtual bool unHook() override;

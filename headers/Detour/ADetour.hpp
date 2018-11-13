@@ -64,6 +64,8 @@ public:
 		m_userTrampVar = userTrampVar;
 	}
 
+	virtual ~Detour() = default;
+
 	virtual bool unHook() override;
 
 	virtual HookType getType() const {
