@@ -41,4 +41,7 @@ private:
 	bool m_hooked;
 	uint64_t m_moduleBase;
 };
+
+inline void* Allocate_2GB_IMPL(uint8_t* pStart, size_t Size, int_fast64_t Delta);
+inline void* AllocateWithin2GB(uint8_t* pStart, size_t Size, size_t& AllocationDelta);
 }
