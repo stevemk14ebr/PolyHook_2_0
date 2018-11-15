@@ -9,6 +9,7 @@
 #include "headers/MemProtector.hpp"
 #include "headers/Misc.hpp"
 #include "headers/PE/PEB.hpp"
+#include "headers/ADisassembler.hpp"
 
 #define RVA2VA(type, base, rva) (type)((ULONG_PTR) base + rva)
 
@@ -25,6 +26,7 @@ public:
 		return HookType::EAT;
 	}
 private:
+	const uint16_t m_trampolineSize = 32;
 	uint32_t* FindEatFunction(const std::string& apiName, const std::wstring& moduleName = L"");
 	uint32_t* FindEatFunctionInModule(const std::string& apiName);
 
@@ -36,12 +38,12 @@ private:
 	uint64_t* m_userOrigVar;
 
 	// only used if EAT offset points >= 2GB
-	uint8_t* m_trampoline;
+	uint64_t m_trampoline;
 
 	bool m_hooked;
 	uint64_t m_moduleBase;
 };
 
-inline void* Allocate_2GB_IMPL(uint8_t* pStart, size_t Size, int_fast64_t Delta);
-inline void* AllocateWithin2GB(uint8_t* pStart, size_t Size, size_t& AllocationDelta);
+inline uint64_t Allocate_2GB_IMPL(uint64_t pStart, uint64_t Size, int64_t Delta);
+inline uint64_t AllocateWithin2GB(uint64_t pStart, uint64_t Size, uint64_t& AllocationDelta);
 }

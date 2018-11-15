@@ -284,5 +284,96 @@ inline std::ostream& operator<<(std::ostream& os, const std::vector<Instruction>
 //std::ostream& operator<<(std::ostream& os, const std::list<X>& v) { return printInsts(os, v); }
 //std::ostream& operator<<(std::ostream& os, const std::set<X>& v) { return printInsts(os, v); }
 //std::ostream& operator<<(std::ostream& os, const std::multiset<X>& v) { return printInsts(os, v); }
+
+
+/**Write a 25 byte absolute jump. This is preferred since it doesn't require an indirect memory holder.
+ * We first sub rsp by 128 bytes to avoid the red-zone stack space. This is specific to unix only afaik.**/
+inline PLH::insts_t makex64PreferredJump(const uint64_t address, const uint64_t destination) {
+	PLH::Instruction::Displacement zeroDisp = { 0 };
+	uint64_t                       curInstAddress = address;
+
+	std::vector<uint8_t> raxBytes = { 0x50 };
+	Instruction pushRax(curInstAddress,
+		zeroDisp,
+		0,
+		false,
+		raxBytes,
+		"push",
+		"rax", Mode::x64);
+	curInstAddress += pushRax.size();
+
+	std::stringstream ss;
+	ss << std::hex << destination;
+
+	std::vector<uint8_t> movRaxBytes;
+	movRaxBytes.resize(10);
+	movRaxBytes[0] = 0x48;
+	movRaxBytes[1] = 0xB8;
+	memcpy(&movRaxBytes[2], &destination, 8);
+
+	Instruction movRax(curInstAddress, zeroDisp, 0, false,
+		movRaxBytes, "mov", "rax, " + ss.str(), Mode::x64);
+	curInstAddress += movRax.size();
+
+	std::vector<uint8_t> xchgBytes = { 0x48, 0x87, 0x04, 0x24 };
+	Instruction xchgRspRax(curInstAddress, zeroDisp, 0, false,
+		xchgBytes, "xchg", "QWORD PTR [rsp],rax", Mode::x64);
+	curInstAddress += xchgRspRax.size();
+
+	std::vector<uint8_t> retBytes = { 0xC3 };
+	Instruction ret(curInstAddress, zeroDisp, 0, false,
+		retBytes, "ret", "", Mode::x64);
+	curInstAddress += ret.size();
+
+	return { pushRax, movRax, xchgRspRax, ret };
+}
+
+/**Write an indirect style 6byte jump. Address is where the jmp instruction will be located, and
+ * destHoldershould point to the memory location that *CONTAINS* the address to be jumped to.
+ * Destination should be the value that is written into destHolder, and be the address of where
+ * the jmp should land.**/
+inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t destination, const uint64_t destHolder) {
+	PLH::Instruction::Displacement disp = { 0 };
+	disp.Relative = PLH::Instruction::calculateRelativeDisplacement<int32_t>(address, destHolder, 6);
+
+	std::vector<uint8_t> destBytes;
+	destBytes.resize(8);
+	memcpy(destBytes.data(), &destination, 8);
+	Instruction specialDest(destHolder, disp, 0, false, destBytes, "dest holder", "", Mode::x64);
+
+	std::vector<uint8_t> bytes;
+	bytes.resize(6);
+	bytes[0] = 0xFF;
+	bytes[1] = 0x25;
+	memcpy(&bytes[2], &disp.Relative, 4);
+
+	std::stringstream ss;
+	ss << std::hex << "[" << destHolder << "] ->" << destination;
+
+	return { Instruction(address, disp, 2, true, bytes, "jmp", ss.str(), Mode::x64),  specialDest };
+}
+
+inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destination) {
+	Instruction::Displacement disp;
+	disp.Relative = Instruction::calculateRelativeDisplacement<int32_t>(address, destination, 5);
+
+	std::vector<uint8_t> bytes(5);
+	bytes[0] = 0xE9;
+	memcpy(&bytes[1], &disp.Relative, 4);
+
+	std::stringstream ss;
+	ss << std::hex << destination;
+
+	return { Instruction(address, disp, 1, true, bytes, "jmp", ss.str(), Mode::x86) };
+}
+
+
+inline PLH::insts_t makeAgnosticJmp(const uint64_t address, const uint64_t destination) {
+	if constexpr (sizeof(char*) == 4)
+		return makex86Jmp(address, destination);
+	else
+		return makex64PreferredJump(address, destination);
+}
+
 }
 #endif //POLYHOOK_2_0_INSTRUCTION_HPP

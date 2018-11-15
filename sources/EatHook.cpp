@@ -9,13 +9,13 @@ PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName
 	, m_moduleName(moduleName)
     , m_userOrigVar(userOrigVar)
     , m_fnCallback(fnCallback),
-	m_trampoline(nullptr)
+	m_trampoline(0)
 {}
 
 PLH::EatHook::~EatHook() {
-	if (m_trampoline != nullptr) {
-		delete[] m_trampoline;
-		m_trampoline = nullptr;
+	if (m_trampoline != 0) {
+		VirtualFree((char*)m_trampoline, m_trampolineSize, MEM_RELEASE) ;
+		m_trampoline = 0;
 	}
 }
 
@@ -31,18 +31,15 @@ bool PLH::EatHook::hook() {
 	instead allocate a small trampoline within +- 2GB which will do the full
 	width jump to the final destination, and point the EAT to the stub.*/
 	if (offset > std::numeric_limits<uint32_t>::max()) {
-		size_t AllocDelta = 0;
-		m_trampoline = (uint8_t*)AllocateWithin2GB((uint8_t*)m_moduleBase, 32, AllocDelta);
-		if (m_trampoline == nullptr) {
+		uint64_t AllocDelta = 0;
+		m_trampoline = AllocateWithin2GB(m_moduleBase, m_trampolineSize, AllocDelta);
+		if (m_trampoline == 0) {
 			ErrorLog::singleton().push("EAT hook offset is > 32bit's. Allocation of trampoline necessary and failed to find free page within range", ErrorLevel::INFO);
 			return false;
 		}
-
-		*m_trampoline = (uint8_t)0xCC;
-		offset = AllocDelta;
 		
-		// temporary until implementation is done
-		return false;
+		PLH::ADisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback));
+		offset = AllocDelta;
 	}
 
 	ErrorLog::singleton().push("EAT hook offset is > 32bit's. Allocation of trampoline necessary", ErrorLevel::INFO);
@@ -71,6 +68,10 @@ bool PLH::EatHook::unHook() {
 	*pExport = (uint32_t)m_origFunc;
 	m_hooked = false;
 	*m_userOrigVar = NULL;
+
+	VirtualFree((char*)m_trampoline, m_trampolineSize, MEM_RELEASE);
+	m_trampoline = 0;
+
 	return true;
 }
 
@@ -148,19 +149,19 @@ uint32_t* PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
 	return nullptr;
 }
 
-inline void* PLH::Allocate_2GB_IMPL(uint8_t* pStart, size_t Size, int_fast64_t Delta) {
+inline uint64_t PLH::Allocate_2GB_IMPL(uint64_t pStart, uint64_t Size, int64_t Delta) {
 	/*These lambda's let us use a single for loop for both the forward and backward loop conditions.
 	I passed delta variable as a parameter instead of capturing it because it is faster, it allows
 	the compiler to optimize the lambda into a function pointer rather than constructing
 	an anonymous class and incur the extra overhead that involves (negligible overhead but why not optimize)*/
-	auto Incrementor = [](int_fast64_t Delta, MEMORY_BASIC_INFORMATION& mbi) -> uintptr_t {
+	auto Incrementor = [](int64_t Delta, MEMORY_BASIC_INFORMATION& mbi) -> uint64_t {
 		if (Delta > 0)
-			return (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
+			return (uint64_t)mbi.BaseAddress + mbi.RegionSize;
 		else
-			return (uintptr_t)mbi.BaseAddress - 1; //TO-DO can likely jump much more than 1 byte, figure out what the max is
+			return (uint64_t)mbi.BaseAddress - 1; //TO-DO can likely jump much more than 1 byte, figure out what the max is
 	};
 
-	auto Comparator = [](long long int Delta, uintptr_t Addr, uintptr_t End)->bool {
+	auto Comparator = [](int64_t Delta, uint64_t Addr, uint64_t End)->bool {
 		if (Delta > 0)
 			return Addr < End;
 		else
@@ -169,9 +170,9 @@ inline void* PLH::Allocate_2GB_IMPL(uint8_t* pStart, size_t Size, int_fast64_t D
 
 	//Start at pStart, search 2GB around it (up/down depending on Delta)
 	MEMORY_BASIC_INFORMATION mbi;
-	for (uintptr_t Addr = (uintptr_t)pStart; Comparator(Delta, Addr, (uintptr_t)pStart + Delta); Addr = Incrementor(Delta, mbi))
+	for (uint64_t Addr = (uint64_t)pStart; Comparator(Delta, Addr, (uint64_t)pStart + Delta); Addr = Incrementor(Delta, mbi))
 	{
-		if (!VirtualQuery((LPCVOID)Addr, &mbi, sizeof(mbi)))
+		if (!VirtualQuery((char*)Addr, &mbi, sizeof(mbi)))
 			break;
 
 		assert(mbi.RegionSize != 0);
@@ -180,31 +181,31 @@ inline void* PLH::Allocate_2GB_IMPL(uint8_t* pStart, size_t Size, int_fast64_t D
 			continue;
 
 		//VirtualAlloc requires 64k aligned addresses
-		void* PageBase = (uint8_t*)mbi.BaseAddress - LOWORD(mbi.BaseAddress);
-		if (void* Allocated = (uint8_t*)VirtualAlloc(PageBase, Size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE))
+		uint64_t PageBase = (uint64_t)mbi.BaseAddress - (uint64_t)LOWORD(mbi.BaseAddress);
+		if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)PageBase, (SIZE_T)Size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE))
 			return Allocated;
 	}
-	return nullptr;
+	return 0;
 }
 
-inline void* PLH::AllocateWithin2GB(uint8_t* pStart, size_t Size, size_t& AllocationDelta)
+inline uint64_t PLH::AllocateWithin2GB(uint64_t pStart, uint64_t Size, uint64_t& AllocationDelta)
 {
-	static const size_t MaxAllocationDelta = 0x80000000; //2GB
+	static const uint64_t MaxAllocationDelta = 0x80000000; //2GB
 
 	//Attempt to allocate +-2GB from pStart
 	AllocationDelta = 0;
-	void* Allocated = nullptr;
+	uint64_t Allocated = 0;
 	Allocated = Allocate_2GB_IMPL(pStart, Size, MaxAllocationDelta); //Search up (2GB) 
 
 	//Sanity check the delta is less than 2GB
-	if (Allocated != nullptr)
+	if (Allocated != 0)
 	{
-		AllocationDelta = std::abs(pStart - (uint8_t*)Allocated);
+		AllocationDelta = std::abs((long long)(pStart - (uint64_t)Allocated));
 		if (AllocationDelta > MaxAllocationDelta)
 		{
 			//Out of range, free then return
-			VirtualFree(Allocated, 0, MEM_RELEASE);
-			return nullptr;
+			VirtualFree((char*)Allocated, 0, MEM_RELEASE);
+			return 0;
 		}
 	}
 	return Allocated;

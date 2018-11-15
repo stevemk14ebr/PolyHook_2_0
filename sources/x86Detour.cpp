@@ -15,20 +15,6 @@ PLH::Mode PLH::x86Detour::getArchType() const {
 	return PLH::Mode::x86;
 }
 
-PLH::insts_t PLH::x86Detour::makeJmp(const uint64_t address, const uint64_t destination) const {
-	Instruction::Displacement disp;
-	disp.Relative = Instruction::calculateRelativeDisplacement<int32_t>(address, destination, 5);
-
-	std::vector<uint8_t> bytes(5);
-	bytes[0] = 0xE9;
-	memcpy(&bytes[1], &disp.Relative, 4);
-
-	std::stringstream ss;
-	ss << std::hex << destination;
-
-	return {Instruction(address, disp, 1, true, bytes, "jmp", ss.str(), Mode::x86)};
-}
-
 uint8_t PLH::x86Detour::getJmpSize() const {
 	return 5;
 }
@@ -102,7 +88,7 @@ bool PLH::x86Detour::hook() {
 	*m_userTrampVar = m_trampoline;
 
 	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
-	auto prolJmp = makeJmp(m_fnAddress, m_fnCallback);
+	auto prolJmp = makex86Jmp(m_fnAddress, m_fnCallback);
 	m_disasm.writeEncoding(prolJmp);
 
 	// Nop the space between jmp and end of prologue
@@ -145,13 +131,12 @@ std::optional<PLH::insts_t> PLH::x86Detour::makeTrampoline(insts_t& prologue) {
 	// Insert jmp from trampoline -> prologue after overwritten section
 	const uint64_t jmpToProlAddr = m_trampoline + prolSz;
 	{
-		auto jmpToProl = makeJmp(jmpToProlAddr, prologue.front().getAddress() + prolSz);
+		auto jmpToProl = makex86Jmp(jmpToProlAddr, prologue.front().getAddress() + prolSz);
 		m_disasm.writeEncoding(jmpToProl);
 	}
 
-	auto makeJmpFn = std::bind(&x86Detour::makeJmp, this, _1, _2);
 	uint64_t jmpTblStart = jmpToProlAddr + getJmpSize();
-	PLH::insts_t jmpTblEntries = relocateTrampoline(prologue, jmpTblStart, delta, getJmpSize(), makeJmpFn, instsNeedingReloc, instsNeedingEntry);
+	PLH::insts_t jmpTblEntries = relocateTrampoline(prologue, jmpTblStart, delta, getJmpSize(), makex86Jmp, instsNeedingReloc, instsNeedingEntry);
 	if (jmpTblEntries.size() > 0)
 		return jmpTblEntries;
 	else

@@ -29,8 +29,6 @@ public:
 
 	Mode getArchType() const;
 
-	insts_t makeJmp(const uint64_t address, const uint64_t destination) const;
-
 	uint8_t getJmpSize() const;
 private:
 	std::optional<insts_t> makeTrampoline(insts_t& prologue);

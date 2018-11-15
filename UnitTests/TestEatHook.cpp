@@ -71,7 +71,8 @@ TEST_CASE("Eat winapi tests", "[EatHook]") {
 	REQUIRE(hook.hook());
 
 	eatEffectTracker.PushEffect();
-	MessageBoxA(0, "test", "test", 0);
+	tEatMessageBox MsgBox = (tEatMessageBox)GetProcAddress(GetModuleHandleA("User32.dll"), "MessageBoxA");
+	MsgBox(0, "test", "test", 0);
 	REQUIRE(eatEffectTracker.PopEffect().didExecute());
 	hook.unHook();
 }

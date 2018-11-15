@@ -29,10 +29,6 @@ public:
 
 	Mode getArchType() const;
 
-	insts_t makeMinimumJump(const uint64_t address, const uint64_t destination, const uint64_t destHolder) const;
-
-	insts_t makePreferredJump(const uint64_t address, const uint64_t destination) const;
-
 	uint8_t getMinJmpSize() const;
 
 	uint8_t getPrefJmpSize() const;
