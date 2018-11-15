@@ -10,6 +10,7 @@
 #include "headers/Misc.hpp"
 #include "headers/PE/PEB.hpp"
 #include "headers/ADisassembler.hpp"
+#include "headers/PageAllocator.hpp"
 
 #define RVA2VA(type, base, rva) (type)((ULONG_PTR) base + rva)
 
@@ -38,12 +39,10 @@ private:
 	uint64_t* m_userOrigVar;
 
 	// only used if EAT offset points >= 2GB
+	PageAllocator* m_allocator;
 	uint64_t m_trampoline;
 
 	bool m_hooked;
 	uint64_t m_moduleBase;
 };
-
-inline uint64_t Allocate_2GB_IMPL(uint64_t pStart, uint64_t Size, int64_t Delta);
-inline uint64_t AllocateWithin2GB(uint64_t pStart, uint64_t Size, uint64_t& AllocationDelta);
 }

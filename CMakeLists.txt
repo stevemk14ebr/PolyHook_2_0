@@ -17,12 +17,14 @@ set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
         ${PROJECT_SOURCE_DIR}/headers/Misc.hpp
 		${PROJECT_SOURCE_DIR}/headers/UID.hpp
 		${PROJECT_SOURCE_DIR}/headers/ErrorLog.hpp
-		${PROJECT_SOURCE_DIR}/headers/MemProtector.hpp)
+		${PROJECT_SOURCE_DIR}/headers/MemProtector.hpp
+		${PROJECT_SOURCE_DIR}/headers/PageAllocator.hpp)
 
 set(HEADER_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
 		${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp
-		${PROJECT_SOURCE_DIR}/sources/TestEffectTracker.cpp)
+		${PROJECT_SOURCE_DIR}/sources/TestEffectTracker.cpp
+		${PROJECT_SOURCE_DIR}/sources/PageAllocator.cpp)
 
 set(UNIT_TEST_SOURCES 
 		${PROJECT_SOURCE_DIR}/MainTests.cpp
