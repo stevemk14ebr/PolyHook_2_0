@@ -69,8 +69,10 @@ bool PLH::EatHook::unHook() {
 	m_hooked = false;
 	*m_userOrigVar = NULL;
 
-	VirtualFree((char*)m_trampoline, m_trampolineSize, MEM_RELEASE);
-	m_trampoline = 0;
+	if (m_trampoline != 0) {
+		VirtualFree((char*)m_trampoline, m_trampolineSize, MEM_RELEASE);
+		m_trampoline = 0;
+	}
 
 	return true;
 }
