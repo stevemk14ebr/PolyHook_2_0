@@ -46,9 +46,9 @@ bool PLH::EatHook::hook() {
 		
 		PLH::ADisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback));
 		offset = m_trampoline - m_moduleBase;
-	}
 
-	ErrorLog::singleton().push("EAT hook offset is > 32bit's. Allocation of trampoline necessary", ErrorLevel::INFO);
+		ErrorLog::singleton().push("EAT hook offset is > 32bit's. Allocation of trampoline necessary", ErrorLevel::INFO);
+	}
 
 	// Just like IAT, EAT is by default a writeable section
 	// any EAT entry must be an offset

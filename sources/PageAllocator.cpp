@@ -12,8 +12,7 @@ PLH::PageAllocator::~PageAllocator() {
 	// future me may hate myself for locking in destructor
 	std::lock_guard<std::recursive_mutex> lock(m_pageMtx);
 
-	m_refCount--;
-	if (m_refCount == 0) {
+	if (m_refCount.fetch_sub(1) == 1) {
 		for (const SplitPage& page : m_pages) {
 			VirtualFree((char*)page.address, (SIZE_T)WIN_PAGE_SZ, MEM_RELEASE);
 		}

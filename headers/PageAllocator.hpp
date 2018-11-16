@@ -95,7 +95,7 @@ inline uint64_t PLH::AllocateWithinRange(const uint64_t pStart, const int64_t De
 			uint64_t unusableSize = nextPage - (uint64_t)mbi.BaseAddress;
 			Addr = nextPage;
 
-			if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)nextPage, (SIZE_T)mbi.RegionSize - unusableSize, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE))
+			if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)nextPage, (SIZE_T)(mbi.RegionSize - unusableSize), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE))
 				return Allocated;
 		} 
 	}
