@@ -11,8 +11,8 @@ git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
 cd PolyHook_2_0
 git submodule update --init --recursive
 ```
-Then run buildcapstone.bat and open this in VS2017 now that it has cmake support. Or generate a cmake project with 
-```cmake -G```. I recommend VS2017 very much.
+Then run buildcapstone.bat and open this in VS2017 now that it has cmake support. By default buildcapstone will only include x86 architectures, to build capstone with all of them use --full-capstone command line arg. Instead of using VS 2017 you can instead generate a cmake project with 
+```cmake -G```. But I recommend VS2017 very much.
 
 You can build 3 different things. By default an executable is built and the unit tests are run. You can also build as a library by setting the ```BUILD_DLL``` option in CMakeLists.txt. If you choose to build as a library you can build it for static linking using the ```BUILD_STATIC``` option. I've setup an example project to show how to use this as a static library. You should clear your cmake cache between changing these options. The dll is built with the cmake option to export all symbols. This is different from the typical windows DLL where things are manually exported via declspec(dllexport), instead it behaves how linux dlls do with all symbols exported by default. This style should make it easier to maintain the code, the downside is there are many exports but i don't care.
 
