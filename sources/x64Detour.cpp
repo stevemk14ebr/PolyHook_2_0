@@ -54,8 +54,7 @@ bool PLH::x64Detour::hook() {
 	m_fnAddress = insts.front().getAddress();
 
 	// --------------- END RECURSIVE JMP RESOLUTION ---------------------
-
-	std::cout << "Original function:" << std::endl << insts << std::endl;
+	ErrorLog::singleton().push("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
 	uint64_t minProlSz = getPrefJmpSize(); // min size of patches that may split instructions
 	uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
@@ -79,14 +78,13 @@ bool PLH::x64Detour::hook() {
 	}
 
 	m_originalInsts = prologue;
-	std::cout << "Prologue to overwrite:" << std::endl << prologue << std::endl;
-
+	ErrorLog::singleton().push("Prologue to overwrite:\n" + instsToStr(prologue) + "\n", ErrorLevel::INFO);
+	
 	{   // copy all the prologue stuff to trampoline
 		auto jmpTblOpt = makeTrampoline(prologue);
-
-		std::cout << "Trampoline:" << std::endl << m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz) << std::endl;
+		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz)) + "\n", ErrorLevel::INFO);
 		if (jmpTblOpt)
-			std::cout << "Trampoline Jmp Tbl:" << std::endl << *jmpTblOpt << std::endl;
+			ErrorLog::singleton().push("Trampoline Jmp Tbl:\n" + instsToStr(*jmpTblOpt) + "\n", ErrorLevel::INFO);
 	}
 
 	*m_userTrampVar = m_trampoline;
@@ -140,7 +138,7 @@ std::optional<PLH::insts_t> PLH::x64Detour::makeTrampoline(insts_t& prologue) {
 	{
 		auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prologue.front().getAddress() + prolSz, jmpHolderCurAddr);
 
-		std::cout << "Jmp To Prol:" << std::endl << jmpToProl << std::endl;
+		ErrorLog::singleton().push("Jmp To Prol:\n" + instsToStr(jmpToProl) + "\n", ErrorLevel::INFO);
 		m_disasm.writeEncoding(jmpToProl);
 	}
 

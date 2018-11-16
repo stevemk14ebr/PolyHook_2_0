@@ -271,6 +271,13 @@ inline uint16_t calcInstsSz(const insts_t& insts) {
 	return sz;
 }
 
+template<typename T>
+std::string instsToStr(const T& container) {
+	std::stringstream ss;
+	printInsts(ss, container);
+	return ss.str();
+}
+
 template <typename T>
 inline std::ostream& printInsts(std::ostream& out, const T& container) {
 	for (auto ii = container.cbegin(); ii != container.cend(); ++ii) {
