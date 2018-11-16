@@ -36,7 +36,7 @@ uint64_t PLH::PageAllocator::getBlock(const uint64_t size) {
 		}
 	}
 	
-	uint64_t Allocated = AllocateWithinRange(m_regionStart, WIN_PAGE_SZ, m_regionSize);
+	uint64_t Allocated = AllocateWithinRange(m_regionStart, m_regionSize);
 	if (Allocated == 0)
 		return 0;
 

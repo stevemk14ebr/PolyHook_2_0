@@ -1,6 +1,7 @@
 #ifndef POLYHOOK_2_PAGEALLOCATOR_HPP
 #define POLYHOOK_2_PAGEALLOCATOR_HPP
 
+#include "headers/Misc.hpp"
 #include <vector>
 #include <mutex>
 #include <atomic>
@@ -49,10 +50,10 @@ namespace PLH {
 		static std::atomic<uint8_t> m_refCount;
 	};
 
-	inline uint64_t AllocateWithinRange(uint64_t pStart, uint64_t Size, int64_t Delta);
+	inline uint64_t AllocateWithinRange(uint64_t pStart, int64_t Delta);
 }
 
-inline uint64_t PLH::AllocateWithinRange(const uint64_t pStart, const uint64_t Size, const int64_t Delta) {
+inline uint64_t PLH::AllocateWithinRange(const uint64_t pStart, const int64_t Delta) {
 	/*These lambda's let us use a single for loop for both the forward and backward loop conditions.
 	I passed delta variable as a parameter instead of capturing it because it is faster, it allows
 	the compiler to optimize the lambda into a function pointer rather than constructing
@@ -71,7 +72,11 @@ inline uint64_t PLH::AllocateWithinRange(const uint64_t pStart, const uint64_t S
 			return Addr > End;
 	};
 
-	//Start at pStart, search 2GB around it (up/down depending on Delta)
+	SYSTEM_INFO si;
+	memset(&si, 0, sizeof(si));
+	GetSystemInfo(&si);
+
+	//Start at pStart, search around it (up/down depending on Delta)
 	MEMORY_BASIC_INFORMATION mbi;
 	for (uint64_t Addr = (uint64_t)pStart; Comparator(Delta, Addr, (uint64_t)pStart + Delta); Addr = Incrementor(Delta, mbi))
 	{
@@ -84,9 +89,17 @@ inline uint64_t PLH::AllocateWithinRange(const uint64_t pStart, const uint64_t S
 		if (mbi.State != MEM_FREE)
 			continue;
 
-		//VirtualAlloc requires 64k aligned addresses
-		uint64_t PageBase = (uint64_t)mbi.BaseAddress - (uint64_t)LOWORD(mbi.BaseAddress);
-		if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)PageBase, (SIZE_T)Size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE))
+		// address online alignment boundary, split it (upwards)
+		if ((uint64_t)mbi.BaseAddress & (si.dwAllocationGranularity - 1)) {
+			uint64_t nextPage = (uint64_t)PLH::AlignUpwards((char*)mbi.BaseAddress, si.dwAllocationGranularity);
+			uint64_t unusableSize = nextPage - (uint64_t)mbi.BaseAddress;
+			Addr = nextPage;
+
+			if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)nextPage, (SIZE_T)mbi.RegionSize - unusableSize, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE))
+				return Allocated;
+		} 
+
+		if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)mbi.BaseAddress, (SIZE_T)mbi.RegionSize, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE))
 			return Allocated;
 	}
 	return 0;

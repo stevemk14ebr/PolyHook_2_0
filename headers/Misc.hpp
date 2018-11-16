@@ -7,6 +7,7 @@
 
 #include <stdexcept>
 #include <cassert>
+#include <cctype>
 
 namespace PLH {
 
