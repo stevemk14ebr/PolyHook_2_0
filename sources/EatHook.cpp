@@ -140,7 +140,7 @@ uint32_t* PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
 	uint32_t* pAddressOfNames = RVA2VA(uint32_t*, m_moduleBase, pExports->AddressOfNames);
 	uint16_t* pAddressOfNameOrdinals = RVA2VA(uint16_t*, m_moduleBase, pExports->AddressOfNameOrdinals);
 
-	for (uint32_t i = 0; i < pExports->NumberOfFunctions; i++)
+	for (uint32_t i = 0; i < pExports->NumberOfNames; i++)
 	{	
         if(my_narrow_stricmp(RVA2VA(char*, m_moduleBase, pAddressOfNames[i]),
                              apiName.c_str()) != 0)
