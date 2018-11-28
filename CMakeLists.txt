@@ -5,7 +5,7 @@ option(FEATURE_DETOURS "Implement detour functionality" ON)
 option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
 option(FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 option(FEATURE_PE "Implement all win pe hooking functionality" ON)
-option(BUILD_DLL "Build dll & lib instead of tests" OFF)
+option(BUILD_DLL "Build dll & lib instead of tests" ON)
 option(BUILD_STATIC "If BUILD_DLL is set, create the type that can be statically linked" ON)
 
 #IDE's like it when header file are included as source files

@@ -17,8 +17,10 @@ NOINLINE int __cdecl h_hookPrintf(const char* format, ...) {
 	return PLH::FnCast(hookPrintfTramp, &printf)("INTERCEPTED YO:%s", buffer);
 }
 
+/** THIS EXAMPLE IS SETUP FOR x86. IT WILL CRASH IF YOU COMPILE IN x64**/
 int main()
 {
+	// Switch modes for x64
 	PLH::CapstoneDisassembler dis(PLH::Mode::x86);
 	PLH::x86Detour detour((char*)&printf, (char*)&h_hookPrintf, &hookPrintfTramp, dis);
 	detour.hook();

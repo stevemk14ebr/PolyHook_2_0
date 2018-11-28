@@ -23,7 +23,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_link_libraries(${PROJECT_NAME} debug ${CAPSTONE_LIB_PATH_64}/Debug/capstone.lib)
 	target_link_libraries(${PROJECT_NAME} optimized ${CAPSTONE_LIB_PATH_64}/Release/capstone.lib)
 	target_link_libraries(${PROJECT_NAME} debug ${PLH_LIB_PATH_64}/Debug/PolyHook_2.lib)
-	target_link_libraries(${PROJECT_NAME} optimized ${PLH_LIB_PATH_64}/Release/Release/PolyHook_2.lib)
+	target_link_libraries(${PROJECT_NAME} optimized ${PLH_LIB_PATH_64}/Release/PolyHook_2.lib)
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     # 32 bits
 
@@ -31,6 +31,6 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 	target_link_libraries(${PROJECT_NAME} debug ${CAPSTONE_LIB_PATH_86}/Debug/capstone.lib)
 	target_link_libraries(${PROJECT_NAME} optimized ${CAPSTONE_LIB_PATH_86}/Release/capstone.lib)
 	target_link_libraries(${PROJECT_NAME} debug ${PLH_LIB_PATH_86}/Debug/PolyHook_2.lib)
-	target_link_libraries(${PROJECT_NAME} optimized ${PLH_LIB_PATH_86}/Release/Release/PolyHook_2.lib)
+	target_link_libraries(${PROJECT_NAME} optimized ${PLH_LIB_PATH_86}/Release/PolyHook_2.lib)
 endif()
 # TODO: Add tests and install targets if needed.
