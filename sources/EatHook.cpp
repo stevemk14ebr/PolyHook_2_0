@@ -147,7 +147,7 @@ uint32_t* PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
 			continue;	 				
 
 		// std::cout << RVA2VA(char*, m_moduleBase, pAddressOfNames[i]) << std::endl;
-		uint16_t iExportOrdinal = RVA2VA(uint16_t, m_moduleBase, pAddressOfNameOrdinals[i]);
+		uint16_t iExportOrdinal = pAddressOfNameOrdinals[i];
 		uint32_t* pExportAddress = &pAddressOfFunctions[iExportOrdinal];
 
 		return pExportAddress;
