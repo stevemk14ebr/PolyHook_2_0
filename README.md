@@ -12,7 +12,7 @@ cd PolyHook_2_0
 git submodule update --init --recursive
 ```
 Then run buildcapstone.bat and open this in VS2017 now that it has cmake support. By default buildcapstone will only include x86 architectures, to build capstone with all of them use --full-capstone command line arg. Instead of using VS 2017 you can instead generate a cmake project with 
-```cmake -G```. But I recommend VS2017 very much.
+```cmake -G```. But I recommend VS2017 very much. You may need to run the script in the developer command prompt for visual studio for paths to cmake to resolve correctly.
 
 ### Visual Studio 2017
 Open VS 2017, go to file->open->cmake.. this will load the project and start cmake generation. Next go to tools->options->cmake->general->CMakeSettings.json path needs to be set to the polyhook2_0 directory that directly contains CMakeSettings.json, this will tell visual studio the build paths and also setup the build types (if it doesn't look right clear all the cmake cache stuff by cmake->clean all & cmake->cache->delete all & cmake->cache->generate
