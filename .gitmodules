@@ -4,4 +4,4 @@
 	branch = next
 [submodule "asmjit"]
 	path = asmjit
-	url = https://github.com/asmjit/asmjit.git
+	url = https://github.com/stevemk14ebr/asmjit.git
