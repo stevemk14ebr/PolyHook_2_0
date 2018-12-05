@@ -10,13 +10,13 @@ TEST_CASE("Minimal Example", "[AsmJit]") {
 	asmjit::JitRuntime rt;                          // Runtime specialized for JIT code execution.
 
 	asmjit::CodeHolder code;                        // Holds code and relocation information.
-	code.init(rt.getCodeInfo());            // Initialize to the same arch as JIT runtime.
+	code.init(rt.getCodeInfo());					// Initialize to the same arch as JIT runtime.
 
 	asmjit::X86Assembler a(&code);                  // Create and attach X86Assembler to `code`.
 	a.mov(asmjit::x86::eax, 1);                     // Move one to 'eax' register.
-	a.ret();                                // Return from function.
+	a.ret();										// Return from function.
 	// ----> X86Assembler is no longer needed from here and can be destroyed <----
-
+	
 	Func fn;
 	asmjit::Error err = rt.add(&fn, &code);         // Add the generated code to the runtime.
 	if (err) {

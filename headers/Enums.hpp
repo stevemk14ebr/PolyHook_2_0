@@ -53,5 +53,14 @@ enum class ErrorLevel {
 	WARN,
 	SEV
 };
+
+enum class CallConv {
+	MS_x64, // has shadow space
+	SysV_x64, // has red zone
+
+	MS_cdecl,
+	MS_stdcall,
+	MS_fastcall
+};
 }
 #endif //POLYHOOK_2_0_ENUMS_HPP

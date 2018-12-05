@@ -40,12 +40,14 @@ set(UNIT_TEST_SOURCES
 if(FEATURE_DETOURS MATCHES ON) 
 	set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/Detour/ADetour.hpp
 			${PROJECT_SOURCE_DIR}/headers/Detour/x64Detour.hpp
-			${PROJECT_SOURCE_DIR}/headers/Detour/x86Detour.hpp)
+			${PROJECT_SOURCE_DIR}/headers/Detour/x86Detour.hpp
+			${PROJECT_SOURCE_DIR}/headers/Detour/ILCallback.hpp)
 
 	set(DETOUR_IMP_SOURCES 
 			${PROJECT_SOURCE_DIR}/sources/ADetour.cpp
 			${PROJECT_SOURCE_DIR}/sources/x64Detour.cpp
-			${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp)
+			${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp
+			${PROJECT_SOURCE_DIR}/sources/ILCallback.cpp)
 
 	set(HEADER_FILES ${HEADER_FILES} ${DETOUR_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${DETOUR_IMP_SOURCES})
