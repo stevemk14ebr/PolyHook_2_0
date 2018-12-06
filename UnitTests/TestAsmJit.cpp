@@ -1,9 +1,6 @@
 #include <Catch.hpp>
 
-#pragma warning( push )
-#pragma warning( disable : 4245)
-#include <asmjit/asmjit.h>
-#pragma warning( pop )
+#include "headers/Detour/ILCallback.hpp"
 
 typedef int(*Func)(void);
 TEST_CASE("Minimal Example", "[AsmJit]") {
@@ -22,7 +19,7 @@ TEST_CASE("Minimal Example", "[AsmJit]") {
 	if (err) {
 		REQUIRE(false);
 	}
-
+	
 	int result = fn();                      // Execute the generated code.
 	REQUIRE(result == 1);
 
@@ -30,4 +27,38 @@ TEST_CASE("Minimal Example", "[AsmJit]") {
 	// the generated function can be, however, released explicitly if you intend to
 	// reuse or keep the runtime alive, which you should in a production-ready code.
 	rt.release(fn);
+}
+
+#include "headers/Detour/X64Detour.hpp"
+#include "headers/CapstoneDisassembler.hpp"
+
+
+NOINLINE void hookMe(int a) {
+	volatile int var = 1;
+	volatile int var2 = 0;
+	var2 += 3;
+	var2 = var + var2;
+	var2 *= 30 / 3;
+	var = 2;
+	printf("%d %d\n", var, var2); // 2, 40
+}
+uint64_t hookMeTramp = 0;
+
+NOINLINE void myCallback(const PLH::ILCallback::Parameters* params) {
+	printf("holy balls it works: %d\n", (int)params->m_arguments[0]); 
+}
+
+TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
+	PLH::ILCallback callback;
+
+	// void func(int), ABI must match hooked function
+	asmjit::FuncSignature sig;
+	std::vector<uint8_t> args = { asmjit::TypeIdOf<int>::kTypeId};
+	sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
+	uint64_t JIT = callback.getJitFunc(sig, &myCallback);
+
+	PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+	PLH::x64Detour detour((char*)&hookMe, (char*)JIT, &hookMeTramp, dis);
+	REQUIRE(detour.hook() == true);
+	hookMe(1337);
 }

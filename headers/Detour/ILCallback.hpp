@@ -3,18 +3,26 @@
 #include <asmjit/asmjit.h>
 #pragma warning( pop )
 
+#pragma warning( disable : 4200)
 #include "headers/Enums.hpp"
-class ILCallback {
-public:
-	ILCallback() = default;
-	~ILCallback();
-	uint64_t getJitFunc(const PLH::CallConv conv);
 
-	/* all mem calculations assume rsp/rbp are values BEFORE execution but AFTER call,
-	i.e about to exec prolog. */
-	asmjit::Operand getRegForArg(const uint8_t idx, const PLH::CallConv conv) const;
-private:
-	// asmjit's memory manager, manages JIT'd code
-	asmjit::VMemMgr m_mem; 
-	uint64_t m_callbackBuf;
-};
+#include <vector>
+namespace PLH {
+	class ILCallback {
+	public:
+		struct Parameters {
+			// asm depends on this specific type
+			uint64_t m_arguments[];
+		};
+		typedef void(*tUserCallback)(const Parameters* params);
+		
+		ILCallback() = default;
+		~ILCallback();
+		uint64_t getJitFunc(const asmjit::FuncSignature sig, const tUserCallback callback);
+	private:
+		// asmjit's memory manager, manages JIT'd code
+		asmjit::VMemMgr m_mem;
+		uint64_t m_callbackBuf;
+		asmjit::X86Mem argsStack;
+	};
+}
