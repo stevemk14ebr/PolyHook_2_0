@@ -1,6 +1,7 @@
 #include <Catch.hpp>
 
 #include "headers/Detour/ILCallback.hpp"
+#pragma warning( disable : 4244)
 
 typedef int(*Func)(void);
 TEST_CASE("Minimal Example", "[AsmJit]") {
@@ -33,32 +34,59 @@ TEST_CASE("Minimal Example", "[AsmJit]") {
 #include "headers/CapstoneDisassembler.hpp"
 
 
-NOINLINE void hookMe(int a) {
+NOINLINE void hookMeInt(int a) {
 	volatile int var = 1;
-	volatile int var2 = 0;
+	volatile int var2 = a;
 	var2 += 3;
 	var2 = var + var2;
 	var2 *= 30 / 3;
 	var = 2;
-	printf("%d %d\n", var, var2); // 2, 40
+	printf("%d %d\n", var, var2);
 }
-uint64_t hookMeTramp = 0;
 
-NOINLINE void myCallback(const PLH::ILCallback::Parameters* params) {
-	printf("holy balls it works: %d\n", (int)params->m_arguments[0]); 
+NOINLINE void hookMeFloat(float a) {
+	volatile float ans = 0.0f;
+	ans += a;
+	printf("%f\n", ans); 
+}
+uint64_t hookMeTramp = 3;
+
+NOINLINE void myCallback(const PLH::ILCallback::Parameters* p) {
+	printf("holy balls it works: asInt:%d asFloat:%f\n", *(int*)p->getArgPtr(0), *(float*)p->getArgPtr(0));
 }
 
 TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	PLH::ILCallback callback;
 
-	// void func(int), ABI must match hooked function
-	asmjit::FuncSignature sig;
-	std::vector<uint8_t> args = { asmjit::TypeIdOf<int>::kTypeId};
-	sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
-	uint64_t JIT = callback.getJitFunc(sig, &myCallback);
+	SECTION("Integer argument") {
+		// void func(int), ABI must match hooked function
+		asmjit::FuncSignature sig;
+		std::vector<uint8_t> args = { asmjit::TypeIdOf<int>::kTypeId };
+		sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
+		uint64_t JIT = callback.getJitFunc(sig, &myCallback, &hookMeTramp);
+		REQUIRE(JIT != 0);
 
-	PLH::CapstoneDisassembler dis(PLH::Mode::x64);
-	PLH::x64Detour detour((char*)&hookMe, (char*)JIT, &hookMeTramp, dis);
-	REQUIRE(detour.hook() == true);
-	hookMe(1337);
+		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::x64Detour detour((char*)&hookMeInt, (char*)JIT, &hookMeTramp, dis);
+		REQUIRE(detour.hook() == true);
+		hookMeInt(1337);
+		REQUIRE(detour.unHook());
+	}
+
+	SECTION("Floating argument") {
+		// void func(int), ABI must match hooked function
+		asmjit::FuncSignature sig;
+		std::vector<uint8_t> args = { asmjit::TypeIdOf<float>::kTypeId };
+		sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
+		uint64_t JIT = callback.getJitFunc(sig, &myCallback, &hookMeTramp);
+		REQUIRE(JIT != 0);
+
+		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::x64Detour detour((char*)&hookMeFloat, (char*)JIT, &hookMeTramp, dis);
+		REQUIRE(detour.hook() == true);
+
+		uint64_t as64 = (uint64_t)1337.1337f;
+		hookMeFloat(as64);
+		REQUIRE(detour.unHook());
+	}
 }

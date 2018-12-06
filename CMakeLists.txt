@@ -162,6 +162,7 @@ endif()
 # add WALL + PDB flags
 if(MSVC)
   # apply wall flags only to plh src files, asmjit can't compile in wall
+  set_property(SOURCE ${ASMJIT_SRC} PROPERTY COMPILE_FLAGS "/MP")
   set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS "/MP /W4 /WX /Z7")
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
 endif()
