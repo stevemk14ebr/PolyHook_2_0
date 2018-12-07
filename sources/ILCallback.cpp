@@ -22,7 +22,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 		} else if (isXmmReg(argType)) {
 			arg = cc.newXmm();
 		} else {
-			ErrorLog::singleton().push("Parameters wider than 128bits not supported", ErrorLevel::SEV);
+			ErrorLog::singleton().push("Parameters wider than 64bits not supported", ErrorLevel::SEV);
 			return 0;
 		}
 
@@ -54,9 +54,9 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 		if (isGeneralReg(argType)) {
 			cc.mov(argsStackIdx, argRegisters.at(arg_idx).as<asmjit::X86Gp>());
 		} else if(isXmmReg(argType)) {
-			cc.vmovdqu(argsStackIdx, argRegisters.at(arg_idx).as<asmjit::X86Xmm>());
+			cc.movq(argsStackIdx, argRegisters.at(arg_idx).as<asmjit::X86Xmm>());
 		} else {
-			ErrorLog::singleton().push("Parameters wider than 128bits not supported", ErrorLevel::SEV);
+			ErrorLog::singleton().push("Parameters wider than 64bits not supported", ErrorLevel::SEV);
 			return 0;
 		}
 
@@ -69,19 +69,21 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	cc.lea(argStruct, argsStack);
 
 	// call to user provided function (use ABI of host compiler)
+	cc.sub(asmjit::x86::rsp, 32);
 	auto call = cc.call(asmjit::imm_ptr((unsigned char*)callback), asmjit::FuncSignature1<void, const Parameters*>(asmjit::CallConv::kIdHost));
 	call->setArg(0, argStruct);
+	cc.add(asmjit::x86::rsp, 32);
 	
-	asmjit::X86Gp orig_ptr = cc.newUInt64();
-	cc.mov(orig_ptr, (uint64_t)userTrampVar);
-	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
+	//asmjit::X86Gp orig_ptr = cc.newUInt64();
+	//cc.mov(orig_ptr, (uint64_t)userTrampVar);
+	//cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
-	// call trampoline, map input args same order they were passed to us
-	auto orig_call = cc.call(orig_ptr, sig);
-	for (uint8_t arg_idx = 0; arg_idx < sig.getArgCount(); arg_idx++) {
-		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
-	}
-
+	//// call trampoline, map input args same order they were passed to us
+	//auto orig_call = cc.call(orig_ptr, sig);
+	//for (uint8_t arg_idx = 0; arg_idx < sig.getArgCount(); arg_idx++) {
+	//	orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
+	//}
+	UNREFERENCED_PARAMETER(userTrampVar);
 	// end function
 	cc.endFunc();    
 	cc.finalize();
@@ -124,7 +126,6 @@ bool PLH::ILCallback::isXmmReg(const uint8_t typeId) const {
 	switch (typeId) {
 	case  asmjit::TypeId::kF32:
 	case asmjit::TypeId::kF64:
-	case asmjit::TypeId::kI32x4:
 		return true;
 	default:
 		return false;

@@ -36,11 +36,7 @@ TEST_CASE("Minimal Example", "[AsmJit]") {
 
 NOINLINE void hookMeInt(int a) {
 	volatile int var = 1;
-	volatile int var2 = a;
-	var2 += 3;
-	var2 = var + var2;
-	var2 *= 30 / 3;
-	var = 2;
+	int var2 = var + a;
 	printf("%d %d\n", var, var2);
 }
 
@@ -49,7 +45,7 @@ NOINLINE void hookMeFloat(float a) {
 	ans += a;
 	printf("%f\n", ans); 
 }
-uint64_t hookMeTramp = 3;
+uint64_t hookMeTramp = 0;
 
 NOINLINE void myCallback(const PLH::ILCallback::Parameters* p) {
 	printf("holy balls it works: asInt:%d asFloat:%f\n", *(int*)p->getArgPtr(0), *(float*)p->getArgPtr(0));
@@ -85,8 +81,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 		PLH::x64Detour detour((char*)&hookMeFloat, (char*)JIT, &hookMeTramp, dis);
 		REQUIRE(detour.hook() == true);
 
-		uint64_t as64 = (uint64_t)1337.1337f;
-		hookMeFloat(as64);
+		hookMeFloat(1337.1337f);
 		REQUIRE(detour.unHook());
 	}
 }
