@@ -74,16 +74,19 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	call->setArg(0, argStruct);
 	cc.add(asmjit::x86::rsp, 32);
 	
-	//asmjit::X86Gp orig_ptr = cc.newUInt64();
-	//cc.mov(orig_ptr, (uint64_t)userTrampVar);
-	//cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
+	// deref the trampoline ptr (must live longer)
+	asmjit::X86Gp orig_ptr = cc.newUInt64();
+	cc.mov(orig_ptr, (uint64_t)userTrampVar);
+	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
-	//// call trampoline, map input args same order they were passed to us
-	//auto orig_call = cc.call(orig_ptr, sig);
-	//for (uint8_t arg_idx = 0; arg_idx < sig.getArgCount(); arg_idx++) {
-	//	orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
-	//}
-	UNREFERENCED_PARAMETER(userTrampVar);
+	// call trampoline, map input args same order they were passed to us
+	cc.sub(asmjit::x86::rsp, 32);
+	auto orig_call = cc.call(orig_ptr, sig);
+	for (uint8_t arg_idx = 0; arg_idx < sig.getArgCount(); arg_idx++) {
+		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
+	}
+	cc.add(asmjit::x86::rsp, 32);
+
 	// end function
 	cc.endFunc();    
 	cc.finalize();

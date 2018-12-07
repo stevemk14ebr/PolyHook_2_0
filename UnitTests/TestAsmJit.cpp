@@ -43,7 +43,7 @@ NOINLINE void hookMeInt(int a) {
 NOINLINE void hookMeFloat(float a) {
 	volatile float ans = 0.0f;
 	ans += a;
-	printf("%f\n", ans); 
+	printf("%f %f\n", ans, a); 
 }
 uint64_t hookMeTramp = 0;
 
