@@ -35,7 +35,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	asmjit::X86Mem argsStackIdx(argsStack);               
 
 	// assigns some register as index reg 
-	asmjit::X86Gp i = cc.newIntPtr();
+	asmjit::X86Gp i = cc.newUIntPtr();
 
 	// stackIdx <- stack[i].
 	argsStackIdx.setIndex(i);                   
@@ -45,8 +45,8 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	
 	// set i = 0
 	cc.mov(i, 0);  
-
-	// mov from arguments registers into the stack structure
+	UNREFERENCED_PARAMETER(callback);
+	//// mov from arguments registers into the stack structure
 	for (uint8_t arg_idx = 0; arg_idx < sig.getArgCount(); arg_idx++) {
 		const uint8_t argType = sig.getArgs()[arg_idx];
 
@@ -65,7 +65,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	}
 
 	// get pointer to stack structure and pass it to the user callback
-	asmjit::X86Gp argStruct = cc.newIntPtr("argStruct");
+	asmjit::X86Gp argStruct = cc.newUIntPtr("argStruct");
 	cc.lea(argStruct, argsStack);
 
 	// fill reg to pass struct arg count to callback
@@ -78,8 +78,9 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	call->setArg(1, argCountParam);
 	
 	// deref the trampoline ptr (must live longer)
-	asmjit::X86Gp orig_ptr = cc.newUInt64();
-	cc.mov(orig_ptr, (uint64_t)getTrampolineHolder());
+	
+	asmjit::X86Gp orig_ptr = cc.newUIntPtr();;
+	cc.mov(orig_ptr, (uintptr_t)getTrampolineHolder());
 	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
 	// call trampoline, map input args same order they were passed to us
