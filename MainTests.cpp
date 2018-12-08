@@ -1,6 +1,6 @@
-#include <iostream>
 #define CATCH_CONFIG_RUNNER
 #include "Catch.hpp"
+#include <iostream>
 
 int main(int argc, char* const argv[]) {
 	std::cout << "Welcome to PolyHook -By- Stevemk14ebr" << std::endl;
@@ -9,10 +9,4 @@ int main(int argc, char* const argv[]) {
 	getchar();
 	return result;
 }
-
-//Project layout type unit tests should go here, or console output things
-//TEST_CASE("","")
-//{
-//    std::cout << "Welcome to PolyHook -By- Stevemk14ebr" << std::endl;
-//}
 
