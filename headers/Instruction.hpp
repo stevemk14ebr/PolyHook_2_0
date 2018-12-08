@@ -67,7 +67,7 @@ public:
 	}
 
 	void setDestination(const uint64_t dest) {
-		if (!isBranching() || !hasDisplacement())
+		if (!hasDisplacement())
 			return;
 
 		if (isDisplacementRelative()) {

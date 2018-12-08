@@ -1,13 +1,25 @@
 cmake_minimum_required(VERSION 3.6)
 project(PolyHook_2)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Turn Features On/Off, Set build options
 option(FEATURE_DETOURS "Implement detour functionality" ON)
 option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
 option(FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
+option(FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" ON)
 option(FEATURE_PE "Implement all win pe hooking functionality" ON)
 option(BUILD_DLL "Build dll & lib instead of tests" OFF)
 option(BUILD_STATIC "If BUILD_DLL is set, create the type that can be statically linked" ON)
 
+# Calculate inclusion of necessary dependencies based on features
+
+# for now only inlinentd uses asmjit
+set(DEP_ASMJIT_NEED ${FEATURE_INLINENTD})
+# todo: make inclusion of capstone stuff depend on feature flags
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 #IDE's like it when header file are included as source files
 set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
         ${PROJECT_SOURCE_DIR}/headers/CapstoneDisassembler.hpp
@@ -122,26 +134,62 @@ if(FEATURE_PE MATCHES ON)
 	endif()
 endif()
 
+if(FEATURE_INLINENTD MATCHES ON)
+	set(NTD_HEADER_FILES
+		${PROJECT_SOURCE_DIR}/headers/Detour/ILCallback.hpp)
+
+	set(NTD_SOURCES 
+		${PROJECT_SOURCE_DIR}/sources/ILCallback.cpp)
+
+	set(HEADER_FILES ${HEADER_FILES} ${NTD_HEADER_FILES})
+	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${NTD_SOURCES})
+
+	# only build tests if making exe
+	if(BUILD_DLL MATCHES OFF)
+		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+			# 64 bits
+			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx64.cpp)
+		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+			# 32 bits
+			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx86.cpp)
+		endif()
+	endif()
+endif()
+
+if(DEP_ASMJIT_NEED MATCHES ON)
+	
+	# only build tests if making exe
+	if(BUILD_DLL MATCHES OFF)
+		# AsmJit is a dep iff inlinetd is on
+		set(ASMJIT_DIR ${PROJECT_SOURCE_DIR}/asmjit)
+		set(ASMJIT_EMBED TRUE)
+	
+		include("${ASMJIT_DIR}/CMakeLists.txt")
+		include_directories(${ASMJIT_DIR}/src)
+	endif()
+endif()
+
 include_directories(${PROJECT_SOURCE_DIR})
-
 set(SOURCE_FILES_PLH ${UNIT_TEST_SOURCES} ${HEADER_IMP_SOURCES} ${HEADER_FILES})
-
 
 if(BUILD_DLL MATCHES ON) 
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 	if(BUILD_STATIC MATCHES ON)
-	    add_library(PolyHook_2 STATIC ${SOURCE_FILES_PLH})
+	    add_library(PolyHook_2 STATIC ${SOURCE_FILES_PLH} ${ASMJIT_SRC})
 	else()
-	    add_library(PolyHook_2 SHARED ${SOURCE_FILES_PLH})
+	    add_library(PolyHook_2 SHARED ${SOURCE_FILES_PLH} ${ASMJIT_SRC})
 	endif()
 else()
-    add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
+    add_executable(PolyHook_2 ${SOURCE_FILES_PLH} ${ASMJIT_SRC})
 endif()
 
-# require c++ 17 (for std::optional) and add WALL + PDB flags
-target_compile_options(PolyHook_2 PRIVATE /std:c++latest)
+# add WALL + PDB flags
 if(MSVC)
-  target_compile_options(PolyHook_2 PRIVATE /W4 /WX /Z7)
+  # apply wall flags only to plh src files, asmjit can't compile in wall
+  set_property(SOURCE ${ASMJIT_SRC} PROPERTY COMPILE_FLAGS "/MP")
+  set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS "/MP /W4 /WX /Z7")
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
 endif()
 

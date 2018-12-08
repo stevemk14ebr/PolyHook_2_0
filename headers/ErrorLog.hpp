@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 #include "headers/Enums.hpp"
 
 namespace PLH {
