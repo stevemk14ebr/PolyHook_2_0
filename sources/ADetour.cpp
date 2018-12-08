@@ -1,7 +1,7 @@
 #include "headers/Detour/ADetour.hpp"
 
 std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& functionInsts, const uint64_t prolOvrwStartOffset,
-													   uint64_t& prolOvrwEndOffset) {
+	uint64_t& prolOvrwEndOffset) {
 
 	uint64_t     prolLen = 0;
 	PLH::insts_t instructionsInRange;
@@ -48,9 +48,9 @@ bool PLH::Detour::followJmp(PLH::insts_t& functionInsts, const uint8_t curDepth,
 }
 
 bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
-									 const insts_t& func,
-									 uint64_t& minProlSz,
-									 uint64_t& roundProlSz) {
+	const insts_t& func,
+	uint64_t& minProlSz,
+	uint64_t& roundProlSz) {
 	const uint64_t prolStart = prol.front().getAddress();
 	branch_map_t branchMap = m_disasm.getBranchMap();
 
@@ -92,14 +92,33 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 		// types that change control flow
 		if (inst.isBranching() && inst.hasDisplacement() &&
 			(inst.getDestination() < prolStart ||
-			inst.getDestination() > prolStart + roundProlSz)) {
+				inst.getDestination() > prolStart + roundProlSz)) {
 
 			// can inst just be re-encoded or do we need a tbl entry
 			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
 			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); // 2^bitSz give max val, /2 and -1 because signed ex (int8_t [-128, 127] = [2^8 / 2, 2^8 / 2 - 1]
 			if ((uint64_t)std::llabs(delta) > maxInstDisp) {
 				instsNeedingEntry.push_back(inst);
-			} else {
+			}
+			else {
+				instsNeedingReloc.push_back(inst);
+			}
+		}
+
+		// data operations (duplicated because clearer)
+		if (!inst.isBranching() && inst.hasDisplacement()) {
+			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
+			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0);
+			if ((uint64_t)std::llabs(delta) > maxInstDisp) {
+				/*EX: 48 8d 0d 96 79 07 00    lea rcx, [rip + 0x77996]
+				If instruction is moved beyond displacement field width
+				we can't fix the load. TODO: generate equivalent load
+				with asmjit and insert it at position
+				*/
+				ErrorLog::singleton().push("Cannot fixup IP relative data operation, relocation beyond displacement size", ErrorLevel::SEV);
+				return false;
+			}
+			else {
 				instsNeedingReloc.push_back(inst);
 			}
 		}
@@ -129,7 +148,7 @@ bool PLH::Detour::unHook() {
 
 	MemoryProtector prot(m_fnAddress, PLH::calcInstsSz(m_originalInsts), ProtFlag::R | ProtFlag::W | ProtFlag::X);
 	m_disasm.writeEncoding(m_originalInsts);
-	
+
 	if (m_trampoline != NULL) {
 		delete[](char*)m_trampoline;
 		m_trampoline = NULL;
@@ -139,7 +158,7 @@ bool PLH::Detour::unHook() {
 		*m_userTrampVar = NULL;
 		m_userTrampVar = NULL;
 	}
-	
+
 	m_hooked = false;
 	return true;
 }
