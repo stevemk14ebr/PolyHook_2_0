@@ -29,7 +29,7 @@ uint64_t PLH::PageAllocator::getBlock(const uint64_t size) {
 		const uint64_t unusedPtr = page.getUnusedAddr();
 		const uint64_t proposedEnd = unusedPtr + size;
 		const uint64_t pageEnd = page.address + WIN_PAGE_SZ;
-		if (unusedPtr < pageEnd && proposedEnd <= pageEnd) {
+		if (m_regionStart <= unusedPtr && proposedEnd <= pageEnd) {
 			page.unusedOffset += size;
 			return unusedPtr;
 		}

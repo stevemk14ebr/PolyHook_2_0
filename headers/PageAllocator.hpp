@@ -81,14 +81,14 @@ inline uint64_t PLH::AllocateWithinRange(const uint64_t pStart, const int64_t De
 	for (uint64_t Addr = (uint64_t)pStart; Comparator(Delta, Addr, (uint64_t)pStart + Delta); Addr = Incrementor(Delta, mbi))
 	{
 		if (!VirtualQuery((char*)Addr, &mbi, sizeof(mbi)))
-			break;
+			continue;
 
 		assert(mbi.RegionSize != 0);
 
 		// TODO: Fails on PAGE_NO_ACCESS type for now
 		if (mbi.State != MEM_FREE)
 			continue;
-
+		
 		// address online alignment boundary, split it (upwards)
 		if ((uint64_t)mbi.BaseAddress & (si.dwAllocationGranularity - 1)) {
 			uint64_t nextPage = (uint64_t)PLH::AlignUpwards((char*)mbi.BaseAddress, si.dwAllocationGranularity);
@@ -97,7 +97,12 @@ inline uint64_t PLH::AllocateWithinRange(const uint64_t pStart, const int64_t De
 
 			if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)nextPage, (SIZE_T)(mbi.RegionSize - unusableSize), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE))
 				return Allocated;
-		} 
+		} else {
+			//VirtualAlloc requires 64k aligned addresses
+			assert((uint64_t)mbi.BaseAddress % si.dwAllocationGranularity == 0);
+			if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)mbi.BaseAddress, (SIZE_T)si.dwPageSize, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE))
+				return Allocated;
+		}
 	}
 	return 0;
 }

@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(FEATURE_DETOURS "Implement detour functionality" ON)
 option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
 option(FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
-option(FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" ON)
+option(FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" OFF)
 option(FEATURE_PE "Implement all win pe hooking functionality" ON)
 option(BUILD_DLL "Build dll & lib instead of tests" OFF)
 option(BUILD_STATIC "If BUILD_DLL is set, create the type that can be statically linked" ON)
@@ -47,14 +47,12 @@ set(UNIT_TEST_SOURCES
 if(FEATURE_DETOURS MATCHES ON) 
 	set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/Detour/ADetour.hpp
 			${PROJECT_SOURCE_DIR}/headers/Detour/x64Detour.hpp
-			${PROJECT_SOURCE_DIR}/headers/Detour/x86Detour.hpp
-			${PROJECT_SOURCE_DIR}/headers/Detour/ILCallback.hpp)
+			${PROJECT_SOURCE_DIR}/headers/Detour/x86Detour.hpp)
 
 	set(DETOUR_IMP_SOURCES 
 			${PROJECT_SOURCE_DIR}/sources/ADetour.cpp
 			${PROJECT_SOURCE_DIR}/sources/x64Detour.cpp
-			${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp
-			${PROJECT_SOURCE_DIR}/sources/ILCallback.cpp)
+			${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp)
 
 	set(HEADER_FILES ${HEADER_FILES} ${DETOUR_HEADER_FILES})
 	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${DETOUR_IMP_SOURCES})
@@ -136,6 +134,30 @@ if(FEATURE_PE MATCHES ON)
 	endif()
 endif()
 
+if(FEATURE_INLINENTD MATCHES ON)
+	set(NTD_HEADER_FILES
+		${PROJECT_SOURCE_DIR}/headers/Detour/ILCallback.hpp)
+
+	set(NTD_SOURCES 
+		${PROJECT_SOURCE_DIR}/sources/ILCallback.cpp)
+
+	set(HEADER_FILES ${HEADER_FILES} ${NTD_HEADER_FILES})
+	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${NTD_SOURCES})
+
+	# only build tests if making exe
+	if(BUILD_DLL MATCHES OFF)
+		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+			# 64 bits
+			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx64.cpp)
+		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+			# 32 bits
+			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx86.cpp)
+		endif()
+	endif()
+endif()
+
 if(DEP_ASMJIT_NEED MATCHES ON)
 	
 	# only build tests if making exe
@@ -146,16 +168,6 @@ if(DEP_ASMJIT_NEED MATCHES ON)
 	
 		include("${ASMJIT_DIR}/CMakeLists.txt")
 		include_directories(${ASMJIT_DIR}/src)
-	
-		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-			# 64 bits
-			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
-				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx64.cpp)
-		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-			# 32 bits
-			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
-				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx86.cpp)
-		endif()
 	endif()
 endif()
 
