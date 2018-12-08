@@ -19,19 +19,19 @@ using namespace std::placeholders;
 
 namespace PLH {
 
-class x86Detour : public Detour {
-public:
-	x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
+	class x86Detour : public Detour {
+	public:
+		x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
 
-	x86Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
-	virtual ~x86Detour() = default;
-	virtual bool hook() override;
+		x86Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
+		virtual ~x86Detour() = default;
+		virtual bool hook() override;
 
-	Mode getArchType() const;
+		Mode getArchType() const;
 
-	uint8_t getJmpSize() const;
-private:
-	std::optional<insts_t> makeTrampoline(insts_t& prologue);
-};
+		uint8_t getJmpSize() const;
+	private:
+		bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
+	};
 }
 #endif //POLYHOOK_2_X86DETOUR_HPP

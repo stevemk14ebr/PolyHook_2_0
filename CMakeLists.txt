@@ -5,8 +5,13 @@ option(FEATURE_DETOURS "Implement detour functionality" ON)
 option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
 option(FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 option(FEATURE_PE "Implement all win pe hooking functionality" ON)
-option(BUILD_DLL "Build dll & lib instead of tests" ON)
+option(BUILD_DLL "Build dll & lib instead of tests exe (clear cache if still gen lib)" OFF)
 option(BUILD_STATIC "If BUILD_DLL is set, create the type that can be statically linked" ON)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 
 #IDE's like it when header file are included as source files
 set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
@@ -138,10 +143,10 @@ else()
     add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
 endif()
 
-# require c++ 17 (for std::optional) and add WALL + PDB flags
-target_compile_options(PolyHook_2 PRIVATE /std:c++latest)
+# add WALL + PDB flags
 if(MSVC)
-  target_compile_options(PolyHook_2 PRIVATE /W4 /WX /Z7)
+  # apply wall flags only to plh src files, other deps set their flags appropriately
+  set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS "/MP /W4 /WX /Z7")
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
 endif()
 

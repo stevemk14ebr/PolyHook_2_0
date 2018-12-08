@@ -50,6 +50,9 @@ bool PLH::x64Detour::hook() {
 		return false;
 	}
 
+	// remove, just for debugging w/o following recursion above
+	insts = m_disasm.disassemble(insts.at(0).getAddress(), insts.at(0).getAddress(), insts.at(0).getAddress() + 100);
+
 	// update given fn address to resolved one
 	m_fnAddress = insts.front().getAddress();
 
@@ -79,12 +82,15 @@ bool PLH::x64Detour::hook() {
 
 	m_originalInsts = prologue;
 	ErrorLog::singleton().push("Prologue to overwrite:\n" + instsToStr(prologue) + "\n", ErrorLevel::INFO);
-	
+
 	{   // copy all the prologue stuff to trampoline
-		auto jmpTblOpt = makeTrampoline(prologue);
+		insts_t jmpTblOpt;
+		if (!makeTrampoline(prologue, jmpTblOpt))
+			return false;
+
 		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz)) + "\n", ErrorLevel::INFO);
-		if (jmpTblOpt)
-			ErrorLog::singleton().push("Trampoline Jmp Tbl:\n" + instsToStr(*jmpTblOpt) + "\n", ErrorLevel::INFO);
+		if (jmpTblOpt.size() > 0)
+			ErrorLog::singleton().push("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
 	}
 
 	*m_userTrampVar = m_trampoline;
@@ -101,7 +107,7 @@ bool PLH::x64Detour::hook() {
 	return true;
 }
 
-std::optional<PLH::insts_t> PLH::x64Detour::makeTrampoline(insts_t& prologue) {
+bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	assert(prologue.size() > 0);
 	const uint64_t prolStart = prologue.front().getAddress();
 	const uint16_t prolSz = calcInstsSz(prologue);
@@ -109,11 +115,21 @@ std::optional<PLH::insts_t> PLH::x64Detour::makeTrampoline(insts_t& prologue) {
 
 	/** Make a guess for the number entries we need so we can try to allocate a trampoline. The allocation
 	address will change each attempt, which changes delta, which changes the number of needed entries. So
-	we just try until we hit that lucky number that works**/
+	we just try until we hit that lucky number that works
+
+	The relocation could also because of data operations too. But that's specific to the function and can't
+	work again on a retry (same function, duh). Return immediately in that case.**/
 	uint8_t neededEntryCount = 5;
 	PLH::insts_t instsNeedingEntry;
 	PLH::insts_t instsNeedingReloc;
+
+	uint8_t retries = 0;
 	do {
+		if (retries++ > 4) {
+			ErrorLog::singleton().push("Failed to calculate trampoline information", ErrorLevel::SEV);
+			return false;
+		}
+
 		if (m_trampoline != NULL) {
 			delete[](unsigned char*)m_trampoline;
 			neededEntryCount = (uint8_t)instsNeedingEntry.size();
@@ -126,7 +142,8 @@ std::optional<PLH::insts_t> PLH::x64Detour::makeTrampoline(insts_t& prologue) {
 
 		int64_t delta = m_trampoline - prolStart;
 
-		buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc);
+		if (!buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc))
+			return false;
 	} while (instsNeedingEntry.size() > neededEntryCount);
 
 	const int64_t delta = m_trampoline - prolStart;
@@ -143,7 +160,7 @@ std::optional<PLH::insts_t> PLH::x64Detour::makeTrampoline(insts_t& prologue) {
 	}
 
 	// each jmp tbl entries holder is one slot down from the previous
-	auto calcJmpHolder = [=] () -> uint64_t {
+	auto calcJmpHolder = [=]() -> uint64_t {
 		static uint64_t captureAddr = jmpHolderCurAddr;
 		captureAddr -= destHldrSz;
 		return captureAddr;
@@ -152,10 +169,8 @@ std::optional<PLH::insts_t> PLH::x64Detour::makeTrampoline(insts_t& prologue) {
 	auto makeJmpFn = std::bind(makex64MinimumJump, _1, _2, std::bind(calcJmpHolder));
 
 	uint64_t jmpTblStart = jmpToProlAddr + getMinJmpSize();
-	PLH::insts_t jmpTblEntries = relocateTrampoline(prologue, jmpTblStart, delta, getMinJmpSize(),
-													makeJmpFn, instsNeedingReloc, instsNeedingEntry);
-	if (jmpTblEntries.size() > 0)
-		return jmpTblEntries;
-	else
-		return std::nullopt;
+	trampolineOut = relocateTrampoline(prologue, jmpTblStart, delta, getMinJmpSize(),
+		makeJmpFn, instsNeedingReloc, instsNeedingEntry);
+
+	return true;
 }
