@@ -3,6 +3,7 @@ project(PolyHook_2)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Turn Features On/Off, Set build options
 option(FEATURE_DETOURS "Implement detour functionality" ON)
 option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
 option(FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
@@ -10,6 +11,12 @@ option(FEATURE_INLINENTD "Support inline hooks without specifying typedefs by ge
 option(FEATURE_PE "Implement all win pe hooking functionality" ON)
 option(BUILD_DLL "Build dll & lib instead of tests" OFF)
 option(BUILD_STATIC "If BUILD_DLL is set, create the type that can be statically linked" ON)
+
+# Calculate inclusion of necessary dependencies based on features
+
+# for now only inlinentd uses asmjit
+set(DEP_ASMJIT_NEED ${FEATURE_INLINENTD})
+# todo: make inclusion of capstone stuff depend on feature flags
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
@@ -129,7 +136,7 @@ if(FEATURE_PE MATCHES ON)
 	endif()
 endif()
 
-if(FEATURE_INLINENTD MATCHES ON)
+if(DEP_ASMJIT_NEED MATCHES ON)
 	
 	# only build tests if making exe
 	if(BUILD_DLL MATCHES OFF)
@@ -140,8 +147,15 @@ if(FEATURE_INLINENTD MATCHES ON)
 		include("${ASMJIT_DIR}/CMakeLists.txt")
 		include_directories(${ASMJIT_DIR}/src)
 	
-		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
-				${PROJECT_SOURCE_DIR}/UnitTests/TestAsmJit.cpp)
+		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+			# 64 bits
+			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx64.cpp)
+		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+			# 32 bits
+			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
+				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx86.cpp)
+		endif()
 	endif()
 endif()
 

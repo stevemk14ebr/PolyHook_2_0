@@ -20,11 +20,12 @@ namespace PLH {
 			// asm depends on this specific type
 			uint64_t m_arguments[];
 		};
-		typedef void(*tUserCallback)(const Parameters* params);
+		typedef void(*tUserCallback)(const Parameters* params, const uint8_t count);
 		
 		ILCallback() = default;
 		~ILCallback();
-		uint64_t getJitFunc(const asmjit::FuncSignature sig, const tUserCallback callback, uint64_t* userTrampVar);
+		uint64_t getJitFunc(const asmjit::FuncSignature sig, const tUserCallback callback);
+		uint64_t* getTrampolineHolder();
 	private:
 		// does a given type fit in a general purpose register (i.e. is it integer type)
 		bool isGeneralReg(const uint8_t typeId) const;
@@ -35,5 +36,8 @@ namespace PLH {
 		asmjit::VMemMgr m_mem;
 		uint64_t m_callbackBuf;
 		asmjit::X86Mem argsStack;
+
+		// ptr to trampoline allocated by hook, we hold this so user doesn't need to.
+		uint64_t m_trampolinePtr; 
 	};
 }

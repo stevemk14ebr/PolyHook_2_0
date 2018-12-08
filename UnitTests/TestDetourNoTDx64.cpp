@@ -33,7 +33,6 @@ TEST_CASE("Minimal Example", "[AsmJit]") {
 #include "headers/Detour/X64Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
 
-
 NOINLINE void hookMeInt(int a) {
 	volatile int var = 1;
 	int var2 = var + a;
@@ -41,14 +40,24 @@ NOINLINE void hookMeInt(int a) {
 }
 
 NOINLINE void hookMeFloat(float a) {
-	volatile float ans = 0.0f;
+	float ans = 1.0f;
 	ans += a;
 	printf("%f %f\n", ans, a); 
 }
-uint64_t hookMeTramp = 0;
 
-NOINLINE void myCallback(const PLH::ILCallback::Parameters* p) {
-	printf("holy balls it works: asInt:%d asFloat:%f\n", *(int*)p->getArgPtr(0), *(float*)p->getArgPtr(0));
+NOINLINE void hookMeIntFloatDouble(int a, float b, double c) {
+	volatile float ans = 0.0f;
+	ans += (float)a;
+	ans += c;
+	ans += b;
+	printf("%d %f %f %f\n", a, b, c, ans);
+}
+
+NOINLINE void myCallback(const PLH::ILCallback::Parameters* p, const uint8_t count) {
+	printf("Argument Count: %d\n", count);
+	for (int i = 0; i < count; i++) {
+		printf("Arg: %d asInt:%d asFloat:%f asDouble:%f\n", i, *(int*)p->getArgPtr(i), *(float*)p->getArgPtr(i), *(double*)p->getArgPtr(i));
+	}
 }
 
 TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
@@ -59,11 +68,11 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 		asmjit::FuncSignature sig;
 		std::vector<uint8_t> args = { asmjit::TypeIdOf<int>::kTypeId };
 		sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
-		uint64_t JIT = callback.getJitFunc(sig, &myCallback, &hookMeTramp);
+		uint64_t JIT = callback.getJitFunc(sig, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
-		PLH::x64Detour detour((char*)&hookMeInt, (char*)JIT, &hookMeTramp, dis);
+		PLH::x64Detour detour((char*)&hookMeInt, (char*)JIT, callback.getTrampolineHolder(), dis);
 		REQUIRE(detour.hook() == true);
 		hookMeInt(1337);
 		REQUIRE(detour.unHook());
@@ -74,14 +83,30 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 		asmjit::FuncSignature sig;
 		std::vector<uint8_t> args = { asmjit::TypeIdOf<float>::kTypeId };
 		sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
-		uint64_t JIT = callback.getJitFunc(sig, &myCallback, &hookMeTramp);
+		uint64_t JIT = callback.getJitFunc(sig, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
-		PLH::x64Detour detour((char*)&hookMeFloat, (char*)JIT, &hookMeTramp, dis);
+		PLH::x64Detour detour((char*)&hookMeFloat, (char*)JIT, callback.getTrampolineHolder(), dis);
 		REQUIRE(detour.hook() == true);
 
 		hookMeFloat(1337.1337f);
+		REQUIRE(detour.unHook());
+	}
+
+	SECTION("Int, float, double arguments") {
+		// void func(int), ABI must match hooked function
+		asmjit::FuncSignature sig;
+		std::vector<uint8_t> args = { asmjit::TypeIdOf<int>::kTypeId,  asmjit::TypeIdOf<float>::kTypeId,  asmjit::TypeIdOf<double>::kTypeId };
+		sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
+		uint64_t JIT = callback.getJitFunc(sig, &myCallback);
+		REQUIRE(JIT != 0);
+
+		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::x64Detour detour((char*)&hookMeIntFloatDouble, (char*)JIT, callback.getTrampolineHolder(), dis);
+		REQUIRE(detour.hook() == true);
+
+		hookMeIntFloatDouble(1337, 1337.1337f, 1337.1337);
 		REQUIRE(detour.unHook());
 	}
 }

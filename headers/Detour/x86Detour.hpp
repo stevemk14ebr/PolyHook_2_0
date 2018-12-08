@@ -31,7 +31,7 @@ public:
 
 	uint8_t getJmpSize() const;
 private:
-	std::optional<insts_t> makeTrampoline(insts_t& prologue);
+	bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
 };
 }
 #endif //POLYHOOK_2_X86DETOUR_HPP

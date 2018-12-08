@@ -1,6 +1,6 @@
 #include "headers/Detour/ILCallback.hpp"
 
-uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH::ILCallback::tUserCallback callback, uint64_t* userTrampVar) {
+uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH::ILCallback::tUserCallback callback) {
 	asmjit::CodeHolder code;                      
 	code.init(asmjit::CodeInfo(asmjit::ArchInfo::kTypeHost));			
 	
@@ -10,7 +10,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 
 	// to small to really need it
 	cc.getFunc()->getFrameInfo().disablePreservedFP();
-	
+
 	// map argument slots to registers, following abi.
 	std::vector<asmjit::Reg> argRegisters;
 	for (uint8_t arg_idx = 0; arg_idx < sig.getArgCount(); arg_idx++) {
@@ -68,24 +68,25 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	asmjit::X86Gp argStruct = cc.newIntPtr("argStruct");
 	cc.lea(argStruct, argsStack);
 
+	// fill reg to pass struct arg count to callback
+	asmjit::X86Gp argCountParam = cc.newU8();
+	cc.mov(argCountParam, (uint8_t)sig.getArgCount());
+
 	// call to user provided function (use ABI of host compiler)
-	cc.sub(asmjit::x86::rsp, 32);
-	auto call = cc.call(asmjit::imm_ptr((unsigned char*)callback), asmjit::FuncSignature1<void, const Parameters*>(asmjit::CallConv::kIdHost));
+	auto call = cc.call(asmjit::imm_ptr((unsigned char*)callback), asmjit::FuncSignature2<void, Parameters*, uint8_t>(asmjit::CallConv::kIdHost));
 	call->setArg(0, argStruct);
-	cc.add(asmjit::x86::rsp, 32);
+	call->setArg(1, argCountParam);
 	
 	// deref the trampoline ptr (must live longer)
 	asmjit::X86Gp orig_ptr = cc.newUInt64();
-	cc.mov(orig_ptr, (uint64_t)userTrampVar);
+	cc.mov(orig_ptr, (uint64_t)getTrampolineHolder());
 	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
 	// call trampoline, map input args same order they were passed to us
-	cc.sub(asmjit::x86::rsp, 32);
 	auto orig_call = cc.call(orig_ptr, sig);
 	for (uint8_t arg_idx = 0; arg_idx < sig.getArgCount(); arg_idx++) {
 		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
 	}
-	cc.add(asmjit::x86::rsp, 32);
 
 	// end function
 	cc.endFunc();    
@@ -106,6 +107,10 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	return m_callbackBuf;
 }
 
+uint64_t* PLH::ILCallback::getTrampolineHolder() {
+	return &m_trampolinePtr;
+}
+
 bool PLH::ILCallback::isGeneralReg(const uint8_t typeId) const {
 	switch (typeId) {
 	case asmjit::TypeId::kI8:
@@ -123,7 +128,6 @@ bool PLH::ILCallback::isGeneralReg(const uint8_t typeId) const {
 		return false;
 	}
 }
-
 
 bool PLH::ILCallback::isXmmReg(const uint8_t typeId) const {
 	switch (typeId) {

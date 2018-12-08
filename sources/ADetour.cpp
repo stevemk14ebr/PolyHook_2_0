@@ -81,7 +81,7 @@ bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
 	return true;
 }
 
-void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t& instsNeedingEntry, PLH::insts_t& instsNeedingReloc) {
+bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t& instsNeedingEntry, PLH::insts_t& instsNeedingReloc) {
 	assert(instsNeedingEntry.size() == 0);
 	assert(instsNeedingReloc.size() == 0);
 	assert(prologue.size() > 0);
@@ -89,6 +89,7 @@ void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 	const uint64_t prolStart = prologue.front().getAddress();
 
 	for (auto& inst : prologue) {
+		// types that change control flow
 		if (inst.isBranching() && inst.hasDisplacement() &&
 			(inst.getDestination() < prolStart ||
 			inst.getDestination() > prolStart + roundProlSz)) {
@@ -102,7 +103,25 @@ void PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 				instsNeedingReloc.push_back(inst);
 			}
 		}
+
+		// data operations (duplicated because clearer)
+		if (!inst.isBranching() && inst.hasDisplacement()) {
+			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
+			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); 
+			if ((uint64_t)std::llabs(delta) > maxInstDisp) {
+				/*EX: 48 8d 0d 96 79 07 00    lea rcx, [rip + 0x77996]
+				If instruction is moved beyond displacement field width
+				we can't fix the load. TODO: generate equivalent load
+				with asmjit and insert it at position
+				*/
+				ErrorLog::singleton().push("Cannot fixup IP relative data operation, relocation beyond displacement size", ErrorLevel::SEV);
+				return false;
+			}else {
+				instsNeedingReloc.push_back(inst);
+			}
+		}
 	}
+	return true;
 }
 
 bool PLH::Detour::unHook() {
