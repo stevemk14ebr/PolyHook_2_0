@@ -60,22 +60,21 @@ NOINLINE void myCallback(const PLH::ILCallback::Parameters* p, const uint8_t cou
 	}
 }
 
-//TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
-//	PLH::ILCallback callback;
-//
-//	SECTION("Integer argument") {
-//		// void func(int), ABI must match hooked function
-//		asmjit::FuncSignature sig;
-//		std::vector<uint8_t> args = { asmjit::TypeIdOf<int>::kTypeId };
-//		sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
-//		uint64_t JIT = callback.getJitFunc(sig, &myCallback);
-//		REQUIRE(JIT != 0);
-//
-//		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
-//		PLH::x64Detour detour((char*)&hookMeInt, (char*)JIT, callback.getTrampolineHolder(), dis);
-//		REQUIRE(detour.hook() == true);
-//		hookMeInt(1337);
-//		REQUIRE(detour.unHook());
-//	}
-//
-//}
+TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
+	PLH::ILCallback callback;
+
+	SECTION("Integer argument") {
+		// void func(int), ABI must match hooked function
+		asmjit::FuncSignature sig;
+		std::vector<uint8_t> args = { asmjit::TypeIdOf<int>::kTypeId };
+		sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
+		uint64_t JIT = callback.getJitFunc(sig, &myCallback);
+		REQUIRE(JIT != 0);
+
+		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
+		PLH::x86Detour detour((char*)&hookMeInt, (char*)JIT, callback.getTrampolineHolder(), dis);
+		REQUIRE(detour.hook() == true);
+		hookMeInt(1337);
+		REQUIRE(detour.unHook());
+	}
+}

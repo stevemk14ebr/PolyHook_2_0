@@ -26,16 +26,18 @@ uint64_t PLH::PageAllocator::getBlock(const uint64_t size) {
 
 	// Search available pages first
 	for (SplitPage& page : m_pages) {
-		const uint64_t unusedPtr = page.getUnusedAddr();
+		const uint64_t unusedPtr = (uint64_t)PLH::AlignUpwards((char*)page.getUnusedAddr(), 64);
 		const uint64_t proposedEnd = unusedPtr + size;
 		const uint64_t pageEnd = page.address + WIN_PAGE_SZ;
 		if (m_regionStart <= unusedPtr && proposedEnd <= pageEnd) {
-			page.unusedOffset += size;
+			// size + alignment unusable space
+			page.unusedOffset += size + (unusedPtr - page.getUnusedAddr());
 			return unusedPtr;
 		}
 	}
 	
-	uint64_t Allocated = AllocateWithinRange(m_regionStart, m_regionSize);
+	uint64_t searchSz = m_regionSize ? m_regionSize : std::numeric_limits<int64_t>::max();
+	uint64_t Allocated = AllocateWithinRange(m_regionStart, searchSz);
 	if (Allocated == 0)
 		return 0;
 

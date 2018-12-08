@@ -6,6 +6,7 @@
 #include <mutex>
 #include <atomic>
 #include <cassert>
+#include <limits>
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
@@ -33,7 +34,8 @@ namespace PLH {
 
 	class PageAllocator {
 	public:
-		/** Construct an allocator to return pages within [address, address + size)**/
+		/** Construct an allocator to return pages within [address, address + size).
+		If size is zero, then it will try to allocate anywhere**/
 		PageAllocator(const uint64_t address, const uint64_t size);
 		~PageAllocator();
 
@@ -81,7 +83,7 @@ inline uint64_t PLH::AllocateWithinRange(const uint64_t pStart, const int64_t De
 	for (uint64_t Addr = (uint64_t)pStart; Comparator(Delta, Addr, (uint64_t)pStart + Delta); Addr = Incrementor(Delta, mbi))
 	{
 		if (!VirtualQuery((char*)Addr, &mbi, sizeof(mbi)))
-			continue;
+			return 0;
 
 		assert(mbi.RegionSize != 0);
 

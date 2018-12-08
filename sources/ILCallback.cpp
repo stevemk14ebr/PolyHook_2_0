@@ -96,14 +96,14 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	size_t size = code.getCodeSize();
 
 	// Allocate a virtual memory (executable).
-	m_callbackBuf = (uint64_t)m_mem.alloc(size);
+	m_callbackBuf = (uint64_t)m_mem.getBlock(size);
 	if (!m_callbackBuf) {
 		__debugbreak();
 		return 0;
 	}
 
 	// Relocate & store the output in p
-	code.relocate((unsigned char*)m_callbackBuf);
+	code.relocate((unsigned char*)m_callbackBuf, m_callbackBuf);
 	return m_callbackBuf;
 }
 
@@ -139,6 +139,11 @@ bool PLH::ILCallback::isXmmReg(const uint8_t typeId) const {
 	}
 }
 
+PLH::ILCallback::ILCallback() : m_mem(0, 0) {
+	m_callbackBuf = 0;
+	m_trampolinePtr = 0;
+}
+
 PLH::ILCallback::~ILCallback() {
-	m_mem.release((unsigned char*)m_callbackBuf);
+	
 }

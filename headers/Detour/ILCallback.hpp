@@ -7,6 +7,8 @@
 #include "headers/ErrorLog.hpp"
 #include "headers/Enums.hpp"
 
+#include "headers/PageAllocator.hpp"
+
 #include <vector>
 namespace PLH {
 	class ILCallback {
@@ -22,7 +24,7 @@ namespace PLH {
 		};
 		typedef void(*tUserCallback)(const Parameters* params, const uint8_t count);
 		
-		ILCallback() = default;
+		ILCallback();
 		~ILCallback();
 		uint64_t getJitFunc(const asmjit::FuncSignature sig, const tUserCallback callback);
 		uint64_t* getTrampolineHolder();
@@ -32,8 +34,7 @@ namespace PLH {
 		// float, double, simd128
 		bool isXmmReg(const uint8_t typeId) const;
 
-		// asmjit's memory manager, manages JIT'd code
-		asmjit::VMemMgr m_mem;
+		PageAllocator m_mem;
 		uint64_t m_callbackBuf;
 		asmjit::X86Mem argsStack;
 
