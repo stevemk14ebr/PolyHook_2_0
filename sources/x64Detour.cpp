@@ -50,9 +50,6 @@ bool PLH::x64Detour::hook() {
 		return false;
 	}
 
-	// remove, just for debugging w/o following recursion above
-	insts = m_disasm.disassemble(insts.at(0).getAddress(), insts.at(0).getAddress(), insts.at(0).getAddress() + 100);
-
 	// update given fn address to resolved one
 	m_fnAddress = insts.front().getAddress();
 
