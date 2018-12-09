@@ -47,7 +47,7 @@ Read the tests for docs for now until i write some. They are extensive
 6) Import Address Table Hook (IatHook)
     * Resolves loaded modules through PEB, finds IAT, then swaps the thunk pointer to the callback. 
 7) Export Address Table Hook (EatHook)
-    * Resolves loaded modules through PEB, finds EAT, then swaps pointer to export to the callback.
+    * Resolves loaded modules through PEB, finds EAT, then swaps pointer to export to the callback. Since this is a 32bit offset we optionally allocate a trampoline stub to do the full transfer to callback if it's beyond 32bits.
     
 # Extras
 - THOROUGHLY unit tested, hundreds of tests, using the fantastic library Catch
