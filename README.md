@@ -26,6 +26,7 @@ Read the tests for docs for now until i write some. They are extensive
 1) Inline hook (x86/x64 Detour)
     - Places a jmp to a callback at the prologue, and then allocates a trampoline to continue execution of the original function
     - Operates entirely on an intermediate instruction object, disassembler engine is swappable, capstone included by default
+    - Can JIT callback for when calling conv is unknown at compile time (see ILCallback.cpp)
     - Follows already hooked functions
     - Resolves indirect calls such as through the iat and hooks underlying function
     - Relocates prologue and resolves all position dependent code
