@@ -143,11 +143,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	}
 
 	SECTION("Int, float, double arguments fastcall") {
-		// void func(int), ABI must match hooked function
-		asmjit::FuncSignature sig;
-		std::vector<uint8_t> args = { asmjit::TypeIdOf<int>::kTypeId,  asmjit::TypeIdOf<float>::kTypeId,  asmjit::TypeIdOf<double>::kTypeId };
-		sig.init(asmjit::CallConv::kIdHostFastCall, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
-		uint64_t JIT = callback.getJitFunc(sig, &myCallback);
+		uint64_t JIT = callback.getJitFunc("void", {"int", "float", "double"}, &myCallback, "fastcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);

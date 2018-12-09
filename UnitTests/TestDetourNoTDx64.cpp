@@ -94,12 +94,8 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 		REQUIRE(detour.unHook());
 	}
 
-	SECTION("Int, float, double arguments") {
-		// void func(int), ABI must match hooked function
-		asmjit::FuncSignature sig;
-		std::vector<uint8_t> args = { asmjit::TypeIdOf<int>::kTypeId,  asmjit::TypeIdOf<float>::kTypeId,  asmjit::TypeIdOf<double>::kTypeId };
-		sig.init(asmjit::CallConv::kIdHost, asmjit::TypeIdOf<void>::kTypeId, args.data(), (uint32_t)args.size());
-		uint64_t JIT = callback.getJitFunc(sig, &myCallback);
+	SECTION("Int, float, double arguments, string parsing types") {
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);

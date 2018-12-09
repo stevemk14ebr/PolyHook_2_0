@@ -27,12 +27,20 @@ namespace PLH {
 		ILCallback();
 		~ILCallback();
 		uint64_t getJitFunc(const asmjit::FuncSignature sig, const tUserCallback callback);
+
+		/* Construct a function given the typedef as a string. Types are any valid C/C++ data type (basic types), and pointers to
+		anything are just a uintptr_t. Calling convention is defaulted to whatever is typeical for the compiler you use, you can override with
+		stdcall, fastcall, or cdecl (cdecl is default on x86). On x64 those map to the same thing.*/
+		uint64_t getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv = "");
 		uint64_t* getTrampolineHolder();
 	private:
 		// does a given type fit in a general purpose register (i.e. is it integer type)
 		bool isGeneralReg(const uint8_t typeId) const;
 		// float, double, simd128
 		bool isXmmReg(const uint8_t typeId) const;
+
+		asmjit::CallConv::Id getCallConv(const std::string& conv);
+		uint8_t getTypeId(const std::string& type);
 
 		PageAllocator m_mem;
 		uint64_t m_callbackBuf;
