@@ -9,7 +9,7 @@ Article 2: https://www.codeproject.com/Articles/1252212/PolyHook-2-Cplusplus17-x
 ```
 git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
 cd PolyHook_2_0
-git submodule update --init --recursive
+git submodule update --init --remote
 ```
 Then run buildcapstone.bat and open this in VS2017 now that it has cmake support. By default buildcapstone will only include x86 architectures, to build capstone with all of them use --full-capstone command line arg. Instead of using VS 2017 you can instead generate a cmake project with 
 ```cmake -G```. But I recommend VS2017 very much. You may need to run the script in the developer command prompt for visual studio for paths to cmake to resolve correctly.
