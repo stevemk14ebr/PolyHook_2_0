@@ -9,6 +9,7 @@
 
 #include "headers/PageAllocator.hpp"
 
+#include <iostream>
 #include <vector>
 namespace PLH {
 	class ILCallback {
@@ -50,7 +51,7 @@ namespace PLH {
 
 		PageAllocator m_mem;
 		uint64_t m_callbackBuf;
-		asmjit::X86Mem argsStack;
+		asmjit::x86::Mem argsStack;
 
 		// ptr to trampoline allocated by hook, we hold this so user doesn't need to.
 		uint64_t m_trampolinePtr; 
