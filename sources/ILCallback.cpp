@@ -56,7 +56,14 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 	return asmjit::TypeId::kVoid;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH::ILCallback::tUserCallback callback) {
+uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH::ILCallback::tUserCallback callback, const uint64_t retAddr /* = 0 */) {
+	/*AsmJit is smart enough to track register allocations and will forward
+	  the proper registers the right values and fixup any it dirtied earlier.
+	  This can only be done if it knows the signature, and ABI, so we give it 
+	  them. It also only does this mapping for calls, so we need to generate 
+	  calls on our boundaries of transfers when we want argument order correct
+	  (ABI stuff is managed for us when calling C code within this project via host mode).
+	*/
 	asmjit::CodeHolder code;                      
 	code.init(asmjit::CodeInfo(asmjit::ArchInfo::kTypeHost));			
 	
@@ -134,21 +141,44 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	call->setArg(1, argCountParam);
 	
 	// deref the trampoline ptr (must live longer)
-	
 	asmjit::X86Gp orig_ptr = cc.newUIntPtr();;
 	cc.mov(orig_ptr, (uintptr_t)getTrampolineHolder());
 	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
-	// call trampoline, map input args same order they were passed to us
-	auto orig_call = cc.call(orig_ptr, sig);
-	for (uint8_t arg_idx = 0; arg_idx < sig.getArgCount(); arg_idx++) {
-		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
+	/*-- OPTIONALLY SPOOF RET ADDR --
+	If the retAddr param is != 0 then we transfer via a push of dest addr, ret addr, and jmp.
+	Other wise we just call. Potentially useful for defensive binaries.
+	*/
+	/*unsigned char* retBufTmp = (unsigned char*)m_mem.getBlock(10);
+	*(unsigned char*)retBufTmp = 0xC3;*/
+	
+	uint64_t retAddrReal = retAddr;
+	//retAddrReal = (uint64_t)retBufTmp;
+	if (retAddrReal == 0) {
+		/* call trampoline, map input args same order they were passed to us.*/
+		auto orig_call = cc.call(orig_ptr, sig);
+		for (uint8_t arg_idx = 0; arg_idx < sig.getArgCount(); arg_idx++) {
+			orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
+		}
+
+		cc.endFunc();
+		cc.finalize();
+	} else {
+		//asmjit::Label ret_jit_stub = cc.newLabel();
+		//asmjit::X86Gp tmpReg = cc.newUIntPtr();
+		//cc.lea(tmpReg, asmjit::x86::ptr(ret_jit_stub));
+		//
+		//cc.push(tmpReg); // push ret
+		//cc.push((uintptr_t)retAddrReal); // push &ret_inst
+		//cc.jmp(orig_ptr); // jmp orig
+		//cc.bind(ret_jit_stub); // ret_inst:
+		//cc.endFunc(); // omit prolog cleanup
+		//cc.finalize();
 	}
-
+	
 	// end function
-	cc.endFunc();    
-	cc.finalize();
 
+	
 	// worst case, overestimates for case trampolines needed
 	size_t size = code.getCodeSize();
 
@@ -164,14 +194,14 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature sig, const PLH:
 	return m_callbackBuf;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv/* = ""*/) {
+uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv/* = ""*/, const uint64_t retAddr /* = 0 */) {
 	asmjit::FuncSignature sig;
 	std::vector<uint8_t> args;
 	for (const std::string& s : paramTypes) {
 		args.push_back(getTypeId(s));
 	}
 	sig.init(getCallConv(callConv), getTypeId(retType), args.data(), (uint32_t)args.size());
-	return getJitFunc(sig, callback);
+	return getJitFunc(sig, callback, retAddr);
 }
 
 uint64_t* PLH::ILCallback::getTrampolineHolder() {
