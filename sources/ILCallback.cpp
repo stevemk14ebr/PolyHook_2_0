@@ -57,6 +57,8 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 }
 
 uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH::ILCallback::tUserCallback callback, const uint64_t retAddr /* = 0 */) {
+	UNREFERENCED_PARAMETER(retAddr);
+
 	/*AsmJit is smart enough to track register allocations and will forward
 	  the proper registers the right values and fixup any it dirtied earlier.
 	  This can only be done if it knows the signature, and ABI, so we give it 
@@ -69,18 +71,18 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	
 	// initialize function
 	asmjit::x86::Compiler cc(&code);            
-	cc.addFunc(sig);              
+	asmjit::FuncNode* func = cc.addFunc(sig);              
 
-	//asmjit::FileLogger log(stdout);
-	//uint32_t kFormatFlags = asmjit::FormatOptions::kFlagMachineCode | asmjit::FormatOptions::kFlagExplainImms | asmjit::FormatOptions::kFlagRegCasts 
-	//	| asmjit::FormatOptions::kFlagAnnotations | asmjit::FormatOptions::kFlagDebugPasses | asmjit::FormatOptions::kFlagDebugRA
-	//	| asmjit::FormatOptions::kFlagHexImms | asmjit::FormatOptions::kFlagHexOffsets; 
-	//
-	//log.addFlags(kFormatFlags);
-	//code.setLogger(&log);
-
+	asmjit::StringLogger log;
+	uint32_t kFormatFlags = asmjit::FormatOptions::kFlagMachineCode | asmjit::FormatOptions::kFlagExplainImms | asmjit::FormatOptions::kFlagRegCasts 
+		| asmjit::FormatOptions::kFlagAnnotations | asmjit::FormatOptions::kFlagDebugPasses | asmjit::FormatOptions::kFlagDebugRA
+		| asmjit::FormatOptions::kFlagHexImms | asmjit::FormatOptions::kFlagHexOffsets | asmjit::FormatOptions::kFlagPositions;
+	
+	log.addFlags(kFormatFlags);
+	code.setLogger(&log);
+	
 	// too small to really need it
-	cc.func()->frame().resetPreservedFP();
+	func->frame().resetPreservedFP();
 	
 	// map argument slots to registers, following abi.
 	std::vector<asmjit::x86::Reg> argRegisters;
@@ -147,46 +149,54 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	auto call = cc.call(asmjit::Imm(static_cast<int64_t>((intptr_t)callback)), asmjit::FuncSignatureT<void, Parameters*, uint8_t>(asmjit::CallConv::kIdHost));
 	call->setArg(0, argStruct);
 	call->setArg(1, argCountParam);
-	
+
 	// deref the trampoline ptr (must live longer)
-	asmjit::x86::Gp orig_ptr = cc.newUIntPtr();;
+	asmjit::x86::Gp orig_ptr = cc.newUIntPtr();
 	cc.mov(orig_ptr, (uintptr_t)getTrampolineHolder());
 	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
-	/*-- OPTIONALLY SPOOF RET ADDR --
-	If the retAddr param is != 0 then we transfer via a push of dest addr, ret addr, and jmp.
-	Other wise we just call. Potentially useful for defensive binaries.
-	*/
-	/*unsigned char* retBufTmp = (unsigned char*)m_mem.getBlock(10);
-	*(unsigned char*)retBufTmp = 0xC3;*/
-	
-	uint64_t retAddrReal = retAddr;
-	//retAddrReal = (uint64_t)retBufTmp;
-	if (retAddrReal == 0) {
-		/* call trampoline, map input args same order they were passed to us.*/
-		auto orig_call = cc.call(orig_ptr, sig);
-		for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
-			orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
-		}
-
-		cc.endFunc();
-		cc.finalize();
-	} else {
-		//asmjit::Label ret_jit_stub = cc.newLabel();
-		//asmjit::X86Gp tmpReg = cc.newUIntPtr();
-		//cc.lea(tmpReg, asmjit::x86::ptr(ret_jit_stub));
-		//
-		//cc.push(tmpReg); // push ret
-		//cc.push((uintptr_t)retAddrReal); // push &ret_inst
-		//cc.jmp(orig_ptr); // jmp orig
-		//cc.bind(ret_jit_stub); // ret_inst:
-		//cc.endFunc(); // omit prolog cleanup
-		//cc.finalize();
+	auto orig_call = cc.call(orig_ptr, sig);
+	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
+		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
 	}
-	
-	// end function
 
-	
+	cc.endFunc();
+
+	/*
+	Optionally Spoof Return (TODO)
+	Finalize Manually so we can mutate node list. In asmjit the compiler inserts implicit calculated 
+	nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
+	We want to generate these so we emit a call, but we want to spoof the return address via a jmp, so we iterate 
+	nodes and re-write the call with push, push, jmp. Only then can we serialize. Asmjit finalize applies
+	optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
+	*/
+
+	/* 
+	   runPasses will insert implicit nodes as mentioned above, remember insert point before.
+	   Passes will also do virtual register allocations, which may be assigned multiple concrete
+	   registers throughout the lifetime of the function. So we must only emit raw assembly with
+	   concrete registers from this point on (after runPasses call).
+	*/
+
+	//asmjit::BaseNode* endFunc = ret->prev();
+	//cc.setCursor(endFunc);
+	//cc.removeNode(orig_call);
+	//unsigned char* retBufTmp = (unsigned char*)m_mem.getBlock(10);
+	//*(unsigned char*)retBufTmp = 0xC3;
+	//asmjit::Label ret_jit_stub = cc.newLabel();
+	//asmjit::x86::Gp h = cc.newUIntPtr();
+	//cc.lea(h, asmjit::x86::ptr(ret_jit_stub));
+	//cc.push(h);
+	//cc.push((uintptr_t)retBufTmp);
+	//cc.jmp(orig_ptr);
+	//cc.bind(ret_jit_stub);
+
+	cc.runPasses();
+
+	// write to buffer
+	asmjit::x86::Assembler assembler(&code);
+	cc.serialize(&assembler);
+
 	// worst case, overestimates for case trampolines needed
 	code.flatten();
 	size_t size = code.codeSize();
@@ -206,6 +216,8 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	 // Relocate to the base-address of the allocated memory.
 	code.relocateToBase(m_callbackBuf);
 	code.copyFlattenedData((unsigned char*)m_callbackBuf, size);
+
+	ErrorLog::singleton().push("JIT Stub:\n" + std::string(log.data()), ErrorLevel::INFO);
 	return m_callbackBuf;
 }
 
