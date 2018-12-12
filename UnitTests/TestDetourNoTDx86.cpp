@@ -137,4 +137,21 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 		hookMeIntFloatDoubleFst(1337, 1337.1337f, 1337.1337);
 		REQUIRE(detour.unHook());
 	}
+
+	SECTION("Verify return address spoofing doesn't crash") {
+		PLH::PageAllocator mem(0, 0);
+		unsigned char* retBufTmp = (unsigned char*)mem.getBlock(10);
+		*(unsigned char*)retBufTmp = 0xC3;
+
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &myCallback, "fastcall", (uint64_t)retBufTmp);
+		REQUIRE(JIT != 0);
+
+		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
+		PLH::x86Detour detour((char*)&hookMeIntFloatDoubleFst, (char*)JIT, callback.getTrampolineHolder(), dis);
+		REQUIRE(detour.hook() == true);
+
+		hookMeIntFloatDoubleFst(1337, 1337.1337f, 1337.1337);
+		REQUIRE(detour.unHook());
+	}
+	
 }

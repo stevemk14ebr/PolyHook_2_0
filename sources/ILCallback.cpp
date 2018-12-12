@@ -163,33 +163,36 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
 	}
 
-	unsigned char* retBufTmp = (unsigned char*)m_mem.getBlock(10);
-	*(unsigned char*)retBufTmp = 0xC3;
+	asmjit::BaseNode* spoofCursor = nullptr;
+	asmjit::InstNode* pushRetAddr = nullptr;
+	asmjit::InstNode* jmpOrigPtr = nullptr;
+	if (retAddr != 0) {
+		/*
+		Spoof Method:
+			mov [esp], newRetAddress (ret_jit_stub label)
+			jmp orig_call
+			mov [esp], oldRetAddress
+			... stack cleanup ...
+			ret
+		*/
+		asmjit::Label ret_jit_stub = cc.newLabel();
+		asmjit::x86::Gp newRetAddr = cc.zcx();
+		cc.lea(newRetAddr, asmjit::x86::ptr(ret_jit_stub));
+		asmjit::x86::Gp retInstHolder = cc.zax();
+		cc.mov(retInstHolder, (uintptr_t)retAddr);
+		cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
 
-	/*
-	Spoof Method:
-	mov [esp], newRetAddress (ret_jit_stub label)
-	jmp orig_call
-	mov [esp], oldRetAddress
-	... stack cleanup ...
-	ret
-	*/
-	asmjit::Label ret_jit_stub = cc.newLabel();
-	asmjit::x86::Gp newRetAddr = cc.zcx();
-	cc.lea(newRetAddr, asmjit::x86::ptr(ret_jit_stub));
-	asmjit::x86::Gp retInstHolder = cc.zax();
-	cc.mov(retInstHolder, (uintptr_t)retBufTmp);
-	cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
-	
-	asmjit::BaseNode* spoofCursor = cc.cursor();
+		spoofCursor = cc.cursor();
 
-	/* Must do it this way to not corrupt because using compiler (stack operations + jmp out unsupported)*/
-	asmjit::InstNode* pushRetAddr = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr);
-	asmjit::InstNode* jmpOrigPtr = cc.newInstNode(asmjit::x86::Inst::kIdJmp, asmjit::BaseInst::Options::kOptionLongForm, orig_ptr);
-	
-	cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
-	cc.bind(ret_jit_stub);
-	cc.func()->frame().setAllDirty(asmjit::BaseReg::kGroupGp); // AsmJit bug?, workaround
+		/* Must do it this way to not corrupt because using compiler (stack operations + jmp out unsupported)*/
+		pushRetAddr = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr);
+		jmpOrigPtr = cc.newInstNode(asmjit::x86::Inst::kIdJmp, asmjit::BaseInst::Options::kOptionLongForm, orig_ptr);
+
+		cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
+		cc.bind(ret_jit_stub);
+	}
+
+	cc.func()->frame().setAllDirty(asmjit::BaseReg::kGroupGp); // AsmJit bug?, dirty registers not tracking correctly
 	cc.endFunc();
 	
 	/*
@@ -202,10 +205,15 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	*/
 
 	cc.runPasses();
-	cc.removeNode(orig_call);
-	cc.addAfter(pushRetAddr, spoofCursor);
-	cc.addAfter(jmpOrigPtr, pushRetAddr);
-	
+
+	// mutate nodes for spoofing
+	if (retAddr != 0) {
+		assert(spoofCursor != nullptr && pushRetAddr != nullptr && jmpOrigPtr != nullptr);
+		cc.removeNode(orig_call);
+		cc.addAfter(pushRetAddr, spoofCursor);
+		cc.addAfter(jmpOrigPtr, pushRetAddr);
+	}
+
 	/* 
 		Passes will also do virtual register allocations, which may be assigned multiple concrete
 		registers throughout the lifetime of the function. So we must only emit raw assembly with
