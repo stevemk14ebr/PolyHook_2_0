@@ -58,13 +58,16 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 
 uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH::ILCallback::tUserCallback callback, const uint64_t retAddr /* = 0 */) {
 	UNREFERENCED_PARAMETER(retAddr);
-
 	/*AsmJit is smart enough to track register allocations and will forward
 	  the proper registers the right values and fixup any it dirtied earlier.
 	  This can only be done if it knows the signature, and ABI, so we give it 
 	  them. It also only does this mapping for calls, so we need to generate 
 	  calls on our boundaries of transfers when we want argument order correct
 	  (ABI stuff is managed for us when calling C code within this project via host mode).
+	  It also does stack operations for us including alignment, shadow space, and
+	  arguments, everything really. Manual stack push/pop is not supported using
+	  the AsmJit compiler, so we must create those nodes, and insert them into
+	  the Node list manually to not corrupt the compiler's tracking of things.
 	*/
 	asmjit::CodeHolder code;                      
 	code.init(asmjit::CodeInfo(asmjit::ArchInfo::kIdHost));			
@@ -150,8 +153,8 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	call->setArg(0, argStruct);
 	call->setArg(1, argCountParam);
 
-	// deref the trampoline ptr (must live longer)
-	asmjit::x86::Gp orig_ptr = cc.newUIntPtr();
+	// deref the trampoline ptr (holder must live longer, must be concrete reg since push later)
+	asmjit::x86::Gp orig_ptr = cc.zbx();
 	cc.mov(orig_ptr, (uintptr_t)getTrampolineHolder());
 	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
@@ -160,38 +163,58 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
 	}
 
+	unsigned char* retBufTmp = (unsigned char*)m_mem.getBlock(10);
+	*(unsigned char*)retBufTmp = 0xC3;
+
+	asmjit::Label ret_jit_stub = cc.newLabel();
+	asmjit::x86::Gp h = cc.zcx();
+	cc.lea(h, asmjit::x86::ptr(ret_jit_stub));
+	asmjit::x86::Gp h2 = cc.zax();
+	cc.mov(h2, (uintptr_t)retBufTmp);
+	cc.xchg(asmjit::x86::ptr(cc.zsp()), h2);
+	
+	/* Must do it this way to not corrupt because using compiler*/
+	//asmjit::InstNode* fixZsp = cc.newInstNode(asmjit::x86::Inst::kIdAdd, asmjit::BaseInst::Options::kOptionShortForm, cc.zsp(), asmjit::Imm(sizeof(uintptr_t)));
+	asmjit::InstNode* pushRetAddr = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, h);
+	asmjit::InstNode* pushRet = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionLongForm, asmjit::Imm((uintptr_t)retBufTmp));
+	
+	// compiler would follow this, and go awry
+	cc.unfollow().jmp(orig_ptr);
+	cc.xchg(asmjit::x86::ptr(cc.zsp()), h2);
+	cc.bind(ret_jit_stub);
 	cc.endFunc();
+	
+	UNREFERENCED_PARAMETER(pushRet);
+	UNREFERENCED_PARAMETER(pushRetAddr);
 
 	/*
-	Optionally Spoof Return (TODO)
-	Finalize Manually so we can mutate node list. In asmjit the compiler inserts implicit calculated 
-	nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
-	We want to generate these so we emit a call, but we want to spoof the return address via a jmp, so we iterate 
-	nodes and re-write the call with push, push, jmp. Only then can we serialize. Asmjit finalize applies
-	optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
+		Optionally Spoof Return (TODO)
+		finalize() Manually so we can mutate node list. In asmjit the compiler inserts implicit calculated 
+		nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
+		We want to generate these so we emit a call, but we want to spoof the return address via a jmp, so we iterate 
+		nodes and re-write the call with push, push, jmp. Only then can we serialize. Asmjit finalize applies
+		optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
 	*/
+	
+	cc.runPasses();
+	cc.removeNode(orig_call);
+
+	// insert pushes right before jmp
+	asmjit::BaseNode* insertNode = nullptr;
+	for (insertNode = cc.lastNode(); insertNode != nullptr; insertNode = insertNode->prev()) {
+		if (insertNode->isInst() && insertNode->as<asmjit::InstNode>()->id() == asmjit::x86::Inst::Id::kIdJmp)
+			break;
+	}
+	//cc.addBefore(pushRet, insertNode);
+	cc.addBefore(pushRetAddr, insertNode);
+	//cc.addAfter(fixZsp, pushRetAddr);
+	
 
 	/* 
-	   runPasses will insert implicit nodes as mentioned above, remember insert point before.
-	   Passes will also do virtual register allocations, which may be assigned multiple concrete
-	   registers throughout the lifetime of the function. So we must only emit raw assembly with
-	   concrete registers from this point on (after runPasses call).
+		Passes will also do virtual register allocations, which may be assigned multiple concrete
+		registers throughout the lifetime of the function. So we must only emit raw assembly with
+		concrete registers from this point on (after runPasses call).
 	*/
-
-	//asmjit::BaseNode* endFunc = ret->prev();
-	//cc.setCursor(endFunc);
-	//cc.removeNode(orig_call);
-	//unsigned char* retBufTmp = (unsigned char*)m_mem.getBlock(10);
-	//*(unsigned char*)retBufTmp = 0xC3;
-	//asmjit::Label ret_jit_stub = cc.newLabel();
-	//asmjit::x86::Gp h = cc.newUIntPtr();
-	//cc.lea(h, asmjit::x86::ptr(ret_jit_stub));
-	//cc.push(h);
-	//cc.push((uintptr_t)retBufTmp);
-	//cc.jmp(orig_ptr);
-	//cc.bind(ret_jit_stub);
-
-	cc.runPasses();
 
 	// write to buffer
 	asmjit::x86::Assembler assembler(&code);
