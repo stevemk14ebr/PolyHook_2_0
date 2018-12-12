@@ -76,7 +76,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	asmjit::x86::Compiler cc(&code);            
 	asmjit::FuncNode* func = cc.addFunc(sig);              
 
-	asmjit::StringLogger log;
+	asmjit::FileLogger log(stdout);
 	uint32_t kFormatFlags = asmjit::FormatOptions::kFlagMachineCode | asmjit::FormatOptions::kFlagExplainImms | asmjit::FormatOptions::kFlagRegCasts 
 		| asmjit::FormatOptions::kFlagAnnotations | asmjit::FormatOptions::kFlagDebugPasses | asmjit::FormatOptions::kFlagDebugRA
 		| asmjit::FormatOptions::kFlagHexImms | asmjit::FormatOptions::kFlagHexOffsets | asmjit::FormatOptions::kFlagPositions;
@@ -166,27 +166,32 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	unsigned char* retBufTmp = (unsigned char*)m_mem.getBlock(10);
 	*(unsigned char*)retBufTmp = 0xC3;
 
+	/*
+	Spoof Method:
+	mov [esp], newRetAddress (ret_jit_stub label)
+	jmp orig_call
+	mov [esp], oldRetAddress
+	... stack cleanup ...
+	ret
+	*/
 	asmjit::Label ret_jit_stub = cc.newLabel();
-	asmjit::x86::Gp h = cc.zcx();
-	cc.lea(h, asmjit::x86::ptr(ret_jit_stub));
-	asmjit::x86::Gp h2 = cc.zax();
-	cc.mov(h2, (uintptr_t)retBufTmp);
-	cc.xchg(asmjit::x86::ptr(cc.zsp()), h2);
+	asmjit::x86::Gp newRetAddr = cc.zcx();
+	cc.lea(newRetAddr, asmjit::x86::ptr(ret_jit_stub));
+	asmjit::x86::Gp retInstHolder = cc.zax();
+	cc.mov(retInstHolder, (uintptr_t)retBufTmp);
+	cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
 	
-	/* Must do it this way to not corrupt because using compiler*/
-	//asmjit::InstNode* fixZsp = cc.newInstNode(asmjit::x86::Inst::kIdAdd, asmjit::BaseInst::Options::kOptionShortForm, cc.zsp(), asmjit::Imm(sizeof(uintptr_t)));
-	asmjit::InstNode* pushRetAddr = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, h);
-	asmjit::InstNode* pushRet = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionLongForm, asmjit::Imm((uintptr_t)retBufTmp));
+	asmjit::BaseNode* spoofCursor = cc.cursor();
+
+	/* Must do it this way to not corrupt because using compiler (stack operations + jmp out unsupported)*/
+	asmjit::InstNode* pushRetAddr = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr);
+	asmjit::InstNode* jmpOrigPtr = cc.newInstNode(asmjit::x86::Inst::kIdJmp, asmjit::BaseInst::Options::kOptionLongForm, orig_ptr);
 	
-	// compiler would follow this, and go awry
-	cc.unfollow().jmp(orig_ptr);
-	cc.xchg(asmjit::x86::ptr(cc.zsp()), h2);
+	cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
 	cc.bind(ret_jit_stub);
+	cc.func()->frame().setAllDirty(asmjit::BaseReg::kGroupGp); // AsmJit bug?, workaround
 	cc.endFunc();
 	
-	UNREFERENCED_PARAMETER(pushRet);
-	UNREFERENCED_PARAMETER(pushRetAddr);
-
 	/*
 		Optionally Spoof Return (TODO)
 		finalize() Manually so we can mutate node list. In asmjit the compiler inserts implicit calculated 
@@ -195,21 +200,12 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 		nodes and re-write the call with push, push, jmp. Only then can we serialize. Asmjit finalize applies
 		optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
 	*/
-	
+
 	cc.runPasses();
 	cc.removeNode(orig_call);
-
-	// insert pushes right before jmp
-	asmjit::BaseNode* insertNode = nullptr;
-	for (insertNode = cc.lastNode(); insertNode != nullptr; insertNode = insertNode->prev()) {
-		if (insertNode->isInst() && insertNode->as<asmjit::InstNode>()->id() == asmjit::x86::Inst::Id::kIdJmp)
-			break;
-	}
-	//cc.addBefore(pushRet, insertNode);
-	cc.addBefore(pushRetAddr, insertNode);
-	//cc.addAfter(fixZsp, pushRetAddr);
+	cc.addAfter(pushRetAddr, spoofCursor);
+	cc.addAfter(jmpOrigPtr, pushRetAddr);
 	
-
 	/* 
 		Passes will also do virtual register allocations, which may be assigned multiple concrete
 		registers throughout the lifetime of the function. So we must only emit raw assembly with
@@ -240,7 +236,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	code.relocateToBase(m_callbackBuf);
 	code.copyFlattenedData((unsigned char*)m_callbackBuf, size);
 
-	ErrorLog::singleton().push("JIT Stub:\n" + std::string(log.data()), ErrorLevel::INFO);
+	//ErrorLog::singleton().push("JIT Stub:\n" + std::string(log.data()), ErrorLevel::INFO);
 	return m_callbackBuf;
 }
 

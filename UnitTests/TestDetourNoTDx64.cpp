@@ -36,7 +36,7 @@ TEST_CASE("Minimal Example", "[AsmJit]") {
 NOINLINE void hookMeInt(int a) {
 	volatile int var = 1;
 	int var2 = var + a;
-	printf("%d %d\n", var, var2);
+	printf("%d %d %I64X\n", var, var2, (uint64_t)_ReturnAddress());
 }
 
 NOINLINE void hookMeFloat(float a) {
