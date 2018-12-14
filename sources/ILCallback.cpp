@@ -81,7 +81,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	asmjit::x86::Compiler cc(&code);            
 	asmjit::FuncNode* func = cc.addFunc(sig);              
 
-	asmjit::FileLogger log(stdout);
+	asmjit::StringLogger log;
 	uint32_t kFormatFlags = asmjit::FormatOptions::kFlagMachineCode | asmjit::FormatOptions::kFlagExplainImms | asmjit::FormatOptions::kFlagRegCasts 
 		| asmjit::FormatOptions::kFlagAnnotations | asmjit::FormatOptions::kFlagDebugPasses | asmjit::FormatOptions::kFlagDebugRA
 		| asmjit::FormatOptions::kFlagHexImms | asmjit::FormatOptions::kFlagHexOffsets | asmjit::FormatOptions::kFlagPositions;
@@ -259,7 +259,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	code.relocateToBase(m_callbackBuf);
 	code.copyFlattenedData((unsigned char*)m_callbackBuf, size);
 
-	//ErrorLog::singleton().push("JIT Stub:\n" + std::string(log.data()), ErrorLevel::INFO);
+	ErrorLog::singleton().push("JIT Stub:\n" + std::string(log.data()), ErrorLevel::INFO);
 	return m_callbackBuf;
 }
 
