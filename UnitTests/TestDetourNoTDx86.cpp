@@ -80,9 +80,9 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	PLH::ILCallback callback;
 
 	SECTION("Integer argument") {
-		uint64_t JIT = callback.getJitFunc("void", { "int", "int" }, &myCallback);
+		uint64_t JIT = callback.getJitFunc("void", { "int" }, &myCallback);
 		REQUIRE(JIT != 0);
-
+		
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
 		PLH::x86Detour detour((char*)&hookMeInt, (char*)JIT, callback.getTrampolineHolder(), dis);
 		REQUIRE(detour.hook() == true);
