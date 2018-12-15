@@ -43,7 +43,7 @@ bool PLH::EatHook::hook() {
 			ErrorLog::singleton().push("EAT hook offset is > 32bit's. Allocation of trampoline necessary and failed to find free page within range", ErrorLevel::INFO);
 			return false;
 		}
-		
+
 		PLH::ADisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback));
 		offset = m_trampoline - m_moduleBase;
 
@@ -95,15 +95,13 @@ uint32_t* PLH::EatHook::FindEatFunction(const std::string& apiName, const std::w
 
 	// find loaded module from peb
 	for (LDR_DATA_TABLE_ENTRY* dte = (LDR_DATA_TABLE_ENTRY*)ldr->InLoadOrderModuleList.Flink;
-		 dte->DllBase != NULL;
-		 dte = (LDR_DATA_TABLE_ENTRY*)dte->InLoadOrderLinks.Flink) {
+        dte->DllBase != NULL;
+        dte = (LDR_DATA_TABLE_ENTRY*)dte->InLoadOrderLinks.Flink) {
 
-		// TODO: create stricmp for UNICODE_STRING because this is really bad for performance
-		std::wstring baseModuleName(dte->BaseDllName.Buffer, dte->BaseDllName.Length / sizeof(wchar_t));
-
-		// try all modules if none given, otherwise only try specified
-		if (!moduleName.empty() && (my_wide_stricmp(baseModuleName.c_str(), moduleName.c_str()) != 0))
-			continue;
+        // try all modules if none given, otherwise only try specified
+        const ci_wstring_view baseModuleName{dte->BaseDllName.Buffer, dte->BaseDllName.Length / sizeof(wchar_t)};
+        if (!moduleName.empty() && baseModuleName.compare(moduleName.data()) != 0)
+            continue;
 
 		std::wcout << moduleName << L" Found module" << std::endl;
 
@@ -141,10 +139,10 @@ uint32_t* PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
 	uint16_t* pAddressOfNameOrdinals = RVA2VA(uint16_t*, m_moduleBase, pExports->AddressOfNameOrdinals);
 
 	for (uint32_t i = 0; i < pExports->NumberOfNames; i++)
-	{	
+	{
         if(my_narrow_stricmp(RVA2VA(char*, m_moduleBase, pAddressOfNames[i]),
                              apiName.c_str()) != 0)
-			continue;	 				
+			continue;
 
 		// std::cout << RVA2VA(char*, m_moduleBase, pAddressOfNames[i]) << std::endl;
 		uint16_t iExportOrdinal = pAddressOfNameOrdinals[i];

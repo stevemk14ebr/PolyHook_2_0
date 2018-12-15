@@ -111,5 +111,28 @@ inline int my_wide_stricmp(const wchar_t *a, const wchar_t *b) {
 	return ca - cb;
 }
 
+struct ci_wchar_traits : public std::char_traits<wchar_t> {
+    static bool eq(wchar_t c1, wchar_t c2) { return towupper(c1) == towupper(c2); }
+    static bool ne(wchar_t c1, wchar_t c2) { return towupper(c1) != towupper(c2); }
+    static bool lt(wchar_t c1, wchar_t c2) { return towupper(c1) < towupper(c2); }
+    static int compare(const wchar_t* s1, const wchar_t* s2, size_t n) {
+        while (n-- != 0) {
+            if (towupper(*s1) < towupper(*s2)) return -1;
+            if (toupper(*s1) > towupper(*s2)) return 1;
+            ++s1; ++s2;
+        }
+        return 0;
+    }
+    static const wchar_t* find(const wchar_t* s, int n, wchar_t a) {
+        while (n-- > 0 && towupper(*s) != towupper(a)) {
+            ++s;
+        }
+        return s;
+    }
+};
+
+using ci_wstring = std::basic_string<wchar_t, ci_wchar_traits>;
+using ci_wstring_view = std::basic_string_view<wchar_t, ci_wchar_traits>;
+
 }
 #endif //POLYHOOK_2_0_MISC_HPP
