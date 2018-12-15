@@ -68,6 +68,11 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	  arguments, everything really. Manual stack push/pop is not supported using
 	  the AsmJit compiler, so we must create those nodes, and insert them into
 	  the Node list manually to not corrupt the compiler's tracking of things.
+
+	  Inside the compiler, before endFunc only virtual registers may be used. Any
+	  concrete physical registers will not have their liveness tracked, so will
+	  be spoiled and must be manually marked dirty. After endFunc ONLY concrete
+	  physical registers may be inserted as nodes.
 	*/
 	asmjit::CodeHolder code;                      
 	code.init(asmjit::CodeInfo(asmjit::ArchInfo::kIdHost));			
@@ -76,7 +81,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	asmjit::x86::Compiler cc(&code);            
 	asmjit::FuncNode* func = cc.addFunc(sig);              
 
-	asmjit::FileLogger log(stdout);
+	asmjit::StringLogger log;
 	uint32_t kFormatFlags = asmjit::FormatOptions::kFlagMachineCode | asmjit::FormatOptions::kFlagExplainImms | asmjit::FormatOptions::kFlagRegCasts 
 		| asmjit::FormatOptions::kFlagAnnotations | asmjit::FormatOptions::kFlagDebugPasses | asmjit::FormatOptions::kFlagDebugRA
 		| asmjit::FormatOptions::kFlagHexImms | asmjit::FormatOptions::kFlagHexOffsets | asmjit::FormatOptions::kFlagPositions;
@@ -175,6 +180,12 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 			... stack cleanup ...
 			ret
 		*/
+
+		/* 
+			must use concrete registers so that push & ret nodes to be 
+			inserted later reference registers that exist (reg allocation
+			happens during runPasses).
+		*/
 		asmjit::Label ret_jit_stub = cc.newLabel();
 		asmjit::x86::Gp newRetAddr = cc.zcx();
 		cc.lea(newRetAddr, asmjit::x86::ptr(ret_jit_stub));
@@ -189,10 +200,14 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 		jmpOrigPtr = cc.newInstNode(asmjit::x86::Inst::kIdJmp, asmjit::BaseInst::Options::kOptionLongForm, orig_ptr);
 
 		cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
+
+		// must dirty manually since concrete registers
+		cc.func()->frame().addDirtyRegs(newRetAddr);
+		cc.func()->frame().addDirtyRegs(retInstHolder);
 		cc.bind(ret_jit_stub);
 	}
-
-	cc.func()->frame().setAllDirty(asmjit::BaseReg::kGroupGp); // AsmJit bug?, dirty registers not tracking correctly
+	cc.func()->frame().addDirtyRegs(orig_ptr);
+	//cc.func()->frame().setAllDirty(asmjit::BaseReg::kGroupGp); //  dirty registers not tracking correctly
 	cc.endFunc();
 	
 	/*
@@ -244,7 +259,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	code.relocateToBase(m_callbackBuf);
 	code.copyFlattenedData((unsigned char*)m_callbackBuf, size);
 
-	//ErrorLog::singleton().push("JIT Stub:\n" + std::string(log.data()), ErrorLevel::INFO);
+	ErrorLog::singleton().push("JIT Stub:\n" + std::string(log.data()), ErrorLevel::INFO);
 	return m_callbackBuf;
 }
 
