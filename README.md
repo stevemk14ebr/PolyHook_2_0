@@ -6,7 +6,7 @@ Article 1: https://www.codeproject.com/articles/1100579/polyhook-the-cplusplus-x
 Article 2: https://www.codeproject.com/Articles/1252212/PolyHook-2-Cplusplus17-x86-x64-Hooking-Library
 
 # Community
-Ask for help, chat with others, talke to me here
+Ask for help, chat with others, talk to me here
 * [Official Gitter Chat](https://gitter.im/PolyHook/Lobby)
 
 # Build
