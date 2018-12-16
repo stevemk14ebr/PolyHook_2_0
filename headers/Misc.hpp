@@ -118,7 +118,7 @@ struct ci_wchar_traits : public std::char_traits<wchar_t> {
     static int compare(const wchar_t* s1, const wchar_t* s2, size_t n) {
         while (n-- != 0) {
             if (towupper(*s1) < towupper(*s2)) return -1;
-            if (toupper(*s1) > towupper(*s2)) return 1;
+            if (towupper(*s1) > towupper(*s2)) return 1;
             ++s1; ++s2;
         }
         return 0;
