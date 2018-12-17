@@ -158,6 +158,24 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	call->setArg(0, argStruct);
 	call->setArg(1, argCountParam);
 
+	// mov from arguments stack structure into regs
+	cc.mov(i, 0); // reset idx
+	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
+		const uint8_t argType = sig.args()[arg_idx];
+
+		if (isGeneralReg(argType)) {
+			cc.mov(argRegisters.at(arg_idx).as<asmjit::x86::Gp>(), argsStackIdx);
+		}else if (isXmmReg(argType)) {
+			cc.movq(argRegisters.at(arg_idx).as<asmjit::x86::Xmm>(), argsStackIdx);
+		}else {
+			ErrorLog::singleton().push("Parameters wider than 64bits not supported", ErrorLevel::SEV);
+			return 0;
+		}
+
+		// next structure slot (+= sizeof(uint64_t))
+		cc.add(i, sizeof(uint64_t));
+	}
+
 	// deref the trampoline ptr (holder must live longer, must be concrete reg since push later)
 	asmjit::x86::Gp orig_ptr = cc.zbx();
 	cc.mov(orig_ptr, (uintptr_t)getTrampolineHolder());
@@ -207,11 +225,12 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 		cc.bind(ret_jit_stub);
 	}
 	cc.func()->frame().addDirtyRegs(orig_ptr);
-	//cc.func()->frame().setAllDirty(asmjit::BaseReg::kGroupGp); //  dirty registers not tracking correctly
+
+	// TODO over-write eax/rax value spoof
 	cc.endFunc();
 	
 	/*
-		Optionally Spoof Return (TODO)
+		Optionally Spoof Return
 		finalize() Manually so we can mutate node list. In asmjit the compiler inserts implicit calculated 
 		nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
 		We want to generate these so we emit a call, but we want to spoof the return address via a jmp, so we iterate 
