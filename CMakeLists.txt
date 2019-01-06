@@ -11,6 +11,7 @@ option(FEATURE_INLINENTD "Support inline hooks without specifying typedefs by ge
 option(FEATURE_PE "Implement all win pe hooking functionality" ON)
 option(BUILD_DLL "Build dll & lib instead of tests" OFF)
 option(BUILD_STATIC "If BUILD_DLL is set, create the type that can be statically linked" ON)
+option(CAPSTONE_FULL "Build all features of capstone." OFF)
 
 # Calculate inclusion of necessary dependencies based on features
 
