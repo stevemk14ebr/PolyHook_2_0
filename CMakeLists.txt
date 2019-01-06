@@ -159,16 +159,12 @@ if(FEATURE_INLINENTD MATCHES ON)
 endif()
 
 if(DEP_ASMJIT_NEED MATCHES ON)
-	
-	# only build tests if making exe
-	if(BUILD_DLL MATCHES OFF)
-		# AsmJit is a dep iff inlinetd is on
-		set(ASMJIT_DIR ${PROJECT_SOURCE_DIR}/asmjit)
-		set(ASMJIT_EMBED TRUE)
-	
-		include("${ASMJIT_DIR}/CMakeLists.txt")
-		include_directories(${ASMJIT_DIR}/src)
-	endif()
+	# AsmJit is a dep iff inlinetd is on
+	set(ASMJIT_DIR ${PROJECT_SOURCE_DIR}/asmjit)
+	set(ASMJIT_EMBED TRUE)
+
+	include("${ASMJIT_DIR}/CMakeLists.txt")
+	include_directories(${ASMJIT_DIR}/src)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR})
