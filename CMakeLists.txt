@@ -193,23 +193,25 @@ if(MSVC)
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
 endif()
 
-#Set this variable to hold the path to capstone directory
-set(CAPSTONE_LIB_PATH_64 ${PROJECT_SOURCE_DIR}/capstone/build64)
-set(CAPSTONE_LIB_PATH_86 ${PROJECT_SOURCE_DIR}/capstone/build32)
-
 #Find the absolute path to the lib (linux)
 #find_library(CAPSTONE_LIB NAMES libcapstone.a PATHS ${CAPSTONE_LIB_PATH})
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    # 64 bits
-	
-	#Link the capstone lib according to config mode
-	target_link_libraries(${PROJECT_NAME} debug ${CAPSTONE_LIB_PATH_64}/Debug/capstone.lib)
-	target_link_libraries(${PROJECT_NAME} optimized ${CAPSTONE_LIB_PATH_64}/Release/capstone.lib)
-elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    # 32 bits
-
-	#Link the capstone lib according to config mode
-	target_link_libraries(${PROJECT_NAME} debug ${CAPSTONE_LIB_PATH_86}/Debug/capstone.lib)
-	target_link_libraries(${PROJECT_NAME} optimized ${CAPSTONE_LIB_PATH_86}/Release/capstone.lib)
+set(CAPSTONE_BUILD_SHARED OFF CACHE BOOL "")
+set(CAPSTONE_BUILD_SHARED OFF CACHE BOOL "")
+if(NOT ${CAPSTONE_FULL})
+	set(CAPSTONE_ARM_SUPPORT OFF CACHE BOOL "ARM support") 
+	set(CAPSTONE_ARM64_SUPPORT OFF CACHE BOOL "ARM64 support") 
+	set(CAPSTONE_M680X_SUPPORT OFF CACHE BOOL "M680X support") 
+	set(CAPSTONE_M68K_SUPPORT OFF CACHE BOOL "M68K support") 
+	set(CAPSTONE_MIPS_SUPPORT OFF CACHE BOOL "MIPS support") 
+	set(CAPSTONE_PPC_SUPPORT OFF CACHE BOOL "PPC support") 
+	set(CAPSTONE_SPARC_SUPPORT OFF CACHE BOOL "SPARC support")
+	set(CAPSTONE_SYSZ_SUPPORT OFF CACHE BOOL "SYSZ support")
+	set(CAPSTONE_XCORE_SUPPORT OFF CACHE BOOL "XCORE support")
+	set(CAPSTONE_TMS320C64X_SUPPORT OFF CACHE BOOL "TMS320C64X support")
+	set(CAPSTONE_M680X_SUPPORT OFF CACHE BOOL "M680X support")
+	set(CAPSTONE_EVM_SUPPORT OFF CACHE BOOL "EVM support")
 endif()
+
+add_subdirectory(capstone)
+target_link_libraries(${PROJECT_NAME} capstone-static)
