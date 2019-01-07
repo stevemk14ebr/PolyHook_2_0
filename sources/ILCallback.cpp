@@ -208,6 +208,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 		asmjit::x86::Gp newRetAddr = cc.zcx();
 		cc.lea(newRetAddr, asmjit::x86::ptr(ret_jit_stub));
 		asmjit::x86::Gp retInstHolder = cc.zax();
+
 		cc.mov(retInstHolder, (uintptr_t)retAddr);
 		cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
 
@@ -230,14 +231,13 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	cc.endFunc();
 	
 	/*
-		Optionally Spoof Return
+		Optionally Spoof Return Address
 		finalize() Manually so we can mutate node list. In asmjit the compiler inserts implicit calculated 
 		nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
 		We want to generate these so we emit a call, but we want to spoof the return address via a jmp, so we iterate 
 		nodes and re-write the call with push, push, jmp. Only then can we serialize. Asmjit finalize applies
 		optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
 	*/
-
 	cc.runPasses();
 
 	// mutate nodes for spoofing

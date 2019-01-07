@@ -248,6 +248,21 @@ NOINLINE void mySecondCallback(const PLH::ILCallback::Parameters* p, const uint8
 	}
 }
 
+NOINLINE int spoofReturnValueAndAddress(int param) {
+	printf("%d\n", param);
+	return param;
+}
+
+NOINLINE void spoofReturnValueAndAddressCallback(const PLH::ILCallback::Parameters* p, const uint8_t count) {
+	for (int i = 0; i < count; i++) {
+		printf("Arg: %d asInt:%d\n", i, *(int*)p->getArgPtr(i));
+	}
+
+	/*_asm {
+		mov eax, 7
+	}*/
+}
+
 TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 	PLH::ILCallback callback;
 
@@ -304,6 +319,23 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 		effectsNTD.PushEffect();
 		rw_std(1337, 1337.1337f, 1337.1337);
 		REQUIRE(effectsNTD.PopEffect().didExecute());
+		REQUIRE(detour.unHook());
+	}
+
+	SECTION("Spoof return value and address") {
+		PLH::PageAllocator mem(0, 0);
+		unsigned char* retBufTmp = (unsigned char*)mem.getBlock(10);
+		*(unsigned char*)retBufTmp = 0xC3;
+
+		uint64_t JIT = callback.getJitFunc("void", { "int" }, &spoofReturnValueAndAddressCallback,"");
+		REQUIRE(JIT != 0);
+
+		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
+		PLH::x86Detour detour((char*)&spoofReturnValueAndAddress, (char*)JIT, callback.getTrampolineHolder(), dis);
+		REQUIRE(detour.hook() == true);
+
+		spoofReturnValueAndAddress(1337);
+		
 		REQUIRE(detour.unHook());
 	}
 }
