@@ -186,6 +186,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
 	}
 
+	asmjit::BaseNode* spoofCursor1 = nullptr;
 	asmjit::BaseNode* spoofCursor = nullptr;
 	asmjit::InstNode* pushRetAddr = nullptr;
 	asmjit::InstNode* jmpOrigPtr = nullptr;
@@ -205,17 +206,18 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 			happens during runPasses).
 		*/
 		asmjit::Label ret_jit_stub = cc.newLabel();
-		asmjit::x86::Gp newRetAddr = cc.zcx();
+		asmjit::x86::Gp newRetAddr = cc.zax();
 		cc.lea(newRetAddr, asmjit::x86::ptr(ret_jit_stub));
-		asmjit::x86::Gp retInstHolder = cc.zax();
+		pushRetAddr = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr);
+		spoofCursor1 = cc.cursor();
 
+		asmjit::x86::Gp retInstHolder = cc.zax();
 		cc.mov(retInstHolder, (uintptr_t)retAddr);
-		cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
+		cc.xchg(asmjit::x86::ptr(cc.zsp(), sizeof(uintptr_t)), retInstHolder);
 
 		spoofCursor = cc.cursor();
 
 		/* Must do it this way to not corrupt because using compiler (stack operations + jmp out unsupported)*/
-		pushRetAddr = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr);
 		jmpOrigPtr = cc.newInstNode(asmjit::x86::Inst::kIdJmp, asmjit::BaseInst::Options::kOptionLongForm, orig_ptr);
 
 		cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
@@ -244,8 +246,8 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	if (retAddr != 0) {
 		assert(spoofCursor != nullptr && pushRetAddr != nullptr && jmpOrigPtr != nullptr);
 		cc.removeNode(orig_call);
-		cc.addAfter(pushRetAddr, spoofCursor);
-		cc.addAfter(jmpOrigPtr, pushRetAddr);
+		cc.addAfter(pushRetAddr, spoofCursor1);
+		cc.addAfter(jmpOrigPtr, spoofCursor);
 	}
 
 	/* 
