@@ -181,16 +181,18 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	cc.mov(orig_ptr, (uintptr_t)getTrampolineHolder());
 	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
+	asmjit::Label ret_jit_stub = cc.newLabel();
+	asmjit::LabelNode* ret_jit_stub_loc = nullptr;
 	auto orig_call = cc.call(orig_ptr, sig);
 	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
 		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
 	}
+	
+	std::vector<asmjit::BaseNode*> spoofNodes;
+	std::vector<asmjit::BaseNode*> spoofNodesAfter;
+	if (retAddr != 0) {	
+		cc.labelNodeOf(&ret_jit_stub_loc, ret_jit_stub);
 
-	asmjit::BaseNode* spoofCursor1 = nullptr;
-	asmjit::BaseNode* spoofCursor = nullptr;
-	asmjit::InstNode* pushRetAddr = nullptr;
-	asmjit::InstNode* jmpOrigPtr = nullptr;
-	if (retAddr != 0) {
 		/*
 		Spoof Method:
 			mov [esp], newRetAddress (ret_jit_stub label)
@@ -205,27 +207,23 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 			inserted later reference registers that exist (reg allocation
 			happens during runPasses).
 		*/
-		asmjit::Label ret_jit_stub = cc.newLabel();
+		
 		asmjit::x86::Gp newRetAddr = cc.zax();
-		cc.lea(newRetAddr, asmjit::x86::ptr(ret_jit_stub));
-		pushRetAddr = cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr);
-		spoofCursor1 = cc.cursor();
-
+		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdLea, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr, asmjit::x86::ptr(ret_jit_stub)));
+		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr));
+	
 		asmjit::x86::Gp retInstHolder = cc.zax();
-		cc.mov(retInstHolder, (uintptr_t)retAddr);
-		cc.xchg(asmjit::x86::ptr(cc.zsp(), sizeof(uintptr_t)), retInstHolder);
-
-		spoofCursor = cc.cursor();
+		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdMov, asmjit::BaseInst::Options::kOptionShortForm, retInstHolder, asmjit::Imm((uintptr_t)retAddr)));
+		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdXchg, asmjit::BaseInst::Options::kOptionShortForm, asmjit::x86::ptr(cc.zsp(), sizeof(uintptr_t)), retInstHolder));
 
 		/* Must do it this way to not corrupt because using compiler (stack operations + jmp out unsupported)*/
-		jmpOrigPtr = cc.newInstNode(asmjit::x86::Inst::kIdJmp, asmjit::BaseInst::Options::kOptionLongForm, orig_ptr);
-
-		cc.xchg(asmjit::x86::ptr(cc.zsp()), retInstHolder);
+		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdJmp, asmjit::BaseInst::Options::kOptionLongForm, orig_ptr));
+		spoofNodes.push_back(ret_jit_stub_loc);
+		spoofNodesAfter.push_back(cc.newInstNode(asmjit::x86::Inst::kIdXchg, asmjit::BaseInst::Options::kOptionShortForm, asmjit::x86::ptr(cc.zsp()), retInstHolder));
 
 		// must dirty manually since concrete registers
 		cc.func()->frame().addDirtyRegs(newRetAddr);
 		cc.func()->frame().addDirtyRegs(retInstHolder);
-		cc.bind(ret_jit_stub);
 	}
 	cc.func()->frame().addDirtyRegs(orig_ptr);
 
@@ -240,14 +238,21 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 		nodes and re-write the call with push, push, jmp. Only then can we serialize. Asmjit finalize applies
 		optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
 	*/
+	asmjit::BaseNode* ret_node = cc.lastNode()->prev();
 	cc.runPasses();
 
 	// mutate nodes for spoofing
 	if (retAddr != 0) {
-		assert(spoofCursor != nullptr && pushRetAddr != nullptr && jmpOrigPtr != nullptr);
+		asmjit::BaseNode* cursor = orig_call->prev();
+		for (asmjit::BaseNode* node : spoofNodes) {
+			cursor = cc.addAfter(node, cursor);
+		}
+
+		cursor = ret_node;
+		for (asmjit::BaseNode* node : spoofNodesAfter) {
+			cursor = cc.addAfter(node, cursor);
+		}
 		cc.removeNode(orig_call);
-		cc.addAfter(pushRetAddr, spoofCursor1);
-		cc.addAfter(jmpOrigPtr, spoofCursor);
 	}
 
 	/* 
