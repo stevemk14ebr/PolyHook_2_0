@@ -13,7 +13,7 @@ Ask for help, chat with others, talk to me here
 ```
 git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
 cd PolyHook_2_0
-git submodule update --init --remote
+git submodule update --init
 ```
 
 
