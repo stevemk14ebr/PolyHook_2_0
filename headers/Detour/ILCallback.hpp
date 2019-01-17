@@ -23,22 +23,28 @@ namespace PLH {
 			// asm depends on this specific type
 			uint64_t m_arguments[];
 		};
-		typedef void(*tUserCallback)(const Parameters* params, const uint8_t count);
+
+		struct ReturnValue {
+			unsigned char* getRetPtr() const {
+				return (unsigned char*)&m_retVal;
+			}
+			uint64_t m_retVal;
+		};
+
+		typedef void(*tUserCallback)(const Parameters* params, const uint8_t count, const ReturnValue* ret);
 		
 		ILCallback();
 		~ILCallback();
 
-		/* Construct a callback given the raw signature. 'Callback' param is the C stub to transfer to. Ret addr is optionally
-		the address of a return instruction within the binary being hooked, to be used for return address spoofing. We can control
-		the stack since we JIT, so we push the address of our jit stub to come back to, then the binary's ret instr address. This way 
-		when the original is called it pops the ret and goes there, which pops our address and goes there. And the original stub
-		only sees the ret addr. Leave it zero to not spoof*/
-		uint64_t getJitFunc(const asmjit::FuncSignature& sig, const tUserCallback callback, const uint64_t retAddr = 0);
+		/* Construct a callback given the raw signature at runtime. 'Callback' param is the C stub to transfer to,
+		where parameters can be modified through a structure which is written back to the parameter slots depending 
+		on calling convention.*/
+		uint64_t getJitFunc(const asmjit::FuncSignature& sig, const tUserCallback callback);
 
 		/* Construct a callback given the typedef as a string. Types are any valid C/C++ data type (basic types), and pointers to
 		anything are just a uintptr_t. Calling convention is defaulted to whatever is typical for the compiler you use, you can override with
 		stdcall, fastcall, or cdecl (cdecl is default on x86). On x64 those map to the same thing.*/
-		uint64_t getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv = "", const uint64_t retAddr = 0);
+		uint64_t getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv = "");
 		uint64_t* getTrampolineHolder();
 	private:
 		// does a given type fit in a general purpose register (i.e. is it integer type)

@@ -56,8 +56,7 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 	return asmjit::Type::kIdVoid;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH::ILCallback::tUserCallback callback, const uint64_t retAddr /* = 0 */) {
-	UNREFERENCED_PARAMETER(retAddr);
+uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH::ILCallback::tUserCallback callback) {;
 	/*AsmJit is smart enough to track register allocations and will forward
 	  the proper registers the right values and fixup any it dirtied earlier.
 	  This can only be done if it knows the signature, and ABI, so we give it 
@@ -112,7 +111,8 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	}
   
 	// setup the stack structure to hold arguments for user callback
-	argsStack = cc.newStack((uint32_t)(sizeof(uint64_t) * sig.argCount()), 4);
+	uint32_t stackSize = (uint32_t)(sizeof(uint64_t) * sig.argCount());
+	argsStack = cc.newStack(stackSize, 4);
 	asmjit::x86::Mem argsStackIdx(argsStack);               
 
 	// assigns some register as index reg 
@@ -153,10 +153,16 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	asmjit::x86::Gp argCountParam = cc.newU8();
 	cc.mov(argCountParam, (uint8_t)sig.argCount());
 
+	// create buffer for ret val
+	asmjit::x86::Mem retStack = cc.newStack(sizeof(uint64_t), 4);
+	asmjit::x86::Gp retStruct = cc.newUIntPtr("retStruct");
+	cc.lea(retStruct, retStack);
+
 	// call to user provided function (use ABI of host compiler)
-	auto call = cc.call(asmjit::Imm(static_cast<int64_t>((intptr_t)callback)), asmjit::FuncSignatureT<void, Parameters*, uint8_t>(asmjit::CallConv::kIdHost));
+	auto call = cc.call(asmjit::Imm(static_cast<int64_t>((intptr_t)callback)), asmjit::FuncSignatureT<void, Parameters*, uint8_t, ReturnValue*>(asmjit::CallConv::kIdHost));
 	call->setArg(0, argStruct);
 	call->setArg(1, argCountParam);
+	call->setArg(2, retStruct);
 
 	// mov from arguments stack structure into regs
 	cc.mov(i, 0); // reset idx
@@ -181,79 +187,37 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	cc.mov(orig_ptr, (uintptr_t)getTrampolineHolder());
 	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
-	asmjit::Label ret_jit_stub = cc.newLabel();
-	asmjit::LabelNode* ret_jit_stub_loc = nullptr;
 	auto orig_call = cc.call(orig_ptr, sig);
 	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
 		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
 	}
 	
-	std::vector<asmjit::BaseNode*> spoofNodes;
-	std::vector<asmjit::BaseNode*> spoofNodesAfter;
-	if (retAddr != 0) {	
-		cc.labelNodeOf(&ret_jit_stub_loc, ret_jit_stub);
-
-		/*
-		Spoof Method:
-			mov [esp], newRetAddress (ret_jit_stub label)
-			jmp orig_call
-			mov [esp], oldRetAddress
-			... stack cleanup ...
-			ret
-		*/
-
-		/* 
-			must use concrete registers so that push & ret nodes to be 
-			inserted later reference registers that exist (reg allocation
-			happens during runPasses).
-		*/
-		
-		asmjit::x86::Gp newRetAddr = cc.zax();
-		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdLea, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr, asmjit::x86::ptr(ret_jit_stub)));
-		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdPush, asmjit::BaseInst::Options::kOptionShortForm, newRetAddr));
-	
-		asmjit::x86::Gp retInstHolder = cc.zax();
-		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdMov, asmjit::BaseInst::Options::kOptionShortForm, retInstHolder, asmjit::Imm((uintptr_t)retAddr)));
-		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdXchg, asmjit::BaseInst::Options::kOptionShortForm, asmjit::x86::ptr(cc.zsp(), sizeof(uintptr_t)), retInstHolder));
-
-		/* Must do it this way to not corrupt because using compiler (stack operations + jmp out unsupported)*/
-		spoofNodes.push_back(cc.newInstNode(asmjit::x86::Inst::kIdJmp, asmjit::BaseInst::Options::kOptionLongForm, orig_ptr));
-		spoofNodes.push_back(ret_jit_stub_loc);
-		spoofNodesAfter.push_back(cc.newInstNode(asmjit::x86::Inst::kIdXchg, asmjit::BaseInst::Options::kOptionShortForm, asmjit::x86::ptr(cc.zsp()), retInstHolder));
-
-		// must dirty manually since concrete registers
-		cc.func()->frame().addDirtyRegs(newRetAddr);
-		cc.func()->frame().addDirtyRegs(retInstHolder);
+	if (sig.hasRet()) {
+		asmjit::x86::Mem retStackIdx(retStack);
+		retStackIdx.setSize(sizeof(uint64_t));
+		if (isGeneralReg((uint8_t)sig.ret())) {
+			asmjit::x86::Gp tmp2 = cc.newUIntPtr();
+			cc.mov(tmp2, retStackIdx);
+			cc.ret(tmp2);
+		} else {
+			asmjit::x86::Xmm tmp2 = cc.newXmm();
+			cc.movq(tmp2, retStackIdx);
+			cc.ret(tmp2);
+		}
 	}
-	cc.func()->frame().addDirtyRegs(orig_ptr);
 
-	// TODO over-write eax/rax value spoof
+	cc.func()->frame().addDirtyRegs(orig_ptr);
+	
+	
+
 	cc.endFunc();
 	
 	/*
-		Optionally Spoof Return Address
-		finalize() Manually so we can mutate node list. In asmjit the compiler inserts implicit calculated 
+		finalize() Manually so we can mutate node list (for future use). In asmjit the compiler inserts implicit calculated 
 		nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
-		We want to generate these so we emit a call, but we want to spoof the return address via a jmp, so we iterate 
-		nodes and re-write the call with push, push, jmp. Only then can we serialize. Asmjit finalize applies
-		optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
+		Asmjit finalize applies optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
 	*/
-	asmjit::BaseNode* ret_node = cc.lastNode()->prev();
 	cc.runPasses();
-
-	// mutate nodes for spoofing
-	if (retAddr != 0) {
-		asmjit::BaseNode* cursor = orig_call->prev();
-		for (asmjit::BaseNode* node : spoofNodes) {
-			cursor = cc.addAfter(node, cursor);
-		}
-
-		cursor = ret_node;
-		for (asmjit::BaseNode* node : spoofNodesAfter) {
-			cursor = cc.addAfter(node, cursor);
-		}
-		cc.removeNode(orig_call);
-	}
 
 	/* 
 		Passes will also do virtual register allocations, which may be assigned multiple concrete
@@ -289,14 +253,14 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	return m_callbackBuf;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv/* = ""*/, const uint64_t retAddr /* = 0 */) {
+uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv/* = ""*/) {
 	asmjit::FuncSignature sig;
 	std::vector<uint8_t> args;
 	for (const std::string& s : paramTypes) {
 		args.push_back(getTypeId(s));
 	}
 	sig.init(getCallConv(callConv),asmjit::FuncSignature::kNoVarArgs, getTypeId(retType), args.data(), (uint32_t)args.size());
-	return getJitFunc(sig, callback, retAddr);
+	return getJitFunc(sig, callback);
 }
 
 uint64_t* PLH::ILCallback::getTrampolineHolder() {

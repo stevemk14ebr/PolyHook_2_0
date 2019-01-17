@@ -63,7 +63,7 @@ NOINLINE void hookMeIntFloatDouble(int a, float b, double c) {
 	printf("%d %f %f %f\n", a, b, c, ans);
 }
 
-NOINLINE void myCallback(const PLH::ILCallback::Parameters* p, const uint8_t count) {
+NOINLINE void myCallback(const PLH::ILCallback::Parameters* p, const uint8_t count, const PLH::ILCallback::ReturnValue* retVal) {
 	printf("Argument Count: %d\n", count);
 	for (int i = 0; i < count; i++) {
 		printf("Arg: %d asInt:%d asFloat:%f asDouble:%f\n", i, *(int*)p->getArgPtr(i), *(float*)p->getArgPtr(i), *(double*)p->getArgPtr(i));
@@ -126,7 +126,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 }
 
 
-NOINLINE void rw(int a, float b, double c) {
+NOINLINE void rw(int a, float b, double c, int type) {
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -137,7 +137,43 @@ NOINLINE void rw(int a, float b, double c) {
 	printf("%d %f %f %f\n", a, b, c, ans);
 }
 
-NOINLINE void mySecondCallback(const PLH::ILCallback::Parameters* p, const uint8_t count) {
+NOINLINE float rw_float(int a, float b, double c, int type) {
+	volatile float ans = 0.0f;
+	ans += (float)a;
+	ans += c;
+	ans += b;
+	if (a == 5 && (b > 4.0f && b < 6.0f) && (c > 4.0 && c < 6.0)) {
+		effectsNTD64.PeakEffect().trigger();
+	}
+	printf("%d %f %f %f\n", a, b, c, ans);
+	return ans;
+}
+
+NOINLINE double rw_double(int a, float b, double c, int type) {
+	volatile float ans = 0.0f;
+	ans += (float)a;
+	ans += c;
+	ans += b;
+	if (a == 5 && (b > 4.0f && b < 6.0f) && (c > 4.0 && c < 6.0)) {
+		effectsNTD64.PeakEffect().trigger();
+	}
+	printf("%d %f %f %f\n", a, b, c, ans);
+	return c;
+}
+
+NOINLINE int rw_int(int a, float b, double c, int type) {
+	volatile float ans = 0.0f;
+	ans += (float)a;
+	ans += c;
+	ans += b;
+	if (a == 5 && (b > 4.0f && b < 6.0f) && (c > 4.0 && c < 6.0)) {
+		effectsNTD64.PeakEffect().trigger();
+	}
+	printf("%d %f %f %f\n", a, b, c, ans);
+	return a;
+}
+
+NOINLINE void mySecondCallback(const PLH::ILCallback::Parameters* p, const uint8_t count, const PLH::ILCallback::ReturnValue* retVal) {
 	printf("Argument Count: %d\n", count);
 	for (int i = 0; i < count; i++) {
 		printf("Arg: %d asInt:%d asFloat:%f asDouble:%f\n", i, *(int*)p->getArgPtr(i), *(float*)p->getArgPtr(i), *(double*)p->getArgPtr(i));
@@ -155,13 +191,28 @@ NOINLINE void mySecondCallback(const PLH::ILCallback::Parameters* p, const uint8
 			*(double*)p->getArgPtr(i) = 5.0;
 		}
 	}
+
+	// little hack, use 4th param to test different return types
+	switch (*(int*)p->getArgPtr(3)) {
+	case 0:
+		*(int*)retVal->getRetPtr() = 1337;
+		break;
+	case 1:
+		*(float*)retVal->getRetPtr() = 1337.0f;
+		break;
+	case 2:
+		*(double*)retVal->getRetPtr() = 1337.0;
+		break;
+	default:
+		printf("Unknown Mode, NOT modifying ret val!\n");
+	}
 }
 
 TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 	PLH::ILCallback callback;
 
 	SECTION("Int, float, double arguments host") {
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &mySecondCallback);
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double", "int" }, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -169,7 +220,37 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 		REQUIRE(detour.hook() == true);
 
 		effectsNTD64.PushEffect();
-		rw(1337, 1337.1337f, 1337.1337);
+		rw(1337, 1337.1337f, 1337.1337, 0);
+		REQUIRE(effectsNTD64.PopEffect().didExecute());
+		REQUIRE(detour.unHook());
+	}
+
+	SECTION("Int, float, double arguments, float ret, host") {
+		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, &mySecondCallback);
+		REQUIRE(JIT != 0);
+
+		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::x64Detour detour((char*)&rw_float, (char*)JIT, callback.getTrampolineHolder(), dis);
+		REQUIRE(detour.hook() == true);
+
+		effectsNTD64.PushEffect();
+		float f = rw_float(1337, 1337.1337f, 1337.1337, 1);
+		REQUIRE(f == Approx(1337.0f));
+		REQUIRE(effectsNTD64.PopEffect().didExecute());
+		REQUIRE(detour.unHook());
+	}
+
+	SECTION("Int, float, double arguments, double ret, host") {
+		uint64_t JIT = callback.getJitFunc("double", { "int", "float", "double", "int" }, &mySecondCallback);
+		REQUIRE(JIT != 0);
+
+		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::x64Detour detour((char*)&rw_double, (char*)JIT, callback.getTrampolineHolder(), dis);
+		REQUIRE(detour.hook() == true);
+
+		effectsNTD64.PushEffect();
+		double d = rw_double(1337, 1337.1337f, 1337.1337, 2);
+		REQUIRE(d == Approx(1337.0));
 		REQUIRE(effectsNTD64.PopEffect().didExecute());
 		REQUIRE(detour.unHook());
 	}
