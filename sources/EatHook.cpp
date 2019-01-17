@@ -103,7 +103,7 @@ uint32_t* PLH::EatHook::FindEatFunction(const std::string& apiName, const std::w
         if (!moduleName.empty() && baseModuleName.compare(moduleName.data()) != 0)
             continue;
 
-		std::wcout << moduleName << L" Found module" << std::endl;
+		//std::wcout << moduleName << L" Found module" << std::endl;
 
 		m_moduleBase = (uint64_t)dte->DllBase;
 

@@ -56,15 +56,22 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 	return asmjit::Type::kIdVoid;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH::ILCallback::tUserCallback callback, const uint64_t retAddr /* = 0 */) {
-	UNREFERENCED_PARAMETER(retAddr);
-
+uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH::ILCallback::tUserCallback callback) {;
 	/*AsmJit is smart enough to track register allocations and will forward
 	  the proper registers the right values and fixup any it dirtied earlier.
 	  This can only be done if it knows the signature, and ABI, so we give it 
 	  them. It also only does this mapping for calls, so we need to generate 
 	  calls on our boundaries of transfers when we want argument order correct
 	  (ABI stuff is managed for us when calling C code within this project via host mode).
+	  It also does stack operations for us including alignment, shadow space, and
+	  arguments, everything really. Manual stack push/pop is not supported using
+	  the AsmJit compiler, so we must create those nodes, and insert them into
+	  the Node list manually to not corrupt the compiler's tracking of things.
+
+	  Inside the compiler, before endFunc only virtual registers may be used. Any
+	  concrete physical registers will not have their liveness tracked, so will
+	  be spoiled and must be manually marked dirty. After endFunc ONLY concrete
+	  physical registers may be inserted as nodes.
 	*/
 	asmjit::CodeHolder code;                      
 	code.init(asmjit::CodeInfo(asmjit::ArchInfo::kIdHost));			
@@ -104,7 +111,8 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	}
   
 	// setup the stack structure to hold arguments for user callback
-	argsStack = cc.newStack((uint32_t)(sizeof(uint64_t) * sig.argCount()), 4);
+	uint32_t stackSize = (uint32_t)(sizeof(uint64_t) * sig.argCount());
+	argsStack = cc.newStack(stackSize, 4);
 	asmjit::x86::Mem argsStackIdx(argsStack);               
 
 	// assigns some register as index reg 
@@ -145,13 +153,37 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	asmjit::x86::Gp argCountParam = cc.newU8();
 	cc.mov(argCountParam, (uint8_t)sig.argCount());
 
+	// create buffer for ret val
+	asmjit::x86::Mem retStack = cc.newStack(sizeof(uint64_t), 4);
+	asmjit::x86::Gp retStruct = cc.newUIntPtr("retStruct");
+	cc.lea(retStruct, retStack);
+
 	// call to user provided function (use ABI of host compiler)
-	auto call = cc.call(asmjit::Imm(static_cast<int64_t>((intptr_t)callback)), asmjit::FuncSignatureT<void, Parameters*, uint8_t>(asmjit::CallConv::kIdHost));
+	auto call = cc.call(asmjit::Imm(static_cast<int64_t>((intptr_t)callback)), asmjit::FuncSignatureT<void, Parameters*, uint8_t, ReturnValue*>(asmjit::CallConv::kIdHost));
 	call->setArg(0, argStruct);
 	call->setArg(1, argCountParam);
+	call->setArg(2, retStruct);
 
-	// deref the trampoline ptr (must live longer)
-	asmjit::x86::Gp orig_ptr = cc.newUIntPtr();
+	// mov from arguments stack structure into regs
+	cc.mov(i, 0); // reset idx
+	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
+		const uint8_t argType = sig.args()[arg_idx];
+
+		if (isGeneralReg(argType)) {
+			cc.mov(argRegisters.at(arg_idx).as<asmjit::x86::Gp>(), argsStackIdx);
+		}else if (isXmmReg(argType)) {
+			cc.movq(argRegisters.at(arg_idx).as<asmjit::x86::Xmm>(), argsStackIdx);
+		}else {
+			ErrorLog::singleton().push("Parameters wider than 64bits not supported", ErrorLevel::SEV);
+			return 0;
+		}
+
+		// next structure slot (+= sizeof(uint64_t))
+		cc.add(i, sizeof(uint64_t));
+	}
+
+	// deref the trampoline ptr (holder must live longer, must be concrete reg since push later)
+	asmjit::x86::Gp orig_ptr = cc.zbx();
 	cc.mov(orig_ptr, (uintptr_t)getTrampolineHolder());
 	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
 
@@ -159,39 +191,39 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
 		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
 	}
+	
+	if (sig.hasRet()) {
+		asmjit::x86::Mem retStackIdx(retStack);
+		retStackIdx.setSize(sizeof(uint64_t));
+		if (isGeneralReg((uint8_t)sig.ret())) {
+			asmjit::x86::Gp tmp2 = cc.newUIntPtr();
+			cc.mov(tmp2, retStackIdx);
+			cc.ret(tmp2);
+		} else {
+			asmjit::x86::Xmm tmp2 = cc.newXmm();
+			cc.movq(tmp2, retStackIdx);
+			cc.ret(tmp2);
+		}
+	}
+
+	cc.func()->frame().addDirtyRegs(orig_ptr);
+	
+	
 
 	cc.endFunc();
-
+	
 	/*
-	Optionally Spoof Return (TODO)
-	Finalize Manually so we can mutate node list. In asmjit the compiler inserts implicit calculated 
-	nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
-	We want to generate these so we emit a call, but we want to spoof the return address via a jmp, so we iterate 
-	nodes and re-write the call with push, push, jmp. Only then can we serialize. Asmjit finalize applies
-	optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
+		finalize() Manually so we can mutate node list (for future use). In asmjit the compiler inserts implicit calculated 
+		nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
+		Asmjit finalize applies optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
 	*/
+	cc.runPasses();
 
 	/* 
-	   runPasses will insert implicit nodes as mentioned above, remember insert point before.
-	   Passes will also do virtual register allocations, which may be assigned multiple concrete
-	   registers throughout the lifetime of the function. So we must only emit raw assembly with
-	   concrete registers from this point on (after runPasses call).
+		Passes will also do virtual register allocations, which may be assigned multiple concrete
+		registers throughout the lifetime of the function. So we must only emit raw assembly with
+		concrete registers from this point on (after runPasses call).
 	*/
-
-	//asmjit::BaseNode* endFunc = ret->prev();
-	//cc.setCursor(endFunc);
-	//cc.removeNode(orig_call);
-	//unsigned char* retBufTmp = (unsigned char*)m_mem.getBlock(10);
-	//*(unsigned char*)retBufTmp = 0xC3;
-	//asmjit::Label ret_jit_stub = cc.newLabel();
-	//asmjit::x86::Gp h = cc.newUIntPtr();
-	//cc.lea(h, asmjit::x86::ptr(ret_jit_stub));
-	//cc.push(h);
-	//cc.push((uintptr_t)retBufTmp);
-	//cc.jmp(orig_ptr);
-	//cc.bind(ret_jit_stub);
-
-	cc.runPasses();
 
 	// write to buffer
 	asmjit::x86::Assembler assembler(&code);
@@ -221,14 +253,14 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	return m_callbackBuf;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv/* = ""*/, const uint64_t retAddr /* = 0 */) {
+uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv/* = ""*/) {
 	asmjit::FuncSignature sig;
 	std::vector<uint8_t> args;
 	for (const std::string& s : paramTypes) {
 		args.push_back(getTypeId(s));
 	}
 	sig.init(getCallConv(callConv),asmjit::FuncSignature::kNoVarArgs, getTypeId(retType), args.data(), (uint32_t)args.size());
-	return getJitFunc(sig, callback, retAddr);
+	return getJitFunc(sig, callback);
 }
 
 uint64_t* PLH::ILCallback::getTrampolineHolder() {
