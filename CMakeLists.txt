@@ -19,8 +19,6 @@ option(CAPSTONE_FULL "Build all features of capstone." OFF)
 set(DEP_ASMJIT_NEED ${FEATURE_INLINENTD})
 # todo: make inclusion of capstone stuff depend on feature flags
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 #IDE's like it when header file are included as source files
 set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
         ${PROJECT_SOURCE_DIR}/headers/CapstoneDisassembler.hpp
@@ -159,27 +157,18 @@ if(FEATURE_INLINENTD MATCHES ON)
 	endif()
 endif()
 
-if(DEP_ASMJIT_NEED MATCHES ON)
-	# AsmJit is a dep iff inlinetd is on
-	set(ASMJIT_DIR ${PROJECT_SOURCE_DIR}/asmjit)
-	set(ASMJIT_EMBED TRUE)
-
-	include("${ASMJIT_DIR}/CMakeLists.txt")
-	include_directories(${ASMJIT_DIR}/src)
-endif()
-
 include_directories(${PROJECT_SOURCE_DIR})
 set(SOURCE_FILES_PLH ${UNIT_TEST_SOURCES} ${HEADER_IMP_SOURCES} ${HEADER_FILES})
 
 if(BUILD_DLL MATCHES ON) 
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 	if(BUILD_STATIC MATCHES ON)
-	    add_library(PolyHook_2 STATIC ${SOURCE_FILES_PLH} ${ASMJIT_SRC})
+	    add_library(PolyHook_2 STATIC ${SOURCE_FILES_PLH})
 	else()
-	    add_library(PolyHook_2 SHARED ${SOURCE_FILES_PLH} ${ASMJIT_SRC})
+	    add_library(PolyHook_2 SHARED ${SOURCE_FILES_PLH})
 	endif()
 else()
-    add_executable(PolyHook_2 ${SOURCE_FILES_PLH} ${ASMJIT_SRC})
+    add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
 endif()
 
 # add WALL + PDB flags
@@ -188,6 +177,19 @@ if(MSVC)
   set_property(SOURCE ${ASMJIT_SRC} PROPERTY COMPILE_FLAGS "/MP")
   set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS "/MP /W4 /WX /Z7")
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
+
+  # force static lib
+  set(CompilerFlags
+        CMAKE_CXX_FLAGS
+        CMAKE_CXX_FLAGS_DEBUG
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_C_FLAGS
+        CMAKE_C_FLAGS_DEBUG
+        CMAKE_C_FLAGS_RELEASE
+        )
+	foreach(CompilerFlag ${CompilerFlags})
+		string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+	endforeach()
 endif()
 
 #Find the absolute path to the lib (linux)
@@ -213,3 +215,13 @@ endif()
 
 add_subdirectory(capstone)
 target_link_libraries(${PROJECT_NAME} capstone-static)
+
+if(DEP_ASMJIT_NEED MATCHES ON)
+	# AsmJit is a dep iff inlinetd is on
+	set(ASMJIT_DIR ${PROJECT_SOURCE_DIR}/asmjit/)
+	set(ASMJIT_BUILD_STATIC ON)
+	set(ASMJIT_BUILD_X86 ON)
+	include_directories(${ASMJIT_DIR}/src/)
+	add_subdirectory(${ASMJIT_DIR})
+	target_link_libraries(${PROJECT_NAME} asmjit)
+endif()
