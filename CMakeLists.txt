@@ -173,28 +173,14 @@ endif()
 
 # add WALL + PDB flags
 if(MSVC)
-  # apply wall flags only to plh src files, asmjit can't compile in wall
-  set_property(SOURCE ${ASMJIT_SRC} PROPERTY COMPILE_FLAGS "/MP")
+  # apply wall flags only to plh src files
   set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS "/MP /W4 /WX /Z7")
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
-
-  # force static lib
-  set(CompilerFlags
-        CMAKE_CXX_FLAGS
-        CMAKE_CXX_FLAGS_DEBUG
-        CMAKE_CXX_FLAGS_RELEASE
-        CMAKE_C_FLAGS
-        CMAKE_C_FLAGS_DEBUG
-        CMAKE_C_FLAGS_RELEASE
-        )
-	foreach(CompilerFlag ${CompilerFlags})
-		string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-	endforeach()
 endif()
 
-#Find the absolute path to the lib (linux)
-#find_library(CAPSTONE_LIB NAMES libcapstone.a PATHS ${CAPSTONE_LIB_PATH})
+# build and link all the deps
 
+# CAPSTONE
 set(CAPSTONE_BUILD_SHARED OFF CACHE BOOL "")
 set(CAPSTONE_BUILD_TESTS OFF CACHE BOOL "")
 set(CAPSTONE_BUILD_CSTOOL OFF CACHE BOOL "")
@@ -216,12 +202,13 @@ endif()
 add_subdirectory(capstone)
 target_link_libraries(${PROJECT_NAME} capstone-static)
 
+# ASMJIT
 if(DEP_ASMJIT_NEED MATCHES ON)
 	# AsmJit is a dep iff inlinetd is on
 	set(ASMJIT_DIR ${PROJECT_SOURCE_DIR}/asmjit/)
-	set(ASMJIT_BUILD_STATIC ON)
-	add_definitions(-DASMJIT_BUILD_STATIC)
-	include_directories(${ASMJIT_DIR}/src/)
-	add_subdirectory(${ASMJIT_DIR})
+	set(ASMJIT_BUILD_STATIC ON) # give our project the BUILD_STATIC flag
+	add_definitions(-DASMJIT_BUILD_STATIC) # give asmjit the BUILD_STATIC flag
+	include_directories(${ASMJIT_DIR}/src/) # includes directory is nested in src
+	add_subdirectory(${ASMJIT_DIR}) # build it
 	target_link_libraries(${PROJECT_NAME} asmjit)
 endif()

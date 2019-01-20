@@ -13,19 +13,19 @@ Ask for help, chat with others, talk to me here
 ```
 git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
 cd PolyHook_2_0
-git submodule update --init
+git submodule update --init --recursive
 ```
-
-
-If you do not want to use visual studio 2017, i provide a buildcapstone.bat for manually building capstone libs (you should not need this, the cmake script builds capstone libs and statically links them by default, i provide it for just in case you need it). By default buildcapstone will only include x86 architectures, to build capstone with all of them use --full-capstone command line arg. Instead of using VS 2017 you can instead generate a cmake project with ```cmake -G```. But I recommend VS2017 very much. You may need to run the script in the developer command prompt for visual studio for paths to cmake to resolve correctly.
+I provide directions for how to setup the visual studio cmake environment only. If you don't want to use visual studio that's fine, this is a standard cmake project and will build from command line just fine.
 
 ### Visual Studio 2017/2019
-Follow the command line i posted earlier to clone, follow from here.
+clone and init with given commands
 
-Open VS 2017, go to file->open->cmake.. this will load the project and start cmake generation. Next (optional step) go to tools->options->cmake->general->CMakeSettings.json path needs to be set to the polyhook2_0 directory that directly contains CMakeSettings.json, this will tell visual studio the build paths and also setup the build types (if it doesn't look right clear all the cmake cache stuff by cmake->clean all & cmake->cache->delete all & cmake->cache->generate. After all the stuff is done finally goto cmake->build all or cmake->build only or if you are in exe mode you can also set a startup item and release mode and use the play button. Capstone is set to automatically build and link, you DO NOT need to run the bat file.
+Open VS 2017, go to file->open->cmake.. this will load the project and start cmake generation. Next (optional step) go to tools->options->cmake->general->CMakeSettings.json path needs to be set to the polyhook2_0 directory that directly contains CMakeSettings.json, this will tell visual studio the build paths and also setup the build types (if it doesn't look right clear all the cmake cache stuff by cmake->clean all & cmake->cache->delete all & cmake->cache->generate. After all the stuff is done finally goto cmake->build all or cmake->build only or if you are in exe mode you can also set a startup item and release mode and use the play button. Capstone and asmjit are both set to automatically build and link, you DO NOT need to build them seperately.
+
+![CMakeSettings.json](https://i.imgur.com/RpHQ5Km.png)
 
 ### Build Config
-You can build 3 different things. By default an executable is built and the unit tests are run. You can also build as a library by setting the ```BUILD_DLL``` option in CMakeLists.txt. If you choose to build as a library you can build it for static linking using the ```BUILD_STATIC``` option. I've setup an example project to show how to use this as a static library. You should clear your cmake cache between changing these options. The dll is built with the cmake option to export all symbols. This is different from the typical windows DLL where things are manually exported via declspec(dllexport), instead it behaves how linux dlls do with all symbols exported by default. This style should make it easier to maintain the code, the downside is there are many exports but i don't care.
+You can build 3 different things. By default an executable is built and the unit tests are run. You can also build as a library by setting the ```BUILD_DLL``` option in CMakeLists.txt. If you choose to build as a library you can build it for static linking using the ```BUILD_STATIC``` option. Both asmjit and capstone are linked to polyhook statically, regardless of the BUILD_STATIC flag, it controls only if the polyhook dll itself is static. I've setup an example project to show how to use this as a static library. You should clear your cmake cache between changing these options. The dll is built with the cmake option to export all symbols. This is different from the typical windows DLL where things are manually exported via declspec(dllexport), instead it behaves how linux dlls do with all symbols exported by default. This style should make it easier to maintain the code, the downside is there are many exports but i don't care.
 
 Read the tests for docs for now until i write some. They are extensive
 
