@@ -13,8 +13,9 @@ Ask for help, chat with others, talk to me here
 ```
 git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
 cd PolyHook_2_0
-git submodule update --init
+git submodule update --init --recursive
 ```
+I provide directions for how to setup the visual studio cmake environment only. If you don't want to use visual studio that's fine, this is a standard cmake project and will build from command line just fine.
 
 ### Visual Studio 2017/2019
 clone and init with given commands
