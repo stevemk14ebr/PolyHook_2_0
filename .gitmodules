@@ -6,3 +6,6 @@
 	path = asmjit
 	url = https://github.com/asmjit/asmjit.git
 	branch = next-wip
+[submodule "zydis"]
+	path = zydis
+	url = https://github.com/zyantific/zydis.git

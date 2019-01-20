@@ -17,11 +17,13 @@ option(CAPSTONE_FULL "Build all features of capstone." OFF)
 
 # for now only inlinentd uses asmjit
 set(DEP_ASMJIT_NEED ${FEATURE_INLINENTD})
+set(DEP_ZYDIS_NEED ON)
 # todo: make inclusion of capstone stuff depend on feature flags
 
 #IDE's like it when header file are included as source files
 set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
         ${PROJECT_SOURCE_DIR}/headers/CapstoneDisassembler.hpp
+		${PROJECT_SOURCE_DIR}/headers/ZydisDisassembler.hpp
         ${PROJECT_SOURCE_DIR}/headers/Enums.hpp
         ${PROJECT_SOURCE_DIR}/headers/IHook.hpp
         ${PROJECT_SOURCE_DIR}/headers/Instruction.hpp
@@ -33,6 +35,7 @@ set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
 
 set(HEADER_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
+		${PROJECT_SOURCE_DIR}/sources/ZydisDisassembler.cpp
 		${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp
 		${PROJECT_SOURCE_DIR}/sources/TestEffectTracker.cpp
 		${PROJECT_SOURCE_DIR}/sources/PageAllocator.cpp)
@@ -176,6 +179,19 @@ if(MSVC)
   # apply wall flags only to plh src files
   set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS "/MP /W4 /WX /Z7")
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
+
+  # force static lib
+  set(CompilerFlags
+        CMAKE_CXX_FLAGS
+        CMAKE_CXX_FLAGS_DEBUG
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_C_FLAGS
+        CMAKE_C_FLAGS_DEBUG
+        CMAKE_C_FLAGS_RELEASE
+        )
+	foreach(CompilerFlag ${CompilerFlags})
+		string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+	endforeach()
 endif()
 
 # build and link all the deps
@@ -211,4 +227,16 @@ if(DEP_ASMJIT_NEED MATCHES ON)
 	include_directories(${ASMJIT_DIR}/src/) # includes directory is nested in src
 	add_subdirectory(${ASMJIT_DIR}) # build it
 	target_link_libraries(${PROJECT_NAME} asmjit)
+endif()
+
+if(DEP_ZYDIS_NEED MATCHES ON)
+	# static by default
+	set(ZYDIS_DIR ${PROJECT_SOURCE_DIR}/zydis/)
+	set(ZYDIS_BUILD_TOOLS OFF)
+	set(ZYDIS_BUILD_EXAMPLES OFF)
+	include_directories(${ZYDIS_DIR}/dependencies/zycore/include) # zycore includes
+	include_directories(${ZYDIS_DIR}/include) # zydis includes
+	include_directories(${CMAKE_CURRENT_BINARY_DIR}/zydis/dependencies/zycore) # find auto-generated ZycoreExportConfig.h in build dir
+	add_subdirectory(${ZYDIS_DIR}) # buld it
+	target_link_libraries(${PROJECT_NAME} Zydis)
 endif()
