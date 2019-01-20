@@ -220,7 +220,7 @@ if(DEP_ASMJIT_NEED MATCHES ON)
 	# AsmJit is a dep iff inlinetd is on
 	set(ASMJIT_DIR ${PROJECT_SOURCE_DIR}/asmjit/)
 	set(ASMJIT_BUILD_STATIC ON)
-	set(ASMJIT_BUILD_X86 ON)
+	add_definitions(-DASMJIT_BUILD_STATIC)
 	include_directories(${ASMJIT_DIR}/src/)
 	add_subdirectory(${ASMJIT_DIR})
 	target_link_libraries(${PROJECT_NAME} asmjit)
