@@ -19,8 +19,6 @@ option(CAPSTONE_FULL "Build all features of capstone." OFF)
 set(DEP_ASMJIT_NEED ${FEATURE_INLINENTD})
 # todo: make inclusion of capstone stuff depend on feature flags
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 #IDE's like it when header file are included as source files
 set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
         ${PROJECT_SOURCE_DIR}/headers/CapstoneDisassembler.hpp
