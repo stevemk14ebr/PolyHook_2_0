@@ -41,8 +41,11 @@ public:
 	}
 
 	Error pop() {
-		Error err = m_log.back();
-		m_log.pop_back();
+		Error err = {};
+		if (!m_log.empty()) {
+			err = m_log.back();
+			m_log.pop_back();
+		}
 		return err;
 	}
 
