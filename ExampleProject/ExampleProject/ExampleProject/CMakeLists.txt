@@ -15,6 +15,22 @@ set(PLH_LIB_PATH_86 ${PLH_DIR}/build32)
 set(CAPSTONE_LIB_PATH_64 ${PLH_LIB_PATH_64}/capstone)
 set(CAPSTONE_LIB_PATH_86 ${PLH_LIB_PATH_86}/capstone)
 
+# add WALL + PDB flags
+if(MSVC)
+  # force static lib
+  set(CompilerFlags
+        CMAKE_CXX_FLAGS
+        CMAKE_CXX_FLAGS_DEBUG
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_C_FLAGS
+        CMAKE_C_FLAGS_DEBUG
+        CMAKE_C_FLAGS_RELEASE
+        )
+	foreach(CompilerFlag ${CompilerFlags})
+		string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+	endforeach()
+endif()
+
 target_compile_options(${PROJECT_NAME} PRIVATE /std:c++latest)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     # 64 bits
