@@ -6,14 +6,14 @@ cmake_minimum_required (VERSION 3.8)
 # Add source to this project's executable.
 add_executable (ExampleProject "ExampleProject.cpp" "ExampleProject.h")
 
-set(PLH_DIR C:/Users/steve/Source/Repos/PolyHook_2_0)
+get_filename_component(PLH_DIR "../../../" ABSOLUTE)
 
 include_directories(${PLH_DIR})
 
 set(PLH_LIB_PATH_64 ${PLH_DIR}/build64)
 set(PLH_LIB_PATH_86 ${PLH_DIR}/build32)
-set(CAPSTONE_LIB_PATH_64 ${PLH_DIR}/capstone/build64)
-set(CAPSTONE_LIB_PATH_86 ${PLH_DIR}/capstone/build32)
+set(CAPSTONE_LIB_PATH_64 ${PLH_LIB_PATH_64}/capstone)
+set(CAPSTONE_LIB_PATH_86 ${PLH_LIB_PATH_86}/capstone)
 
 target_compile_options(${PROJECT_NAME} PRIVATE /std:c++latest)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
