@@ -5,7 +5,7 @@ std::recursive_mutex PLH::PageAllocator::m_pageMtx;
 std::atomic<uint8_t> PLH::PageAllocator::m_refCount = 0;
 
 PLH::PageAllocator::PageAllocator(const uint64_t address, const uint64_t size) : m_regionStart(address), m_regionSize(size) {
-	m_refCount++;
+	++m_refCount;
 }
 
 PLH::PageAllocator::~PageAllocator() {
@@ -36,15 +36,15 @@ uint64_t PLH::PageAllocator::getBlock(const uint64_t size) {
 		}
 	}
 	
-	uint64_t searchSz = m_regionSize ? m_regionSize : std::numeric_limits<int64_t>::max();
-	uint64_t Allocated = AllocateWithinRange(m_regionStart, searchSz);
-	if (Allocated == 0)
+	const uint64_t searchSz = m_regionSize ? m_regionSize : std::numeric_limits<int64_t>::max();
+	const uint64_t allocated = AllocateWithinRange(m_regionStart, searchSz);
+	if (allocated == 0)
 		return 0;
 
 	SplitPage page;
-	page.address = Allocated;
+	page.address = allocated;
 	page.unusedOffset = 0;
-	m_pages.push_back(std::move(page));
+	m_pages.push_back(page);
 
 	return getBlock(size);
 }

@@ -5,50 +5,50 @@
 
 PLH::insts_t
 PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
-	cs_insn* InsInfo = cs_malloc(m_capHandle);
-	insts_t InsVec;
+	cs_insn* insInfo = cs_malloc(m_capHandle);
+	insts_t insVec;
 	m_branchMap.clear();
 
-	uint64_t Size = End - start;
-	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&Size, &start, InsInfo)) {
+	uint64_t size = End - start;
+	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&size, &start, insInfo)) {
 		// Set later by 'SetDisplacementFields'
-		Instruction::Displacement displacement;
+		Instruction::Displacement displacement = {};
 		displacement.Absolute = 0;
 
-		Instruction Inst(InsInfo->address,
+		Instruction inst(insInfo->address,
 						 displacement,
 						 0,
 						 false,
-						 InsInfo->bytes,
-						 InsInfo->size,
-						 InsInfo->mnemonic,
-						 InsInfo->op_str,
+						 insInfo->bytes,
+						 insInfo->size,
+						 insInfo->mnemonic,
+						 insInfo->op_str,
 						 m_mode);
 
-		setDisplacementFields(Inst, InsInfo);
-		InsVec.push_back(Inst);
+		setDisplacementFields(inst, insInfo);
+		insVec.push_back(inst);
 
 		// update jump map if the instruction is jump/call
-		if (Inst.isBranching() && Inst.hasDisplacement()) {
+		if (inst.isBranching() && inst.hasDisplacement()) {
 			// search back, check if new instruction points to older ones (one to one)
-			auto destInst = std::find_if(InsVec.begin(), InsVec.end(), [=] (const Instruction& oldIns) {
-				return oldIns.getAddress() == Inst.getDestination();
+			auto destInst = std::find_if(insVec.begin(), insVec.end(), [=] (const Instruction& oldIns) {
+				return oldIns.getAddress() == inst.getDestination();
 			});
 
-			if (destInst != InsVec.end()) {
-				updateBranchMap(destInst->getAddress(), Inst);
+			if (destInst != insVec.end()) {
+				updateBranchMap(destInst->getAddress(), inst);
 			}
 		}
 
 		// search forward, check if old instructions now point to new one (many to one possible)
-		for (const Instruction& oldInst : InsVec) {
-			if (oldInst.isBranching() && oldInst.hasDisplacement() && oldInst.getDestination() == Inst.getAddress()) {
-				updateBranchMap(Inst.getAddress(), oldInst);
+		for (const Instruction& oldInst : insVec) {
+			if (oldInst.isBranching() && oldInst.hasDisplacement() && oldInst.getDestination() == inst.getAddress()) {
+				updateBranchMap(inst.getAddress(), oldInst);
 			}
 		}
 	}
-	cs_free(InsInfo, 1);
-	return InsVec;
+	cs_free(insInfo, 1);
+	return insVec;
 }
 
 /**If an instruction is a jmp/call variant type this will set it's displacement fields to the
@@ -58,7 +58,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
  * the instruction pointer, or directly to an absolute address**/
 void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, const cs_insn* capInst) const {
 	cs_x86 x86 = capInst->detail->x86;
-	bool branches = hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) || hasGroup(capInst, x86_insn_group::X86_GRP_CALL);
+	const bool branches = hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) || hasGroup(capInst, x86_insn_group::X86_GRP_CALL);
 	inst.setBranching(branches);
 
 	for (uint_fast32_t j = 0; j < x86.op_count; j++) {
@@ -74,30 +74,30 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
 				continue;
 			}
 
-			const uint8_t Offset = x86.encoding.disp_offset;
-			const uint8_t Size = std::min<uint8_t>(x86.encoding.disp_size,
+			const uint8_t offset = x86.encoding.disp_offset;
+			const uint8_t size = std::min<uint8_t>(x86.encoding.disp_size,
 												   std::min<uint8_t>(sizeof(uint64_t), (uint8_t)(capInst->size - x86.encoding.disp_offset)));
 
 			// it's relative, set immDest to max to trigger later check
-			copyDispSX(inst, Offset, Size, std::numeric_limits<int64_t>::max());
+			copyDispSx(inst, offset, size, std::numeric_limits<int64_t>::max());
 			break;
 		} else if (op.type == X86_OP_IMM) {
 			// IMM types are like call 0xdeadbeef where they jmp straight to some location
 			if (!branches)
 				break;
 
-			const uint8_t Offset = x86.encoding.imm_offset;
-			const uint8_t Size = std::min<uint8_t>(x86.encoding.imm_size,
+			const uint8_t offset = x86.encoding.imm_offset;
+			const uint8_t size = std::min<uint8_t>(x86.encoding.imm_size,
 												   std::min<uint8_t>(sizeof(uint64_t), (uint8_t)(capInst->size - x86.encoding.imm_offset)));
 
-			copyDispSX(inst, Offset, Size, op.imm);
+			copyDispSx(inst, offset, size, op.imm);
 			break;
 		}
 	}
 }
 
 /**Copies the displacement bytes from memory, and sign extends these values if necessary**/
-void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
+void PLH::CapstoneDisassembler::copyDispSx(PLH::Instruction& inst,
 										   const uint8_t offset,
 										   const uint8_t size,
 										   const int64_t immDestination) const {
@@ -117,7 +117,7 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
 	assert(offset + size <= (uint8_t)inst.getBytes().size());
 	memcpy(&displacement, &inst.getBytes()[offset], size);
 
-	uint64_t mask = (1ULL << (size * 8 - 1));
+	const uint64_t mask = (1ULL << (size * 8 - 1));
 	if (displacement & (1ULL << (size * 8 - 1))) {
 		/* sign extend if negative, requires that bits above Size*8 are zero,
 		 * if bits are not zero use x = x & ((1U << b) - 1) where x is a temp for displacement

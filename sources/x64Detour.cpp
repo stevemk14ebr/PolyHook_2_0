@@ -26,7 +26,7 @@ uint8_t PLH::x64Detour::getPrefJmpSize() const {
 bool PLH::x64Detour::hook() {
 	// ------- Must resolve callback first, so that m_disasm branchmap is filled for prologue stuff
 	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100);
-	if (callbackInsts.size() <= 0) {
+	if (callbackInsts.empty()) {
 		ErrorLog::singleton().push("Disassembler unable to decode any valid callback instructions", ErrorLevel::SEV);
 		return false;
 	}
@@ -40,7 +40,7 @@ bool PLH::x64Detour::hook() {
 	m_fnCallback = callbackInsts.front().getAddress();
 
 	insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100);
-	if (insts.size() <= 0) {
+	if (insts.empty()) {
 		ErrorLog::singleton().push("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
 		return false;
 	}
@@ -86,14 +86,14 @@ bool PLH::x64Detour::hook() {
 			return false;
 
 		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz)) + "\n", ErrorLevel::INFO);
-		if (jmpTblOpt.size() > 0)
+		if (jmpTblOpt.empty())
 			ErrorLog::singleton().push("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
 	}
 
 	*m_userTrampVar = m_trampoline;
 
 	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
-	auto prolJmp = makex64PreferredJump(m_fnAddress, m_fnCallback);
+	const auto prolJmp = makex64PreferredJump(m_fnAddress, m_fnCallback);
 	m_disasm.writeEncoding(prolJmp);
 
 	// Nop the space between jmp and end of prologue
@@ -105,7 +105,7 @@ bool PLH::x64Detour::hook() {
 }
 
 bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
-	assert(prologue.size() > 0);
+	assert(!prologue.empty());
 	const uint64_t prolStart = prologue.front().getAddress();
 	const uint16_t prolSz = calcInstsSz(prologue);
 	const uint8_t destHldrSz = 8;
@@ -137,7 +137,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 			(getMinJmpSize() + destHldrSz)* neededEntryCount);
 		m_trampoline = (uint64_t) new unsigned char[m_trampolineSz];
 
-		int64_t delta = m_trampoline - prolStart;
+		const int64_t delta = m_trampoline - prolStart;
 
 		if (!buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc))
 			return false;
@@ -150,7 +150,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	const uint64_t jmpToProlAddr = m_trampoline + prolSz;
 	const uint64_t jmpHolderCurAddr = m_trampoline + m_trampolineSz - destHldrSz;
 	{
-		auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prologue.front().getAddress() + prolSz, jmpHolderCurAddr);
+		const auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prologue.front().getAddress() + prolSz, jmpHolderCurAddr);
 
 		ErrorLog::singleton().push("Jmp To Prol:\n" + instsToStr(jmpToProl) + "\n", ErrorLevel::INFO);
 		m_disasm.writeEncoding(jmpToProl);
@@ -163,9 +163,9 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 		return captureAddr;
 	};
 
-	auto makeJmpFn = std::bind(makex64MinimumJump, _1, _2, std::bind(calcJmpHolder));
+	const auto makeJmpFn = std::bind(makex64MinimumJump, _1, _2, std::bind(calcJmpHolder));
 
-	uint64_t jmpTblStart = jmpToProlAddr + getMinJmpSize();
+	const uint64_t jmpTblStart = jmpToProlAddr + getMinJmpSize();
 	trampolineOut = relocateTrampoline(prologue, jmpTblStart, delta, getMinJmpSize(),
 													makeJmpFn, instsNeedingReloc, instsNeedingEntry);
 

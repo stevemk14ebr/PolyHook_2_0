@@ -93,8 +93,8 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	
 	// map argument slots to registers, following abi.
 	std::vector<asmjit::x86::Reg> argRegisters;
-	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
-		const uint8_t argType = sig.args()[arg_idx];
+	for (uint8_t argIdx = 0; argIdx < sig.argCount(); argIdx++) {
+		const uint8_t argType = sig.args()[argIdx];
 
 		asmjit::x86::Reg arg;
 		if (isGeneralReg(argType)) {
@@ -106,7 +106,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 			return 0;
 		}
 
-		cc.setArg(arg_idx, arg);
+		cc.setArg(argIdx, arg);
 		argRegisters.push_back(arg);
 	}
   
@@ -128,14 +128,14 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	cc.mov(i, 0);  
 	UNREFERENCED_PARAMETER(callback);
 	//// mov from arguments registers into the stack structure
-	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
-		const uint8_t argType = sig.args()[arg_idx];
+	for (uint8_t argIdx = 0; argIdx < sig.argCount(); argIdx++) {
+		const uint8_t argType = sig.args()[argIdx];
 
 		// have to cast back to explicit register types to gen right mov type
 		if (isGeneralReg(argType)) {
-			cc.mov(argsStackIdx, argRegisters.at(arg_idx).as<asmjit::x86::Gp>());
+			cc.mov(argsStackIdx, argRegisters.at(argIdx).as<asmjit::x86::Gp>());
 		} else if(isXmmReg(argType)) {
-			cc.movq(argsStackIdx, argRegisters.at(arg_idx).as<asmjit::x86::Xmm>());
+			cc.movq(argsStackIdx, argRegisters.at(argIdx).as<asmjit::x86::Xmm>());
 		} else {
 			ErrorLog::singleton().push("Parameters wider than 64bits not supported", ErrorLevel::SEV);
 			return 0;
@@ -183,13 +183,13 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	}
 
 	// deref the trampoline ptr (holder must live longer, must be concrete reg since push later)
-	asmjit::x86::Gp orig_ptr = cc.zbx();
-	cc.mov(orig_ptr, (uintptr_t)getTrampolineHolder());
-	cc.mov(orig_ptr, asmjit::x86::ptr(orig_ptr));
+	asmjit::x86::Gp origPtr = cc.zbx();
+	cc.mov(origPtr, (uintptr_t)getTrampolineHolder());
+	cc.mov(origPtr, asmjit::x86::ptr(origPtr));
 
-	auto orig_call = cc.call(orig_ptr, sig);
-	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
-		orig_call->setArg(arg_idx, argRegisters.at(arg_idx));
+	auto origCall = cc.call(origPtr, sig);
+	for (uint8_t argIdx = 0; argIdx < sig.argCount(); argIdx++) {
+		origCall->setArg(argIdx, argRegisters.at(argIdx));
 	}
 	
 	if (sig.hasRet()) {
@@ -206,7 +206,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 		}
 	}
 
-	cc.func()->frame().addDirtyRegs(orig_ptr);
+	cc.func()->frame().addDirtyRegs(origPtr);
 	
 	
 
@@ -254,7 +254,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 }
 
 uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv/* = ""*/) {
-	asmjit::FuncSignature sig;
+	asmjit::FuncSignature sig = {};
 	std::vector<uint8_t> args;
 	for (const std::string& s : paramTypes) {
 		args.push_back(getTypeId(s));

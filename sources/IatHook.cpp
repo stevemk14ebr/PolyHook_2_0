@@ -56,7 +56,7 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunk(const std::string& dllName, const s
 
 	// find loaded module from peb
 	for (LDR_DATA_TABLE_ENTRY* dte = (LDR_DATA_TABLE_ENTRY*)ldr->InLoadOrderModuleList.Flink;
-		 dte->DllBase != NULL;
+		 dte->DllBase != nullptr;
 		 dte = (LDR_DATA_TABLE_ENTRY*)dte->InLoadOrderLinks.Flink) {
 
 		// TODO: create stricmp for UNICODE_STRING because this is really bad for performance
@@ -82,16 +82,16 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunkInModule(void* moduleBase, const std
 	if (moduleBase == nullptr)
 		return nullptr;
 
-	IMAGE_DOS_HEADER* pDos = (IMAGE_DOS_HEADER*)moduleBase;
-	IMAGE_NT_HEADERS* pNT = RVA2VA(IMAGE_NT_HEADERS*, moduleBase, pDos->e_lfanew);
-	IMAGE_DATA_DIRECTORY* pDataDir = (IMAGE_DATA_DIRECTORY*)pNT->OptionalHeader.DataDirectory;
+	auto* pDos = (IMAGE_DOS_HEADER*)moduleBase;
+	auto* pNT = RVA2VA(IMAGE_NT_HEADERS*, moduleBase, pDos->e_lfanew);
+	auto* pDataDir = (IMAGE_DATA_DIRECTORY*)pNT->OptionalHeader.DataDirectory;
 
 	if (pDataDir[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress == NULL) {
 		ErrorLog::singleton().push("PEs without import tables are unsupported", ErrorLevel::SEV);
 		return nullptr;
 	}
 
-	IMAGE_IMPORT_DESCRIPTOR* pImports = (IMAGE_IMPORT_DESCRIPTOR*)RVA2VA(uintptr_t, moduleBase, pDataDir[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+	auto* pImports = (IMAGE_IMPORT_DESCRIPTOR*)RVA2VA(uintptr_t, moduleBase, pDataDir[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
 
 	// import entry with null fields marks end
 	for (uint_fast16_t i = 0; pImports[i].Name != NULL; i++) {
@@ -100,11 +100,11 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunkInModule(void* moduleBase, const std
 			continue;
 		
 		// Original holds the API Names
-		PIMAGE_THUNK_DATA pOriginalThunk = (PIMAGE_THUNK_DATA)
+        auto pOriginalThunk = (PIMAGE_THUNK_DATA)
 			RVA2VA(uintptr_t, moduleBase, pImports[i].OriginalFirstThunk);
 
 		// FirstThunk is overwritten by loader with API addresses, we change this
-		PIMAGE_THUNK_DATA pThunk = (PIMAGE_THUNK_DATA)
+        auto pThunk = (PIMAGE_THUNK_DATA)
 			RVA2VA(uintptr_t, moduleBase, pImports[i].FirstThunk);
 
 		if (!pOriginalThunk) {
@@ -119,7 +119,7 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunkInModule(void* moduleBase, const std
 				continue;
 			}
 
-			PIMAGE_IMPORT_BY_NAME pImport = (PIMAGE_IMPORT_BY_NAME)
+			auto pImport = (PIMAGE_IMPORT_BY_NAME)
 				RVA2VA(uintptr_t, moduleBase, pOriginalThunk->u1.AddressOfData);
 
             if(my_narrow_stricmp(pImport->Name, apiName.c_str()) != 0)

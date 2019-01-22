@@ -7,6 +7,7 @@
 
 #include "headers/Instruction.hpp"
 #include "headers/Enums.hpp"
+#include "headers/ErrorLog.hpp"
 
 #include <vector>
 #include <unordered_map>

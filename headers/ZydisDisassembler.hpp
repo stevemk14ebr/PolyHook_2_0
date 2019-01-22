@@ -4,16 +4,15 @@
 #include <Zydis/Zydis.h>
 
 #include "headers/ADisassembler.hpp"
+#include "Zycore/Status.h"
 
 namespace PLH {
 
 class ZydisDisassembler : public ADisassembler {
 public:
 	ZydisDisassembler(PLH::Mode mode) : ADisassembler(mode) {
-		if(!ZydisDecoderInit(&m_decoder, (mode == PLH::Mode::x64) ? ZYDIS_MACHINE_MODE_LONG_64:ZYDIS_MACHINE_MODE_LONG_COMPAT_32, ZYDIS_ADDRESS_WIDTH_64))
-		{
-			printf("Error initializing zydis\n");
-		}
+		if(ZYAN_FAILED(ZydisDecoderInit(&m_decoder, (mode == PLH::Mode::x64) ? ZYDIS_MACHINE_MODE_LONG_64:ZYDIS_MACHINE_MODE_LONG_COMPAT_32, ZYDIS_ADDRESS_WIDTH_64)))
+			ErrorLog::singleton().push("Failed to initialize zydis decoder", ErrorLevel::SEV);
 	}
 
 	virtual ~ZydisDisassembler() {
