@@ -34,7 +34,6 @@ public:
 		disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end) override;
 private:
 	
-
 	bool getTokenMnemonic(ZydisDecodedInstruction* pInstruction, uint64_t addr, std::string* pMnemonicOut)
 	{
 		char buffer[256];
@@ -65,6 +64,8 @@ private:
         }
 		return false;
 	}
+
+	void setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const;
 
 	ZydisDecoder m_decoder;
 	ZydisFormatter m_formatter;
