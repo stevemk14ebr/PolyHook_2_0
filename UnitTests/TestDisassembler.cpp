@@ -3,6 +3,7 @@
 //
 #include "Catch.hpp"
 #include "headers/CapstoneDisassembler.hpp"
+#include "headers/ZydisDisassembler.hpp"
 
 #include <iostream>
 #include <vector>
@@ -160,7 +161,7 @@ std::vector<uint8_t> x86ASM = {
 	0x74, 0x00,                         //4) 57b8edcb je  0x57b8edcd
 	0x8d, 0x87, 0x89, 0x67, 0x00, 0x00, //5) 57b8edcd lea eax, [edi+0x6789]child@4
 	0xeb, 0xf0,                         //6) 57b8edd3 jmp 0x57b8edc5       child@3
-	0xe9, 0x00, 0xff, 0x00, 0x00        //7) 57b8edd5 jmp 57b9ecda
+	0xe9, 0x00, 0xff, 0x00, 0x00,        //7) 57b8edd5 jmp 57b9ecda
 };
 
 TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembler]") {
@@ -206,6 +207,7 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
 	uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
 	size_t   PrevInstSize = 0;
 
+	REQUIRE(Instructions.size() == 8);
 	for (size_t i = 0; i < Instructions.size(); i++) {
 		INFO("Index: " << i);
 		INFO("Correct Mnemonic:"
@@ -257,4 +259,35 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
 		std::cout << insts << std::endl;
 	}
 }
+
+
+TEST_CASE("Test Zydis Disassembler x86", "[ADisassembler],[ZydisDisassembler]") {
+	PLH::ZydisDisassembler disasm(PLH::Mode::x86);
+	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+		(uint64_t)&x86ASM.front() + x86ASM.size());
+
+	const uint8_t CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
+	const char* CorrectMnemonic[] = {"add", "add", "add", "jnz", "jz", "lea", "jmp", "jmp"};
+
+	uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
+	size_t   PrevInstSize = 0;
+
+	REQUIRE(Instructions.size() == 8);
+	for (size_t i = 0; i < Instructions.size(); i++) {
+		INFO("Index: " << i);
+		INFO("Correct Mnemonic:"
+			 << CorrectMnemonic[i]
+			 << " Mnemonic:"
+			 << Instructions[i].getMnemonic());
+
+		REQUIRE(Instructions[i].getMnemonic().compare(CorrectMnemonic[i]) == 0);
+
+		REQUIRE(Instructions[i].size() == CorrectSizes[i]);
+
+		REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
+		PrevInstAddress = Instructions[i].getAddress();
+		PrevInstSize = Instructions[i].size();
+	}
+}
+
 
