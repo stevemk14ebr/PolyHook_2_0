@@ -12,6 +12,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <algorithm>
 
 namespace PLH {
 typedef std::unordered_map<uint64_t, insts_t> branch_map_t;
@@ -88,6 +89,27 @@ public:
 
 	branch_map_t getBranchMap() {
 		return m_branchMap;
+	}
+
+	void addToBranchMap(PLH::insts_t& insVec, const PLH::Instruction& inst)
+	{
+		if (inst.isBranching()) {
+			// search back, check if new instruction points to older ones (one to one)
+			auto destInst = std::find_if(insVec.begin(), insVec.end(), [=] (const Instruction& oldIns) {
+				return oldIns.getAddress() == inst.getDestination();
+			});
+
+			if (destInst != insVec.end()) {
+				updateBranchMap(destInst->getAddress(), inst);
+			}
+		}
+
+		// search forward, check if old instructions now point to new one (many to one possible)
+		for (const Instruction& oldInst : insVec) {
+			if (oldInst.isBranching() && oldInst.hasDisplacement() && oldInst.getDestination() == inst.getAddress()) {
+				updateBranchMap(inst.getAddress(), oldInst);
+			}
+		}
 	}
 protected:
 	typename branch_map_t::mapped_type& updateBranchMap(uint64_t key, const Instruction& new_val) {

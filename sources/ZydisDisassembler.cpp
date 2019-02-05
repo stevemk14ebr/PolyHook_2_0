@@ -14,10 +14,6 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 
 		uint64_t address = start + offset;
 
-		std::string mnemonic;
-		if(!getTokenMnemonic(&insInfo, address, &mnemonic))
-			break;
-
 		std::string opstr;
 		if(!getOpStr(&insInfo, address, &opstr))
 			break;
@@ -26,20 +22,18 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 						 displacement,
 						 0,
 						 false,
-						 (uint8_t*)((char*)firstInstruction + offset),
+						 (uint8_t*)((unsigned char*)firstInstruction + offset),
 						 insInfo.length,
-						 mnemonic,
+						 ZydisMnemonicGetString(insInfo.mnemonic),
 						 opstr,
 						 m_mode);
 
-		auto cat = insInfo.meta.category;
-		const bool branches = cat == ZYDIS_CATEGORY_COND_BR || cat == ZYDIS_CATEGORY_UNCOND_BR || cat == ZYDIS_CATEGORY_CALL;
-		assert(branches == (insInfo.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)); // decide if use branch_type or category for this signal
-		inst.setBranching(branches);
-
 		setDisplacementFields(inst, &insInfo);
-
 		insVec.push_back(inst);
+
+		// searches instruction vector and updates references
+		addToBranchMap(insVec, inst);
+
 		offset += insInfo.length;
 	}
 	return insVec;
@@ -47,6 +41,11 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 
 void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const
 {
+	auto cat = zydisInst->meta.category;
+	const bool branches = cat == ZYDIS_CATEGORY_COND_BR || cat == ZYDIS_CATEGORY_UNCOND_BR || cat == ZYDIS_CATEGORY_CALL;
+	assert(branches == (zydisInst->meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)); // decide if use branch_type or category for this signal
+	inst.setBranching(branches);
+
 	for(int i = 0; i < zydisInst->operand_count; i++)
 	{
 		const ZydisDecodedOperand* const operand = &zydisInst->operands[i];
@@ -68,12 +67,9 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 			
             break;
 		case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-			inst.setDisplacementOffset(zydisInst->raw.imm->offset);
 			if(zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE)
 			{
 				inst.setRelativeDisplacement(zydisInst->raw.imm->value.s);
-			} else {
-				inst.setAbsoluteDisplacement(zydisInst->raw.imm->value.u);
 			}
             break;
 		}

@@ -164,6 +164,18 @@ std::vector<uint8_t> x86ASM = {
 	0xe9, 0x00, 0xff, 0x00, 0x00,        //7) 57b8edd5 jmp 57b9ecda
 };
 
+std::vector<uint8_t> x86ASMCopy = {
+	//start @0x57b8edb8
+	0x01, 0xc0,                         //0) 57b8edb8 add eax, eax
+	0x81, 0xc6, 0x34, 0x12, 0x00, 0x00, //1) 57b8edba add esi, 0x1234
+	0x05, 0x78, 0x56, 0x00, 0x00,       //2) 57b8edc0 add eax, 0x5678
+	0x0f, 0x85, 0x08, 0x00, 0x00, 0x00, //3) 57b8edc5 jne 0x57b8edd3       child@6
+	0x74, 0x00,                         //4) 57b8edcb je  0x57b8edcd
+	0x8d, 0x87, 0x89, 0x67, 0x00, 0x00, //5) 57b8edcd lea eax, [edi+0x6789]child@4
+	0xeb, 0xf0,                         //6) 57b8edd3 jmp 0x57b8edc5       child@3
+	0xe9, 0x00, 0xff, 0x00, 0x00,        //7) 57b8edd5 jmp 57b9ecda
+};
+
 TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembler]") {
 	PLH::CapstoneDisassembler disasm(PLH::Mode::x86);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
@@ -177,7 +189,7 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
 		std::cout << Instructions << std::endl;
 
 		for (const auto &p : disasm.getBranchMap()) {
-			std::cout << std::hex << "dest: " << p.first << " " << std::dec << p.second << std::endl;
+			std::cout << std::hex << "dest: " << p.first << " -> " << std::dec << p.second << std::endl;
 		}
 	}
 
@@ -258,10 +270,17 @@ TEST_CASE("Test Capstone Disassembler x86", "[ADisassembler],[CapstoneDisassembl
 										500);
 		std::cout << insts << std::endl;
 	}
+
+	// cleanup
+	x86ASM = x86ASMCopy;
 }
 
-
 TEST_CASE("Test Zydis Disassembler x86", "[ADisassembler],[ZydisDisassembler]") {
+	// Use capstone as reference
+	PLH::CapstoneDisassembler disasmRef(PLH::Mode::x86);
+	auto                      InstructionsRef = disasmRef.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+		(uint64_t)&x86ASM.front() + x86ASM.size());
+
 	PLH::ZydisDisassembler disasm(PLH::Mode::x86);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 		(uint64_t)&x86ASM.front() + x86ASM.size());
@@ -271,22 +290,58 @@ TEST_CASE("Test Zydis Disassembler x86", "[ADisassembler],[ZydisDisassembler]") 
 
 	uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
 	size_t   PrevInstSize = 0;
+	SECTION("Check Integrity") {
+		REQUIRE(Instructions.size() == 8);
+		std::cout << Instructions << std::endl;
 
-	REQUIRE(Instructions.size() == 8);
-	for (size_t i = 0; i < Instructions.size(); i++) {
-		INFO("Index: " << i);
-		INFO("Correct Mnemonic:"
-			 << CorrectMnemonic[i]
-			 << " Mnemonic:"
-			 << Instructions[i].getMnemonic());
+		for (const auto &p : disasm.getBranchMap()) {
+			std::cout << std::hex << "dest: " << p.first << " -> " << std::dec << p.second << std::endl;
+		}
+	
+		for (size_t i = 0; i < Instructions.size(); i++) {
+			INFO("Index: " << i);
+			INFO("Correct Mnemonic:"
+				 << CorrectMnemonic[i]
+				 << " Mnemonic:"
+				 << Instructions[i].getMnemonic());
 
-		REQUIRE(Instructions[i].getMnemonic().compare(CorrectMnemonic[i]) == 0);
+			REQUIRE(Instructions[i].getMnemonic().compare(CorrectMnemonic[i]) == 0);
 
-		REQUIRE(Instructions[i].size() == CorrectSizes[i]);
+			REQUIRE(Instructions[i].size() == CorrectSizes[i]);
 
-		REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
-		PrevInstAddress = Instructions[i].getAddress();
-		PrevInstSize = Instructions[i].size();
+			REQUIRE(Instructions[i].isBranching() == InstructionsRef[i].isBranching());
+
+			REQUIRE(Instructions[i].getAddress() == InstructionsRef[i].getAddress());
+			REQUIRE(Instructions[i].getDestination() == InstructionsRef[i].getDestination());
+			REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
+			PrevInstAddress = Instructions[i].getAddress();
+			PrevInstSize = Instructions[i].size();
+		}
+	}
+
+	SECTION("Check multiple calls") {
+		PLH::insts_t insts;
+		for (int i = 0; i < 100; i++) {
+			insts = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+				(uint64_t)&x86ASM.front() + x86ASM.size());
+		}
+	}
+
+	SECTION("Check branch map") {
+		auto brMapRef = disasmRef.getBranchMap();
+		REQUIRE(brMapRef .size() == 3);
+		REQUIRE(brMapRef .find(Instructions[3].getAddress()) != brMapRef .end());
+		REQUIRE(brMapRef .find(Instructions[5].getAddress()) != brMapRef .end());
+		REQUIRE(brMapRef .find(Instructions[6].getAddress()) != brMapRef .end());
+
+		auto brMap = disasm.getBranchMap();
+		REQUIRE(brMap.size() == 3);
+
+		uint64_t addr = Instructions[3].getAddress();
+		bool status = brMap.find(addr) != brMap.end();
+		REQUIRE(status == true);
+		REQUIRE(brMap.find(Instructions[5].getAddress()) != brMap.end());
+		REQUIRE(brMap.find(Instructions[6].getAddress()) != brMap.end());
 	}
 }
 

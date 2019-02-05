@@ -28,24 +28,8 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 		setDisplacementFields(inst, insInfo);
 		insVec.push_back(inst);
 
-		// update jump map if the instruction is jump/call
-		if (inst.isBranching() && inst.hasDisplacement()) {
-			// search back, check if new instruction points to older ones (one to one)
-			auto destInst = std::find_if(insVec.begin(), insVec.end(), [=] (const Instruction& oldIns) {
-				return oldIns.getAddress() == inst.getDestination();
-			});
-
-			if (destInst != insVec.end()) {
-				updateBranchMap(destInst->getAddress(), inst);
-			}
-		}
-
-		// search forward, check if old instructions now point to new one (many to one possible)
-		for (const Instruction& oldInst : insVec) {
-			if (oldInst.isBranching() && oldInst.hasDisplacement() && oldInst.getDestination() == inst.getAddress()) {
-				updateBranchMap(inst.getAddress(), oldInst);
-			}
-		}
+		// searches instruction vector and updates references
+		addToBranchMap(insVec, inst);
 	}
 	cs_free(insInfo, 1);
 	return insVec;
