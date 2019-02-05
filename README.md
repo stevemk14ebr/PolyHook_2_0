@@ -42,6 +42,9 @@ Read the tests for docs for now until i write some. They are extensive
       - Relocations inside the moved section are resolved (not using relocation table, disassembles using engine)
     - x64 trampoline is not restricted to +- 2GB, can be anywhere, avoids shadow space + no registers spoiled
     - If inline hook fails at an intermediate step the original function will not be malformed. All writes are batched until after we know later steps succeed.
+    
+1.5) Runtime Inline Hook
+    - All the goodness of normal inline hooks, but JIT's a translation stub compatible with the given typedef and ABI. The translation stub will move arguments into a small struct, which is passed as pointer to a callback and allow the spoofing of return value. This allows tools to generate hook translation stubs at runtime, allowing for the full inline hooking of functions where the typedef is not known until runtime.
 
 2) Virtual Function Swap (VFuncSwap)
     * Swaps the pointers at given indexs in a C++ VTable to point to a callbacks
