@@ -43,7 +43,7 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 {
 	auto cat = zydisInst->meta.category;
 	const bool branches = cat == ZYDIS_CATEGORY_COND_BR || cat == ZYDIS_CATEGORY_UNCOND_BR || cat == ZYDIS_CATEGORY_CALL;
-	assert(branches == (zydisInst->meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)); // decide if use branch_type or category for this signal
+	assert(branches == (zydisInst->meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && cat != ZYDIS_CATEGORY_RET)); // decide if use branch_type or category for this signal (ignore ret)
 	inst.setBranching(branches);
 
 	for(int i = 0; i < zydisInst->operand_count; i++)

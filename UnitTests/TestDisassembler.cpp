@@ -343,6 +343,33 @@ TEST_CASE("Test Zydis Disassembler x86", "[ADisassembler],[ZydisDisassembler]") 
 		REQUIRE(brMap.find(Instructions[5].getAddress()) != brMap.end());
 		REQUIRE(brMap.find(Instructions[6].getAddress()) != brMap.end());
 	}
+
+	SECTION("Verify branching, relative fields") {
+		PLH::insts_t insts = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
+			(uint64_t)&x86ASM.front() + x86ASM.size());
+
+		REQUIRE(insts.at(4).isBranching());
+		REQUIRE(insts.at(4).hasDisplacement());
+
+		REQUIRE(insts.at(5).isBranching() == false);
+		REQUIRE(insts.at(5).hasDisplacement() == false);
+
+		REQUIRE(insts.at(6).isBranching());
+		REQUIRE(insts.at(6).hasDisplacement());
+
+		REQUIRE(insts.at(7).isBranching());
+		REQUIRE(insts.at(7).hasDisplacement());
+	}
+
+	SECTION("Test garbage instructions") {
+		char randomBuf[500];
+		for (int i = 0; i < 500; i++)
+			randomBuf[i] = randByte();
+
+		auto insts = disasm.disassemble((uint64_t)randomBuf, (uint64_t)0x0,
+										500);
+		std::cout << insts << std::endl;
+	}
 }
 
 

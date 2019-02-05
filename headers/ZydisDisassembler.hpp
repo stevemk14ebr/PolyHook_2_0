@@ -55,7 +55,6 @@ private:
 
 	ZydisDecoder m_decoder;
 	ZydisFormatter m_formatter;
-	ZydisFormatterFunc m_origMnemonicPrint;
 };
 }
 
