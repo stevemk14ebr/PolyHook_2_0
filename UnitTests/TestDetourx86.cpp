@@ -4,6 +4,7 @@
 #include <Catch.hpp>
 #include "headers/Detour/x86Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
+#include "headers/ZydisDisassembler.hpp"
 
 #include "headers/tests/TestEffectTracker.hpp"
 
@@ -114,8 +115,8 @@ NOINLINE void* h_hookMalloc(size_t size) {
 	return PLH::FnCast(hookMallocTramp, &malloc)(size);
 }
 
-TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
-	PLH::CapstoneDisassembler dis(PLH::Mode::x86);
+TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+	TestType dis(PLH::Mode::x86);
 
 	SECTION("Normal function") {
 		PLH::x86Detour detour((char*)&hookMe1, (char*)&h_hookMe1, &hookMe1Tramp, dis);
@@ -124,18 +125,21 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 		effects.PushEffect();
 		volatile auto result = hookMe1();
 		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
 	}
 
 	SECTION("Jmp into prologue w/ src in range") {
 		PLH::x86Detour detour((char*)&hookMe2, (char*)&h_nullstub, &nullTramp, dis);
 
 		REQUIRE(detour.hook() == true);
+		REQUIRE(detour.unHook() == true);
 	}
 
 	SECTION("Jmp into prologue w/ src out of range") {
 		PLH::x86Detour detour((char*)&hookMe3, (char*)&h_nullstub, &nullTramp, dis);
 		//hookMe1Tramp = detour.getTrampoline();
 		REQUIRE(detour.hook() == true);
+		REQUIRE(detour.unHook() == true);
 	}
 
 	SECTION("Loop") {
@@ -145,6 +149,7 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 		effects.PushEffect();
 		hookMeLoop();
 		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
 	}
 
 	SECTION("hook printf") {

@@ -4,6 +4,7 @@
 #include <Catch.hpp>
 #include "headers/Detour/X64Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
+#include "headers/ZydisDisassembler.hpp"
 
 #include "headers/tests/TestEffectTracker.hpp"
 
@@ -81,8 +82,8 @@ NOINLINE void* h_hookMalloc(size_t size) {
 	return PLH::FnCast(hookMallocTramp, &malloc)(size);
 }
 
-TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
-	PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+	TestType dis(PLH::Mode::x64);
 
 	SECTION("Normal function") {
 		PLH::x64Detour detour((char*)&hookMe1, (char*)&h_hookMe1, &hookMe1Tramp, dis);
@@ -91,6 +92,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		effects.PushEffect();
 		hookMe1();
 		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
 	}
 
 	SECTION("Loop function") {
@@ -100,16 +102,19 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		effects.PushEffect();
 		hookMe2();
 		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
 	}
 
 	SECTION("Jmp into prol w/src in range") {
 		PLH::x64Detour detour((char*)&hookMe3, (char*)&h_nullstub, &nullTramp, dis);
 		REQUIRE(detour.hook() == true);
+		REQUIRE(detour.unHook() == true);
 	}
 
 	SECTION("Jmp into prol w/src out of range") {
 		PLH::x64Detour detour((char*)&hookMe4, (char*)&h_nullstub, &nullTramp, dis);
 		REQUIRE(detour.hook() == true);
+		REQUIRE(detour.unHook() == true);
 	}
 
 	SECTION("hook malloc") {
