@@ -41,14 +41,14 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 
 void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const
 {
-	auto cat = zydisInst->meta.category;
-	const bool branches = cat == ZYDIS_CATEGORY_COND_BR || cat == ZYDIS_CATEGORY_UNCOND_BR || cat == ZYDIS_CATEGORY_CALL;
-	assert(branches == (zydisInst->meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && cat != ZYDIS_CATEGORY_RET)); // decide if use branch_type or category for this signal (ignore ret)
-	inst.setBranching(branches);
-
+	inst.setBranching(zydisInst->meta.branch_type != ZYDIS_BRANCH_TYPE_NONE);
 	for(int i = 0; i < zydisInst->operand_count; i++)
 	{
 		const ZydisDecodedOperand* const operand = &zydisInst->operands[i];
+
+		// skip implicit operands (r/w effects)
+		if(operand->visibility == ZYDIS_OPERAND_VISIBILITY_HIDDEN)
+			continue;
 
 		switch (operand->type)
         {
@@ -61,6 +61,7 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 			{
 				inst.setDisplacementOffset(zydisInst->raw.disp.offset);
 				inst.setRelativeDisplacement(operand->mem.disp.value);
+				return;
 			}
             break;
         case ZYDIS_OPERAND_TYPE_POINTER:
@@ -69,7 +70,9 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 		case ZYDIS_OPERAND_TYPE_IMMEDIATE:
 			if(zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE)
 			{
+				inst.setDisplacementOffset(zydisInst->raw.imm->offset);
 				inst.setRelativeDisplacement(zydisInst->raw.imm->value.s);
+				return;
 			}
             break;
 		}
