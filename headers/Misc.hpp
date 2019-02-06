@@ -134,5 +134,15 @@ struct ci_wchar_traits : public std::char_traits<wchar_t> {
 using ci_wstring = std::basic_string<wchar_t, ci_wchar_traits>;
 using ci_wstring_view = std::basic_string_view<wchar_t, ci_wchar_traits>;
 
+template< typename T >
+std::string int_to_hex(T i)
+{
+	std::stringstream stream;
+	stream << "0x"
+		<< std::setfill('0') << std::setw(sizeof(T) * 2)
+		<< std::hex << i;
+	return stream.str();
+}
+
 }
 #endif //POLYHOOK_2_0_MISC_HPP

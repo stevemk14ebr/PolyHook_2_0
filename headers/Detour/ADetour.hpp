@@ -16,6 +16,7 @@
 #include "headers/ErrorLog.hpp"
 #include "headers/IHook.hpp"
 #include "headers/Enums.hpp"
+#include "headers/Misc.hpp"
 
 #pragma warning(disable:4100)
 #pragma warning(disable:4189)

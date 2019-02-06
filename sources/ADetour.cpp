@@ -114,7 +114,9 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 				we can't fix the load. TODO: generate equivalent load
 				with asmjit and insert it at position
 				*/
-				ErrorLog::singleton().push("Cannot fixup IP relative data operation, relocation beyond displacement size", ErrorLevel::SEV);
+				std::string err = "Cannot fixup IP relative data operation, needed disp. beyond max disp range: " + inst.getFullName() +
+					" needed: " + int_to_hex((uint64_t)std::llabs(delta)) + " raw: " + int_to_hex(delta) +  " max: " + int_to_hex(maxInstDisp);
+				ErrorLog::singleton().push(err, ErrorLevel::SEV);
 				return false;
 			}else {
 				instsNeedingReloc.push_back(inst);
