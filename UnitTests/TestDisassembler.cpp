@@ -42,7 +42,7 @@ TEST_CASE("Test Instruction UUID generator", "[Instruction],[UID]") {
 									 {},
 									 0,
 									 "nothing",
-									 "nothing", PLH::Mode::x86);
+									 "nothing");
 
 		auto instCopy = inst;
 		REQUIRE(instCopy.getUID() == inst.getUID());

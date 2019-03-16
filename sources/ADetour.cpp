@@ -1,5 +1,28 @@
 #include "headers/Detour/ADetour.hpp"
 
+PLH::Detour::Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis)
+: m_disasm(dis) {
+	assert(fnAddress != 0 && fnCallback != 0);
+	m_fnAddress = fnAddress;
+	m_fnCallback = fnCallback;
+	m_trampoline = (uint64_t)NULL;
+	m_trampolineSz = (uint16_t)NULL;
+	m_hooked = false;
+	m_userTrampVar = userTrampVar;
+}
+
+PLH::Detour::Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis)
+: Detour((uint64_t)fnAddress, (uint64_t)fnCallback, userTrampVar, dis) {}
+
+PLH::Detour::~Detour() {
+	try {
+		unHook();
+	}
+	catch(...) {
+		std::cout << "Unhooking failed \n";
+	}
+}
+
 std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& functionInsts, const uint64_t prolOvrwStartOffset,
 													   uint64_t& prolOvrwEndOffset) {
 
@@ -89,8 +112,11 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 	const uint64_t prolStart = prologue.front().getAddress();
 
 	for (auto& inst : prologue) {
-		// types that change control flow
-		if (inst.isBranching() && inst.hasDisplacement() &&
+		// todo: fix
+		
+		auto isBranching = inst.isBranching() && inst.hasDisplacement();
+		auto isRelative = inst.hasDisplacement() && inst.isDisplacementRelative();
+		if ((isBranching || isRelative) &&
 			(inst.getDestination() < prolStart ||
 			inst.getDestination() > prolStart + roundProlSz)) {
 
@@ -124,22 +150,56 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 	return true;
 }
 
+PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, 
+                       std::function<PLH::insts_t(const uint64_t, const uint64_t)> makeJmp, 
+                       const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry) { 
+  uint64_t jmpTblCurAddr = jmpTblStart; 
+  insts_t jmpTblEntries; 
+  for (auto& inst : prologue) { 
+    if (std::find(instsNeedingEntry.begin(), instsNeedingEntry.end(), inst) != instsNeedingEntry.end()) { 
+      assert(inst.hasDisplacement()); 
+      // make an entry pointing to where inst did point to 
+      auto entry = makeJmp(jmpTblCurAddr, inst.getDestination()); 
+       
+      // move inst to trampoline and point instruction to entry 
+      inst.setAddress(inst.getAddress() + delta); 
+      inst.setDestination(jmpTblCurAddr); 
+      jmpTblCurAddr += jmpSz; 
+       
+      m_disasm.writeEncoding(entry); 
+      jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end()); 
+    } else if (std::find(instsNeedingReloc.begin(), instsNeedingReloc.end(), inst) != instsNeedingReloc.end()) { 
+      assert(inst.hasDisplacement()); 
+       
+      const uint64_t instsOldDest = inst.getDestination(); 
+      inst.setAddress(inst.getAddress() + delta); 
+      inst.setDestination(instsOldDest); 
+    } else { 
+      inst.setAddress(inst.getAddress() + delta); 
+    } 
+     
+    m_disasm.writeEncoding(inst); 
+  } 
+  return jmpTblEntries; 
+} 
+
 bool PLH::Detour::unHook() {
-	assert(m_hooked);
+	if (m_hooked) {
+		MemoryProtector prot(m_fnAddress, PLH::calcInstsSz(m_originalInsts), ProtFlag::R | ProtFlag::W | ProtFlag::X);
+		m_disasm.writeEncoding(m_originalInsts);
+		
+		if (m_trampoline != (uint64_t)NULL) {
+			delete[](char*)m_trampoline;
+			m_trampoline = (uint64_t)NULL;
+		}
 
-	MemoryProtector prot(m_fnAddress, PLH::calcInstsSz(m_originalInsts), ProtFlag::R | ProtFlag::W | ProtFlag::X);
-	m_disasm.writeEncoding(m_originalInsts);
-	
-	if (m_trampoline != NULL) {
-		delete[](char*)m_trampoline;
-		m_trampoline = NULL;
+		if (m_userTrampVar != NULL) {
+			*m_userTrampVar = (uint64_t)NULL;
+			m_userTrampVar = NULL;
+		}
+		
+		m_hooked = false;
+		return true;
 	}
-
-	if (m_userTrampVar != NULL) {
-		*m_userTrampVar = NULL;
-		m_userTrampVar = NULL;
-	}
-	
-	m_hooked = false;
-	return true;
+	return false;
 }

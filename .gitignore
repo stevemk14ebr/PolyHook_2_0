@@ -24,6 +24,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 build/
+_builds/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -328,5 +329,34 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+
+#Cmake folders
+CMakeFiles/
+CMakeScripts/
+CMakeCache.txt
+
+#VS Code
+.vscode/
+
+#Xcode
+*.xcodeproj
+
+
+Makefile
+
+*.swp
+
+cmake_install\.cmake
+
+
+build\.ninja
+
+\.ninja_log
+
+\.ninja_deps
+
+rules\.ninja
+
+\.vs/
 build32/
 build64/

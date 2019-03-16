@@ -16,13 +16,13 @@ class VTableSwapHook : public PLH::IHook {
 public:
 	VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap);
 	VTableSwapHook(const char* Class, const VFuncMap& redirectMap);
-	virtual ~VTableSwapHook() = default;
+	~VTableSwapHook() override = default;
 
 	const VFuncMap& getOriginals() const;
 
-	virtual bool hook() override;
-	virtual bool unHook() override;
-	virtual HookType getType() const override {
+	bool hook() override;
+	bool unHook() override;
+	HookType getType() const override {
 		return HookType::VTableSwap;
 	}
 private:

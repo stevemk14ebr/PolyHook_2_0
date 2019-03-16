@@ -42,47 +42,21 @@ T FnCast(void* fnToCast, T pFnCastTo) {
 	return (T)fnToCast;
 }
 
-class Detour : public PLH::IHook {
+class Detour : public IHook {
 public:
-	Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : m_disasm(dis) {
-		assert(fnAddress != 0 && fnCallback != 0);
-		m_fnAddress = fnAddress;
-		m_fnCallback = fnCallback;
-		m_trampoline = NULL;
-		m_trampolineSz = NULL;
-		m_hooked = false;
-		m_userTrampVar = userTrampVar;
-	}
+	Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
+	Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
+	
+	~Detour() override;
 
-	Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : m_disasm(dis) {
-		assert(fnAddress != nullptr && fnCallback != nullptr);
-		m_fnAddress = (uint64_t)fnAddress;
-		m_fnCallback = (uint64_t)fnCallback;
-		m_trampoline = NULL;
-		m_trampolineSz = NULL;
-		m_hooked = false;
-		m_userTrampVar = userTrampVar;
-	}
+	bool unHook() override;
 
-	virtual ~Detour() = default;
-
-	virtual bool unHook() override;
-
-	virtual HookType getType() const {
+	HookType getType() const override {
 		return HookType::Detour;
 	}
 
 	virtual Mode getArchType() const = 0;
 protected:
-	uint64_t                m_fnAddress;
-	uint64_t                m_fnCallback;
-	uint64_t				m_trampoline;
-	uint16_t			    m_trampolineSz;
-	uint64_t*				m_userTrampVar;
-	ADisassembler&			m_disasm;
-
-	PLH::insts_t			m_originalInsts;
-
 	/**Walks the given vector of instructions and sets roundedSz to the lowest size possible that doesn't split any instructions and is greater than minSz.
 	If end of function is encountered before this condition an empty optional is returned. Returns instructions in the range start to adjusted end**/
 	std::optional<insts_t> calcNearestSz(const insts_t& functionInsts, const uint64_t minSz,
@@ -102,46 +76,29 @@ protected:
 							uint64_t& minProlSz,
 							uint64_t& roundProlSz);
 
-	bool buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t &instsNeedingEntry, PLH::insts_t &instsNeedingReloc);
+	bool buildRelocationList(insts_t& prologue,
+							 const uint64_t roundProlSz,
+							 const int64_t delta,
+							 PLH::insts_t &instsNeedingEntry,
+							 PLH::insts_t &instsNeedingReloc);
 
-	template<typename MakeJmpFn>
-	PLH::insts_t relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry);
+	PLH::insts_t relocateTrampoline(insts_t& prologue,
+									uint64_t jmpTblStart,
+									const int64_t delta,
+									const uint8_t jmpSz,
+									std::function<PLH::insts_t(const uint64_t, const uint64_t)> makeJmp,
+									const PLH::insts_t& instsNeedingReloc,
+									const PLH::insts_t& instsNeedingEntry);
 
-	bool                    m_hooked;
+	uint64_t		m_fnAddress;
+	uint64_t		m_fnCallback;
+	uint64_t		m_trampoline;
+	uint16_t		m_trampolineSz;
+	uint64_t*		m_userTrampVar;
+	ADisassembler&	m_disasm;
+	PLH::insts_t	m_originalInsts;
+	bool 			m_hooked;
 };
-
-template<typename MakeJmpFn>
-PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry) {
-	uint64_t jmpTblCurAddr = jmpTblStart;
-	insts_t jmpTblEntries;
-	for (auto& inst : prologue) {
-
-		if (std::find(instsNeedingEntry.begin(), instsNeedingEntry.end(), inst) != instsNeedingEntry.end()) {
-			assert(inst.hasDisplacement());
-			// make an entry pointing to where inst did point to
-			auto entry = makeJmp(jmpTblCurAddr, inst.getDestination());
-
-			// move inst to trampoline and point instruction to entry
-			inst.setAddress(inst.getAddress() + delta);
-			inst.setDestination(jmpTblCurAddr);
-			jmpTblCurAddr += jmpSz;
-
-			m_disasm.writeEncoding(entry);
-			jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());
-		} else if (std::find(instsNeedingReloc.begin(), instsNeedingReloc.end(), inst) != instsNeedingReloc.end()) {
-			assert(inst.hasDisplacement());
-
-			const uint64_t instsOldDest = inst.getDestination();
-			inst.setAddress(inst.getAddress() + delta);
-			inst.setDestination(instsOldDest);
-		} else {
-			inst.setAddress(inst.getAddress() + delta);
-		}
-
-		m_disasm.writeEncoding(inst);
-	}
-	return jmpTblEntries;
-}
 
 /** Before Hook:                                                After hook:
 *

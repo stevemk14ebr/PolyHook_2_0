@@ -4,9 +4,9 @@
 #include <Catch.hpp>
 #include "headers/Detour/X64Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
-
+#include "headers/IHook.hpp"
 #include "headers/tests/TestEffectTracker.hpp"
-
+#include "headers/IHook.hpp"
 EffectTracker effects;
 
 /**These tests can spontaneously fail if the compiler desides to optimize away

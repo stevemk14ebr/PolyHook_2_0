@@ -3,14 +3,22 @@
 //
 #include "headers/CapstoneDisassembler.hpp"
 
+#ifdef _WIN32
+	#define DEBUG_BREAK __debugbreak()
+#else
+	#include <signal.h>
+	#define DEBUG_BREAK raise(SIGTRAP);
+#endif
+
 PLH::insts_t
 PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
-	cs_insn* InsInfo = cs_malloc(m_capHandle);
+    auto InsInfo = std::shared_ptr<cs_insn>(cs_malloc(m_capHandle),
+                                            [](cs_insn* insn){cs_free(insn, 1);});
 	insts_t InsVec;
 	m_branchMap.clear();
 
 	uint64_t Size = End - start;
-	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&Size, &start, InsInfo)) {
+	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&Size, &start, InsInfo.get())) {
 		// Set later by 'SetDisplacementFields'
 		Instruction::Displacement displacement;
 		displacement.Absolute = 0;
@@ -22,8 +30,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 						 InsInfo->bytes,
 						 InsInfo->size,
 						 InsInfo->mnemonic,
-						 InsInfo->op_str,
-						 m_mode);
+						 InsInfo->op_str);
 
 		setDisplacementFields(Inst, InsInfo);
 		InsVec.push_back(Inst);
@@ -47,8 +54,31 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 			}
 		}
 	}
-	cs_free(InsInfo, 1);
+	
 	return InsVec;
+}
+
+PLH::CapstoneDisassembler::~CapstoneDisassembler() {
+	if (m_capHandle)
+		cs_close(&m_capHandle);
+	m_capHandle = (size_t)NULL;
+}
+
+/**Write the raw bytes of the given instruction into the memory specified by the
+ * instruction's address. If the address value of the instruction has been changed
+ * since the time it was decoded this will copy the instruction to a new memory address.
+ * This will not automatically do any code relocation, all relocation logic should
+ * first modify the byte array, and then call write encoding, proper order to relocate
+ * an instruction should be disasm instructions -> set relative/absolute displacement() ->
+ * writeEncoding(). It is done this way so that these operations can be made transactional**/
+void PLH::CapstoneDisassembler::writeEncoding(const PLH::Instruction& instruction) const {
+	memcpy((void*)instruction.getAddress(), &instruction.getBytes()[0], instruction.size());
+}
+
+void PLH::CapstoneDisassembler::writeEncoding(const PLH::insts_t& instructions) const {
+	for (const auto& inst : instructions) {
+		writeEncoding(inst);
+	}
 }
 
 /**If an instruction is a jmp/call variant type this will set it's displacement fields to the
@@ -56,9 +86,10 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
  * this determines if an instruction is a jmp/call variant, and then further if it is is jumping via
  * memory or immediate, and then finally if that mem/imm is encoded via a displacement relative to
  * the instruction pointer, or directly to an absolute address**/
-void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, const cs_insn* capInst) const {
+void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst,
+                                                      const std::shared_ptr<cs_insn>& capInst) const {
 	cs_x86 x86 = capInst->detail->x86;
-	bool branches = hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) || hasGroup(capInst, x86_insn_group::X86_GRP_CALL);
+	bool branches = hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) || hasGroup(capInst, x86_insn_group::X86_GRP_CALL) /* || hasGroup(capInst, x86_insn_group::X86_GRP_BRANCH_RELATIVE) */;
 	inst.setBranching(branches);
 
 	for (uint_fast32_t j = 0; j < x86.op_count; j++) {
@@ -110,7 +141,7 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
 	 * and 0 when sign bit not set (positive displacement)*/
 	int64_t displacement = 0;
 	if (offset + size > (uint8_t)inst.getBytes().size()) {
-		__debugbreak();
+		DEBUG_BREAK;
 		return;
 	}
 
@@ -134,8 +165,80 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
 		inst.setRelativeDisplacement(displacement);
 	} else {
 		if (((uint64_t)displacement) != ((uint64_t)immDestination))
-			__debugbreak();
+			DEBUG_BREAK;
 		assert(((uint64_t)displacement) == ((uint64_t)immDestination));
 		inst.setAbsoluteDisplacement((uint64_t)displacement);
 	}
+}
+
+bool PLH::CapstoneDisassembler::isConditionalJump(const PLH::Instruction& instruction) const {
+	// http://unixwiz.net/techtips/x86-jumps.html
+	if (instruction.size() < 1)
+		return false;
+
+	std::vector<uint8_t> bytes = instruction.getBytes();
+	if (bytes[0] == 0x0F && instruction.size() > 1) {
+		if (bytes[1] >= 0x80 && bytes[1] <= 0x8F)
+			return true;
+	}
+
+	if (bytes[0] >= 0x70 && bytes[0] <= 0x7F)
+		return true;
+
+	if (bytes[0] == 0xE3)
+		return true;
+
+	return false;
+}
+
+bool PLH::CapstoneDisassembler::isFuncEnd(const PLH::Instruction& instruction) const {
+	// TODO: more?
+	/*
+	* 0xABABABAB : Used by Microsoft's HeapAlloc() to mark "no man's land" guard bytes after allocated heap memory
+	* 0xABADCAFE : A startup to this value to initialize all free memory to catch errant pointers
+	* 0xBAADF00D : Used by Microsoft's LocalAlloc(LMEM_FIXED) to mark uninitialised allocated heap memory
+	* 0xBADCAB1E : Error Code returned to the Microsoft eVC debugger when connection is severed to the debugger
+	* 0xBEEFCACE : Used by Microsoft .NET as a magic number in resource files
+	* 0xCCCCCCCC : Used by Microsoft's C++ debugging runtime library to mark uninitialised stack memory
+	* 0xCDCDCDCD : Used by Microsoft's C++ debugging runtime library to mark uninitialised heap memory
+	* 0xDDDDDDDD : Used by Microsoft's C++ debugging heap to mark freed heap memory
+	* 0xDEADDEAD : A Microsoft Windows STOP Error code used when the user manually initiates the crash.
+	* 0xFDFDFDFD : Used by Microsoft's C++ debugging heap to mark "no man's land" guard bytes before and after allocated heap memory
+	* 0xFEEEFEEE : Used by Microsoft's HeapFree() to mark freed heap memory
+	*/
+	return instruction.getMnemonic() == "ret";
+}
+
+PLH::branch_map_t PLH::CapstoneDisassembler::getBranchMap() const {
+	return m_branchMap;
+}
+
+x86_reg PLH::CapstoneDisassembler::getIpReg() const {
+	if (m_mode == PLH::Mode::x64)
+		return X86_REG_RIP;
+	else //if(m_Mode == PLH::ADisassembler::Mode::x86)
+		return X86_REG_EIP;
+}
+
+bool PLH::CapstoneDisassembler::hasGroup(const std::shared_ptr<cs_insn>& inst, const x86_insn_group grp) const {
+	uint8_t GrpSize = inst->detail->groups_count;
+	
+	for (int i = 0; i < GrpSize; i++) {
+		if (inst->detail->groups[i] == grp)
+			return true;
+	}
+	return false;
+}
+
+typename PLH::branch_map_t::mapped_type& PLH::CapstoneDisassembler::updateBranchMap(uint64_t key, const Instruction& new_val) {
+	branch_map_t::iterator it = m_branchMap.find(key);
+	if (it != m_branchMap.end()) {
+		it->second.push_back(new_val);
+	} else {
+		branch_map_t::mapped_type s;
+		s.push_back(new_val);
+		m_branchMap.emplace(key, s);
+		return m_branchMap.at(key);
+	}
+	return it->second;
 }

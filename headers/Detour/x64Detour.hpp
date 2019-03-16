@@ -24,14 +24,15 @@ public:
 	x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
 
 	x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
-	virtual ~x64Detour() = default;
-	virtual bool hook() override;
 
-	Mode getArchType() const;
+	~x64Detour() override = default;
+	
+	bool hook() override;
 
-	uint8_t getMinJmpSize() const;
+	Mode getArchType() const override;
 
-	uint8_t getPrefJmpSize() const;
+	
+	
 private:
 	bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
 };
