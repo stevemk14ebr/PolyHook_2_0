@@ -133,7 +133,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 
 		int64_t delta = m_trampoline - prolStart;
 
-		buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc);
+		if (!buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc))
 			return false;
 	} while (instsNeedingEntry.size() > neededEntryCount);
 
