@@ -15,11 +15,19 @@
 
 #include "headers/UID.hpp"
 #include "headers/Enums.hpp"
+
+#ifdef _WIN32
+#define DEBUG_BREAK __debugbreak()
+#else
+#include <signal.h>
+#define DEBUG_BREAK raise(SIGTRAP);
+#endif
+
 namespace PLH {
 class Instruction {
 public:
 	union Displacement {
-		int64_t  Relative;
+		int64_t  Relative = 0;
 		uint64_t Absolute;
 	};
 
@@ -125,7 +133,7 @@ public:
 	bool isBranching() const {
 		if (m_isBranching && m_isRelative) {
 			if (!m_hasDisplacement) {
-				__debugbreak();
+				DEBUG_BREAK;
 				assert(m_hasDisplacement);
 			}
 		}
@@ -165,7 +173,7 @@ public:
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
-			__debugbreak();
+			DEBUG_BREAK;
 			return;
 		}
 
@@ -183,7 +191,7 @@ public:
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Absolute)) {
-			__debugbreak();
+			DEBUG_BREAK;
 			return;
 		}
 

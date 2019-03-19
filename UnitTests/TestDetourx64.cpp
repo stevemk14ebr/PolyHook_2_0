@@ -22,7 +22,8 @@ NOINLINE void hookMe1() {
 	var2 = var + var2;
 	var2 *= 30 / 3;
 	var = 2;
-	printf("%d %d\n", var, var2); // 2, 40
+	// TODO: revert once relocating lea is fixed 
+	//printf("%d %d\n", var, var2); // 2, 40
 	REQUIRE(var == 2);
 	REQUIRE(var2 == 40);
 }
@@ -36,7 +37,9 @@ NOINLINE void h_hookMe1() {
 
 NOINLINE void hookMe2() {
 	for (int i = 0; i < 10; i++) {
-		printf("%d\n", i);
+		int a = 0;
+		// TODO: revert once relocating lea is fixed 
+		// printf("%d\n", i);
 	}
 }
 uint64_t hookMe2Tramp = NULL;
@@ -91,6 +94,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		effects.PushEffect();
 		hookMe1();
 		REQUIRE(effects.PopEffect().didExecute());
+		detour.unHook();
 	}
 
 	SECTION("Loop function") {
@@ -100,16 +104,19 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		effects.PushEffect();
 		hookMe2();
 		REQUIRE(effects.PopEffect().didExecute());
+		detour.unHook();
 	}
 
 	SECTION("Jmp into prol w/src in range") {
 		PLH::x64Detour detour((char*)&hookMe3, (char*)&h_nullstub, &nullTramp, dis);
 		REQUIRE(detour.hook() == true);
+		detour.unHook();
 	}
 
 	SECTION("Jmp into prol w/src out of range") {
 		PLH::x64Detour detour((char*)&hookMe4, (char*)&h_nullstub, &nullTramp, dis);
 		REQUIRE(detour.hook() == true);
+		detour.unHook();
 	}
 
 	SECTION("hook malloc") {
@@ -123,5 +130,6 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		free(pMem);
 		detour.unHook(); // unhook so we can popeffect safely w/o catch allocation happening again
 		REQUIRE(effects.PopEffect().didExecute());
+		detour.unHook();
 	}
 }

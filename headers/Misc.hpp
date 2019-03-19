@@ -80,9 +80,9 @@ static inline FinalAction<F> finally(F f) {
 
 //Credit to Dogmatt on unknowncheats.me for IsValidPtr
 // and https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/virtual-address-spaces
-#ifdef _WIN64
+#if defined(_WIN64) || defined(__x86_64__)
 #define _PTR_MAX_VALUE ((void*)0x000F000000000000)
-#else
+#elif defined(_WIN32) || defined(__i386__)
 #define _PTR_MAX_VALUE ((void*)0xFFF00000)
 #endif
 

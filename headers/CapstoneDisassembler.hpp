@@ -43,17 +43,18 @@ private:
 			return X86_REG_EIP;
 	}
 
-	bool hasGroup(const cs_insn* inst, const x86_insn_group grp) const {
-		uint8_t GrpSize = inst->detail->groups_count;
+	bool hasGroup(const std::shared_ptr<cs_insn>& capInst, const x86_insn_group grp) const {
+		uint8_t GrpSize = capInst->detail->groups_count;
 
 		for (int i = 0; i < GrpSize; i++) {
-			if (inst->detail->groups[i] == grp)
+			if (capInst->detail->groups[i] == grp)
 				return true;
 		}
 		return false;
 	}
 
-	void setDisplacementFields(Instruction& inst, const cs_insn* capInst) const;
+	void setDisplacementFields(PLH::Instruction& inst,
+                                                      const std::shared_ptr<cs_insn>& capInst) const;
 
 	/* For immediate types capstone gives us only the final destination, but *we* care about the base + displacement values.
 	 * Immediates can be encoded either as some value relative to a register, or a straight up hardcoded address, we need

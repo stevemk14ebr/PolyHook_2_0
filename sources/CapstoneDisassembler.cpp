@@ -3,14 +3,22 @@
 //
 #include "headers/CapstoneDisassembler.hpp"
 
+#ifdef _WIN32
+	#define DEBUG_BREAK __debugbreak()
+#else
+	#include <signal.h>
+	#define DEBUG_BREAK raise(SIGTRAP);
+#endif
+
 PLH::insts_t
 PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
-	cs_insn* InsInfo = cs_malloc(m_capHandle);
+    auto InsInfo = std::shared_ptr<cs_insn>(cs_malloc(m_capHandle),
+                                            [](cs_insn* insn){cs_free(insn, 1);});
 	insts_t InsVec;
 	m_branchMap.clear();
 
 	uint64_t Size = End - start;
-	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&Size, &start, InsInfo)) {
+	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&Size, &start, InsInfo.get())) {
 		// Set later by 'SetDisplacementFields'
 		Instruction::Displacement displacement;
 		displacement.Absolute = 0;
@@ -47,7 +55,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 			}
 		}
 	}
-	cs_free(InsInfo, 1);
+	
 	return InsVec;
 }
 
@@ -56,7 +64,8 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
  * this determines if an instruction is a jmp/call variant, and then further if it is is jumping via
  * memory or immediate, and then finally if that mem/imm is encoded via a displacement relative to
  * the instruction pointer, or directly to an absolute address**/
-void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, const cs_insn* capInst) const {
+void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst,
+                                                      const std::shared_ptr<cs_insn>& capInst) const {
 	cs_x86 x86 = capInst->detail->x86;
 	bool branches = hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) || hasGroup(capInst, x86_insn_group::X86_GRP_CALL);
 	inst.setBranching(branches);
@@ -110,7 +119,7 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
 	 * and 0 when sign bit not set (positive displacement)*/
 	int64_t displacement = 0;
 	if (offset + size > (uint8_t)inst.getBytes().size()) {
-		__debugbreak();
+		DEBUG_BREAK;
 		return;
 	}
 
@@ -134,7 +143,7 @@ void PLH::CapstoneDisassembler::copyDispSX(PLH::Instruction& inst,
 		inst.setRelativeDisplacement(displacement);
 	} else {
 		if (((uint64_t)displacement) != ((uint64_t)immDestination))
-			__debugbreak();
+			DEBUG_BREAK;
 		assert(((uint64_t)displacement) == ((uint64_t)immDestination));
 		inst.setAbsoluteDisplacement((uint64_t)displacement);
 	}

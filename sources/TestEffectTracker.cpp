@@ -1,4 +1,10 @@
 #include "headers/Tests/TestEffectTracker.hpp"
+#ifdef _WIN32
+#define DEBUG_BREAK __debugbreak()
+#else
+#include <signal.h>
+#define DEBUG_BREAK raise(SIGTRAP);
+#endif
 
 
 Effect::Effect() : m_uid(UID::singleton()) {
@@ -31,7 +37,7 @@ Effect EffectTracker::PopEffect() {
 
 Effect& EffectTracker::PeakEffect() {
 	if (m_effectQ.size() <= 0) {
-		__debugbreak();
+		DEBUG_BREAK;
 		PushEffect();
 	}
 		

@@ -1,8 +1,15 @@
 #include "headers/MemProtector.hpp"
+#include <mach/mach.h>  
 #include "headers/Enums.hpp"
 
 #define WIN32_LEAN_AND_MEAN
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#include <sys/mman.h>
+#define PAGE_EXECUTE PROT_EXEC
+#define PAGE_READONLY PROT_READ
+#endif
 
 PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
 	return static_cast<PLH::ProtFlag>(
@@ -16,11 +23,6 @@ bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
 }
 
 std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag flags) {
-	if (flags == PLH::ProtFlag::UNSET) {
-		os << "UNSET";
-		return os;
-	}
-
 	if (flags & PLH::ProtFlag::X)
 		os << "x";
 	else
@@ -40,12 +42,42 @@ std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag flags) {
 		os << "n";
 	else
 		os << "-";
-
-	if (flags & PLH::ProtFlag::P)
-		os << " private";
-	else if (flags & PLH::ProtFlag::S)
-		os << " shared";
 	return os;
+}
+
+PLH::MemoryProtector::MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot,
+									  bool unsetOnDestroy /*= true */)
+: m_origProtection(protect(address, length, TranslateProtection(prot)))
+, m_address(address)
+, m_length(length)
+, m_unsetLater(unsetOnDestroy)
+
+{
+}
+
+PLH::ProtFlag PLH::MemoryProtector::originalProt() {
+	return m_origProtection;
+}
+
+bool PLH::MemoryProtector::isGood() {
+	return m_status;
+}
+
+PLH::MemoryProtector::~MemoryProtector() {
+	if (!m_unsetLater || !isGood())
+		return;
+	
+	protect(m_address, m_length, TranslateProtection(m_origProtection));
+}
+
+
+#ifdef _WIN32
+
+PLH::ProtFlag PLH::MemoryProtector::protect(const uint64_t address, const uint64_t length, int prot) {
+	DWORD orig;
+	DWORD dwProt = prot;
+	m_status = VirtualProtect((char*)address, (SIZE_T)length, dwProt, &orig) != 0;
+	return TranslateProtection(orig);
 }
 
 int PLH::TranslateProtection(const PLH::ProtFlag flags) {
@@ -76,28 +108,65 @@ int PLH::TranslateProtection(const PLH::ProtFlag flags) {
 PLH::ProtFlag PLH::TranslateProtection(const int prot) {
 	PLH::ProtFlag flags = PLH::ProtFlag::UNSET;
 	switch (prot) {
-	case PAGE_EXECUTE:
-		flags = flags | PLH::ProtFlag::X;
-		break;
-	case PAGE_READONLY:
-		flags = flags | PLH::ProtFlag::R;
-		break;
-	case PAGE_READWRITE:
-		flags = flags | PLH::ProtFlag::W;
-		flags = flags | PLH::ProtFlag::R;
-		break;
-	case PAGE_EXECUTE_READWRITE:
-		flags = flags | PLH::ProtFlag::X;
-		flags = flags | PLH::ProtFlag::R;
-		flags = flags | PLH::ProtFlag::W;
-		break;
-	case PAGE_EXECUTE_READ:
-		flags = flags | PLH::ProtFlag::X;
-		flags = flags | PLH::ProtFlag::R;
-		break;
-	case PAGE_NOACCESS:
-		flags = flags | PLH::ProtFlag::NONE;
-		break;
+		case PAGE_EXECUTE:
+			flags = flags | PLH::ProtFlag::X;
+			break;
+		case PAGE_READONLY:
+			flags = flags | PLH::ProtFlag::R;
+			break;
+		case PAGE_READWRITE:
+			flags = flags | PLH::ProtFlag::W;
+			flags = flags | PLH::ProtFlag::R;
+			break;
+		case PAGE_EXECUTE_READWRITE:
+			flags = flags | PLH::ProtFlag::X;
+			flags = flags | PLH::ProtFlag::R;
+			flags = flags | PLH::ProtFlag::W;
+			break;
+		case PAGE_EXECUTE_READ:
+			flags = flags | PLH::ProtFlag::X;
+			flags = flags | PLH::ProtFlag::R;
+			break;
+		case PAGE_NOACCESS:
+			flags = flags | PLH::ProtFlag::NONE;
+			break;
 	}
 	return flags;
 }
+#else
+
+PLH::ProtFlag PLH::MemoryProtector::protect(const uint64_t address, const uint64_t length, int prot) {
+	kern_return_t kr;
+	mach_port_t object;
+	vm_size_t vmsize;
+	mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+	vm_region_flavor_t flavor = VM_REGION_BASIC_INFO_64;
+	vm_region_basic_info_data_64_t info;
+	long pagesize = sysconf(_SC_PAGESIZE);
+	vm_address_t addr = address;
+	
+	kr = vm_region_64(mach_task_self(), &addr, &vmsize, flavor, (vm_region_info_t)&info, &info_count, &object);
+	if (kr) {
+		perror("vm_region_64");
+	}
+ 
+	auto alignedAddress = (void *)((long)address & ~(pagesize - 1));
+	m_status = mprotect((void*)alignedAddress, (size_t)pagesize, prot) == 0;
+
+	if (!m_status) {
+		printf("mprotect failed:  %s\n", strerror(errno));
+	}
+	
+	return TranslateProtection(info.protection);
+}
+
+int PLH::TranslateProtection(const PLH::ProtFlag flags)
+{
+	return static_cast<int>(flags);
+}
+
+PLH::ProtFlag PLH::TranslateProtection(const int prot)
+{
+	return static_cast<PLH::ProtFlag>(prot);
+}
+#endif
