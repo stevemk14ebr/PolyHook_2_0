@@ -14,7 +14,32 @@ Ask for help, chat with others, talk to me here
 git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
 cd PolyHook_2_0
 git submodule update --init --recursive
+cd ..
 ```
+cmake build command for out of source build:
+
+```
+cmake -S PolyHook_2_0 -B_builds -DCMAKE_BUILD_TYPE=Debug
+```
+
+this will build staticaly linked library. To build dynamically linked add parameter:
+```-DBUILD_SHARED_LIBS=ON```
+
+then to build test runner:
+```
+cmake --build _builds --target TestRunner
+```
+
+or 
+
+to build library: 
+```
+cmake --build _builds --target PolyHook_2
+```
+
+To build 32 bit executable on *nix add flags:
+```-DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32```
+
 I provide directions for how to setup the visual studio cmake environment only. If you don't want to use visual studio that's fine, this is a standard cmake project and will build from command line just fine.
 
 ### Visual Studio 2017/2019
@@ -25,7 +50,7 @@ Open VS 2017, go to file->open->cmake.. this will load the project and start cma
 ![CMakeSettings.json](https://i.imgur.com/RpHQ5Km.png)
 
 ### Build Config
-You can build 3 different things. By default an executable is built and the unit tests are run. You can also build as a library by setting the ```BUILD_DLL``` option in CMakeLists.txt. If you choose to build as a library you can build it for static linking using the ```BUILD_STATIC``` option. Both asmjit and capstone are linked to polyhook statically, regardless of the BUILD_STATIC flag, it controls only if the polyhook dll itself is static. I've setup an example project to show how to use this as a static library. You should clear your cmake cache between changing these options. The dll is built with the cmake option to export all symbols. This is different from the typical windows DLL where things are manually exported via declspec(dllexport), instead it behaves how linux dlls do with all symbols exported by default. This style should make it easier to maintain the code, the downside is there are many exports but i don't care.
+You can build 3 different things. With target TestRunner executable is built and the unit tests are run. You can also build as a library by setting PolyHook_2 targer. If you choose to build as a library you can build it for dynamic linking using the ```-DBUILD_SHARED_LIBS=ON``` option. Both asmjit and capstone are linked to polyhook statically, regardless of the BUILD_STATIC flag, it controls only if the polyhook dll itself is static. I've setup an example project to show how to use this as a static library. You should clear your cmake cache between changing these options. The dll is built with the cmake option to export all symbols. This is different from the typical windows DLL where things are manually exported via declspec(dllexport), instead it behaves how linux dlls do with all symbols exported by default. This style should make it easier to maintain the code, the downside is there are many exports but i don't care.
 
 Read the tests for docs for now until i write some. They are extensive
 
@@ -66,6 +91,7 @@ Read the tests for docs for now until i write some. They are extensive
 
 # Notes
 - Breakpoint tests must not be run under a debugger. They are commented out by default now.
+- Some features might not build or work on *nix systems use options to turn them off, like that ```-DFEATURE_PE=OFF```
 
 # Future
 Linux support
