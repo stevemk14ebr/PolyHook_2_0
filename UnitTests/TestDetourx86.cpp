@@ -180,7 +180,6 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 		printf("%s %f\n", "hi", .5f);
 		detour.unHook();
 		REQUIRE(effects.PopEffect().didExecute());
-		detour.unHook();
 	}
 
 	// it's a pun...
@@ -192,7 +191,6 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 		volatile double result = pFnPowDouble(2, 2);
 		detour.unHook();
 		REQUIRE(effects.PopEffect().didExecute());
-		detour.unHook();
 	}
 
 	SECTION("hook malloc") {
@@ -204,6 +202,5 @@ TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]") {
 		free(pMem);
 		detour.unHook(); // unhook so we can popeffect safely w/o catch allocation happening again
 		REQUIRE(effects.PopEffect().didExecute());
-		detour.unHook();
 	}
 }
