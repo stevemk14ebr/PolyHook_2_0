@@ -119,6 +119,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		detour.unHook();
 	}
 
+	#ifndef __APPLE__
 	SECTION("hook malloc") {
 		PLH::x64Detour detour((char*)&malloc, (char*)&h_hookMalloc, &hookMallocTramp, dis);
 		effects.PushEffect(); // catch does some allocations, push effect first so peak works
@@ -132,4 +133,5 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		REQUIRE(effects.PopEffect().didExecute());
 		detour.unHook();
 	}
+	#endif
 }
