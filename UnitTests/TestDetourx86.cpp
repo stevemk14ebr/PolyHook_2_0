@@ -79,7 +79,8 @@ NOINLINE void __declspec(naked) hookMeLoop() {
       cmp eax, 5 
       jle start 
       ret 
-  } 
+  }
+}
 #else
 __attribute__((naked)) NOINLINE void hookMeLoop() { 
   asm ( 
