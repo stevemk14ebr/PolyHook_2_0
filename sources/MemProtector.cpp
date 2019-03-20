@@ -10,6 +10,10 @@
 #define PAGE_READONLY PROT_READ
 #endif
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#endif
+
 PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
 	return static_cast<PLH::ProtFlag>(
 		static_cast<std::uint8_t>(lhs) |
@@ -132,7 +136,7 @@ PLH::ProtFlag PLH::TranslateProtection(const int prot) {
 	}
 	return flags;
 }
-#else
+#elif __APPLE__
 
 PLH::ProtFlag PLH::MemoryProtector::protect(const uint64_t address, const uint64_t length, int prot) {
 	kern_return_t kr;
