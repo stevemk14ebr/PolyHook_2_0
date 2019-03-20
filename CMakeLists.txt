@@ -194,4 +194,5 @@ if(DEP_ASMJIT_NEED MATCHES ON)
 	include_directories(${ASMJIT_DIR}/src/) # includes directory is nested in src
 	add_subdirectory(${ASMJIT_DIR}) # build it
 	target_link_libraries(PolyHook_2 PUBLIC asmjit)
+	target_link_libraries(TestRunner PUBLIC asmjit)
 endif()
