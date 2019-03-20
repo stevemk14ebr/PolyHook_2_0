@@ -1,5 +1,4 @@
 #include "headers/MemProtector.hpp"
-#include <mach/mach.h>  
 #include "headers/Enums.hpp"
 
 #define WIN32_LEAN_AND_MEAN
@@ -106,7 +105,7 @@ int PLH::TranslateProtection(const PLH::ProtFlag flags) {
 }
 
 PLH::ProtFlag PLH::TranslateProtection(const int prot) {
-	PLH::ProtFlag flags = PLH::ProtFlag::UNSET;
+	PLH::ProtFlag flags = PLH::ProtFlag::NONE;
 	switch (prot) {
 		case PAGE_EXECUTE:
 			flags = flags | PLH::ProtFlag::X;
