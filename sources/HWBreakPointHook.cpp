@@ -90,7 +90,7 @@ bool PLH::HWBreakPointHook::unHook() {
 
 LONG PLH::HWBreakPointHook::OnException(EXCEPTION_POINTERS* ExceptionInfo) {
 	if (ExceptionInfo->ExceptionRecord->ExceptionCode != EXCEPTION_SINGLE_STEP)
-		return EXCEPTION_CONTINUE_EXECUTION;
+		return EXCEPTION_CONTINUE_SEARCH;
 
 	ExceptionInfo->ContextRecord->Dr7 &= ~(1ULL << (2 * m_regIdx));
 	ExceptionInfo->ContextRecord->XIP = (decltype(ExceptionInfo->ContextRecord->XIP))m_fnCallback;
