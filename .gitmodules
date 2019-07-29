@@ -2,10 +2,9 @@
 	path = capstone
 	url = https://github.com/aquynh/capstone.git
 	branch = master
-[submodule "asmjit"]
-	path = asmjit
-	url = https://github.com/asmjit/asmjit.git
-	branch = next-wip
 [submodule "zydis"]
 	path = zydis
 	url = https://github.com/zyantific/zydis.git
+[submodule "asmjit"]
+	path = asmjit
+	url = https://github.com/asmjit/asmjit.git
