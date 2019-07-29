@@ -1,7 +1,6 @@
 #include "headers/MemProtector.hpp"
 #include "headers/Enums.hpp"
 
-#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
 PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
