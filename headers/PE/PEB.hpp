@@ -23,8 +23,12 @@
 #endif /* !_IA64_ */
 #endif
 
-#define NOMINMAX
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <minwindef.h> 
 typedef void *PPS_POST_PROCESS_INIT_ROUTINE;
 
