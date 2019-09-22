@@ -70,11 +70,6 @@ Read the tests for docs for now until i write some. They are extensive
 # Future
 Linux support
 
-# Donate
-Running Total: $40
-
-[![Support via PayPal](https://cdn.rawgit.com/twolfson/paypal-github-button/1.0.0/dist/button.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=M2K8DQUNDUGMW&lc=US&item_name=PolyHook%20Donation&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
-
 # License
 MIT - Please consider donating
 
