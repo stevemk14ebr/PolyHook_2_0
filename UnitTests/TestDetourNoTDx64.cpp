@@ -46,7 +46,16 @@ TEST_CASE("Minimal Example", "[AsmJit]") {
 NOINLINE void hookMeInt(int a) {
 	volatile int var = 1;
 	int var2 = var + a;
-	printf("%d %d %I64X\n", var, var2, (uint64_t)_ReturnAddress());
+
+#ifdef _MSC_VER
+	uint64_t retAddress = (uint64_t)_ReturnAddress();
+#elif __GNUC__
+	uint64_t retAddress = (uint64_t)__builtin_return_address(0);
+#else
+	#error "Please implement this for your compiler."
+#endif
+
+	printf("%d %d %I64X\n", var, var2, retAddress);
 }
 
 NOINLINE void hookMeFloat(float a) {
