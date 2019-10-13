@@ -6,6 +6,7 @@
 #define POLYHOOK_2_0_INSTRUCTION_HPP
 
 #include <cassert>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <sstream>

@@ -1,5 +1,7 @@
 #include "headers/Detour/ADetour.hpp"
 
+#include <cmath>
+
 std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& functionInsts, const uint64_t prolOvrwStartOffset,
 													   uint64_t& prolOvrwEndOffset) {
 

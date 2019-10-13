@@ -3,7 +3,7 @@
 #include "headers/Detour/ILCallback.hpp"
 #pragma warning( disable : 4244)
 
-#include "headers/tests/TestEffectTracker.hpp"
+#include "headers/Tests/TestEffectTracker.hpp"
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
 the handler or inline the function. NOINLINE attempts to fix the latter, the former
@@ -40,7 +40,7 @@ TEST_CASE("Minimal Asmjit Example", "[AsmJit]") {
 	rt.release(fn);
 }
 
-#include "headers/Detour/X86Detour.hpp"
+#include "headers/Detour/x86Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
 
 NOINLINE void hookMeInt(int a) {

@@ -5,7 +5,7 @@
 #include "headers/Detour/x86Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
 
-#include "headers/tests/TestEffectTracker.hpp"
+#include "headers/Tests/TestEffectTracker.hpp"
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
 the handler or inline the function. NOINLINE attempts to fix the latter, the former
