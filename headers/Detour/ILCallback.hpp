@@ -21,7 +21,7 @@ namespace PLH {
 			}
 
 			// asm depends on this specific type
-			uint64_t m_arguments[];
+			uint64_t m_arguments[1];
 		};
 
 		struct ReturnValue {
