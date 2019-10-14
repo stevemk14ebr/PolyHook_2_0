@@ -125,8 +125,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	argsStackIdx.setSize(sizeof(uint64_t));
 	
 	// set i = 0
-	cc.mov(i, 0);  
-	UNREFERENCED_PARAMETER(callback);
+	cc.mov(i, 0);
 	//// mov from arguments registers into the stack structure
 	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
 		const uint8_t argType = sig.args()[arg_idx];

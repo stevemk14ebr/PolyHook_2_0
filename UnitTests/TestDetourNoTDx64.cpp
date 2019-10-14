@@ -3,7 +3,7 @@
 #include "headers/Detour/ILCallback.hpp"
 #pragma warning( disable : 4244)
 
-#include "headers/tests/TestEffectTracker.hpp"
+#include "headers/Tests/TestEffectTracker.hpp"
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
 the handler or inline the function. NOINLINE attempts to fix the latter, the former
@@ -40,13 +40,22 @@ TEST_CASE("Minimal Example", "[AsmJit]") {
 	rt.release(fn);
 }
 
-#include "headers/Detour/X64Detour.hpp"
+#include "headers/Detour/x64Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
 
 NOINLINE void hookMeInt(int a) {
 	volatile int var = 1;
 	int var2 = var + a;
-	printf("%d %d %I64X\n", var, var2, (uint64_t)_ReturnAddress());
+
+#ifdef _MSC_VER
+	uint64_t retAddress = (uint64_t)_ReturnAddress();
+#elif __GNUC__
+	uint64_t retAddress = (uint64_t)__builtin_return_address(0);
+#else
+	#error "Please implement this for your compiler."
+#endif
+
+	printf("%d %d %I64X\n", var, var2, retAddress);
 }
 
 NOINLINE void hookMeFloat(float a) {

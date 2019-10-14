@@ -2,10 +2,10 @@
 // Created by steve on 7/9/18.
 //
 #include <Catch.hpp>
-#include "headers/Detour/X64Detour.hpp"
+#include "headers/Detour/x64Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
 
-#include "headers/tests/TestEffectTracker.hpp"
+#include "headers/Tests/TestEffectTracker.hpp"
 
 EffectTracker effects;
 

@@ -1,7 +1,7 @@
 #include "headers/MemProtector.hpp"
 #include "headers/Enums.hpp"
 
-#include <Windows.h>
+#include <windows.h>
 
 PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
 	return static_cast<PLH::ProtFlag>(

@@ -12,7 +12,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <Windows.h>
+#include <windows.h>
 #include <iostream>
 
 PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs);

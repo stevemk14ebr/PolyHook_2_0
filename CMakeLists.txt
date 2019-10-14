@@ -37,10 +37,15 @@ set(HEADER_IMP_SOURCES
 		${PROJECT_SOURCE_DIR}/sources/TestEffectTracker.cpp
 		${PROJECT_SOURCE_DIR}/sources/PageAllocator.cpp)
 
-set(UNIT_TEST_SOURCES 
-		${PROJECT_SOURCE_DIR}/MainTests.cpp
-        ${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp
-		${PROJECT_SOURCE_DIR}/UnitTests/TestMemProtector.cpp)
+# only build tests if making exe
+if(BUILD_DLL MATCHES OFF)	
+	set(UNIT_TEST_SOURCES 
+			${PROJECT_SOURCE_DIR}/MainTests.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestMemProtector.cpp)
+else()
+	set(UNIT_TEST_SOURCES)
+endif()
 
 # Headers, Sources, and Test for detours
 if(FEATURE_DETOURS MATCHES ON) 

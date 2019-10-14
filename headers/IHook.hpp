@@ -13,11 +13,13 @@
 
 #elif defined(__GNUC__) || defined(__GNUG__)
 #define NOINLINE __attribute__((noinline))
+#define PH_ATTR_NAKED __attribute__((naked))
 #define OPTS_OFF _Pragma("GCC push_options") \
 _Pragma("GCC optimize (\"O0\")")
 #define OPTS_ON #pragma GCC pop_options
 #elif defined(_MSC_VER)
 #define NOINLINE __declspec(noinline)
+#define PH_ATTR_NAKED __declspec(naked)
 #define OPTS_OFF __pragma(optimize("", off))
 #define OPTS_ON __pragma(optimize("", on))
 #endif

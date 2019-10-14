@@ -3,7 +3,7 @@
 #include "headers/Detour/ILCallback.hpp"
 #pragma warning( disable : 4244)
 
-#include "headers/tests/TestEffectTracker.hpp"
+#include "headers/Tests/TestEffectTracker.hpp"
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
 the handler or inline the function. NOINLINE attempts to fix the latter, the former
@@ -40,7 +40,7 @@ TEST_CASE("Minimal Asmjit Example", "[AsmJit]") {
 	rt.release(fn);
 }
 
-#include "headers/Detour/X86Detour.hpp"
+#include "headers/Detour/x86Detour.hpp"
 #include "headers/CapstoneDisassembler.hpp"
 
 NOINLINE void hookMeInt(int a) {
@@ -76,7 +76,16 @@ NOINLINE void __fastcall hookMeIntFloatDoubleFst(int a, float b, double c) {
 	ans += (float)a;
 	ans += c;
 	ans += b;
-	printf("%d %f %f %f retAddr:%x\n", a, b, c, ans, (uint32_t)_ReturnAddress());
+
+#ifdef _MSC_VER
+	uint32_t retAddress = (uint32_t)_ReturnAddress();
+#elif __GNUC__
+	uint32_t retAddress = (uint32_t)__builtin_return_address(0);
+#else
+	#error "Please implement this for your compiler."
+#endif
+
+	printf("%d %f %f %f retAddr:%x\n", a, b, c, ans, retAddress);
 }
 
 NOINLINE void myCallback(const PLH::ILCallback::Parameters* p, const uint8_t count, const PLH::ILCallback::ReturnValue* retVal) {
