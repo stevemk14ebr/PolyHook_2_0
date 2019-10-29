@@ -9,6 +9,9 @@ Article 2: https://www.codeproject.com/Articles/1252212/PolyHook-2-Cplusplus17-x
 Ask for help, chat with others, talk to me here
 * [Official Gitter Chat](https://gitter.im/PolyHook/Lobby)
 
+# Packaging
+PolyHook2 is available on vcpkg. Consider trying that installation method if you prefer.
+
 # Build
 ```
 git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
