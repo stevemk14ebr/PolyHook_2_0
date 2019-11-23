@@ -10,7 +10,17 @@ Ask for help, chat with others, talk to me here
 * [Official Gitter Chat](https://gitter.im/PolyHook/Lobby)
 
 # Packaging
-PolyHook2 is available on vcpkg. Consider trying that installation method if you prefer.
+PolyHook2 is available on vcpkg. Consider trying that installation method if you prefer. Just install vcpkg from microsofts directions: 
+
+Commands: 
+```
+λ git clone https://github.com/Microsoft/vcpkg.git
+λ cd vcpkg
+λ .\bootstrap-vcpkg.bat -disableMetrics
+λ (as admin) .\vcpkg integrate install
+λ vcpkg.exe install polyhook2
+```
+You then simply include the polyhook headers, be sure to link the generated .lib.
 
 # Build
 ```
