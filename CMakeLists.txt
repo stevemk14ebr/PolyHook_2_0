@@ -20,16 +20,16 @@ set(DEP_ASMJIT_NEED ${FEATURE_INLINENTD})
 # todo: make inclusion of capstone stuff depend on feature flags
 
 #IDE's like it when header file are included as source files
-set(HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/ADisassembler.hpp
-        ${PROJECT_SOURCE_DIR}/headers/CapstoneDisassembler.hpp
-        ${PROJECT_SOURCE_DIR}/headers/Enums.hpp
-        ${PROJECT_SOURCE_DIR}/headers/IHook.hpp
-        ${PROJECT_SOURCE_DIR}/headers/Instruction.hpp
-        ${PROJECT_SOURCE_DIR}/headers/Misc.hpp
-		${PROJECT_SOURCE_DIR}/headers/UID.hpp
-		${PROJECT_SOURCE_DIR}/headers/ErrorLog.hpp
-		${PROJECT_SOURCE_DIR}/headers/MemProtector.hpp
-		${PROJECT_SOURCE_DIR}/headers/PageAllocator.hpp)
+set(HEADER_FILES ${PROJECT_SOURCE_DIR}/polyhook2/ADisassembler.hpp
+        ${PROJECT_SOURCE_DIR}/polyhook2/CapstoneDisassembler.hpp
+        ${PROJECT_SOURCE_DIR}/polyhook2/Enums.hpp
+        ${PROJECT_SOURCE_DIR}/polyhook2/IHook.hpp
+        ${PROJECT_SOURCE_DIR}/polyhook2/Instruction.hpp
+        ${PROJECT_SOURCE_DIR}/polyhook2/Misc.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/UID.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/ErrorLog.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/MemProtector.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/PageAllocator.hpp)
 
 set(HEADER_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
@@ -49,9 +49,9 @@ endif()
 
 # Headers, Sources, and Test for detours
 if(FEATURE_DETOURS MATCHES ON) 
-	set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/headers/Detour/ADetour.hpp
-			${PROJECT_SOURCE_DIR}/headers/Detour/x64Detour.hpp
-			${PROJECT_SOURCE_DIR}/headers/Detour/x86Detour.hpp)
+	set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/polyhook2/Detour/ADetour.hpp
+			${PROJECT_SOURCE_DIR}/polyhook2/Detour/x64Detour.hpp
+			${PROJECT_SOURCE_DIR}/polyhook2/Detour/x86Detour.hpp)
 
 	set(DETOUR_IMP_SOURCES 
 			${PROJECT_SOURCE_DIR}/sources/ADetour.cpp
@@ -77,9 +77,9 @@ endif()
 
 if(FEATURE_EXCEPTION MATCHES ON)
 	set(EXCEPTION_HEADER_FILES 
-		${PROJECT_SOURCE_DIR}/headers/Exceptions/AVehHook.hpp
-		${PROJECT_SOURCE_DIR}/headers/Exceptions/BreakPointHook.hpp
-		${PROJECT_SOURCE_DIR}/headers/Exceptions/HWBreakPointHook.hpp)
+		${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/AVehHook.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/BreakPointHook.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/HWBreakPointHook.hpp)
 
 	set(EXCEPTION_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/AVehHook.cpp
@@ -99,8 +99,8 @@ endif()
 
 if(FEATURE_VIRTUALS MATCHES ON)
 	set(VIRTUAL_HEADER_FILES 
-		${PROJECT_SOURCE_DIR}/headers/Virtuals/VTableSwapHook.hpp
-		${PROJECT_SOURCE_DIR}/headers/Virtuals/VFuncSwapHook.hpp)
+		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VTableSwapHook.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VFuncSwapHook.hpp)
 
 	set(VIRTUAL_IMP_SOURCES
 		${PROJECT_SOURCE_DIR}/sources/VTableSwapHook.cpp
@@ -119,9 +119,9 @@ endif()
 
 if(FEATURE_PE MATCHES ON)
 	set(PE_HEADER_FILES
-		${PROJECT_SOURCE_DIR}/headers/PE/EatHook.hpp
-		${PROJECT_SOURCE_DIR}/headers/PE/IatHook.hpp
-		${PROJECT_SOURCE_DIR}/headers/PE/PEB.hpp)
+		${PROJECT_SOURCE_DIR}/polyhook2/PE/EatHook.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/PE/IatHook.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/PE/PEB.hpp)
 
 	set(PE_IMP_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/EatHook.cpp
@@ -140,7 +140,7 @@ endif()
 
 if(FEATURE_INLINENTD MATCHES ON)
 	set(NTD_HEADER_FILES
-		${PROJECT_SOURCE_DIR}/headers/Detour/ILCallback.hpp)
+		${PROJECT_SOURCE_DIR}/polyhook2/Detour/ILCallback.hpp)
 
 	set(NTD_SOURCES 
 		${PROJECT_SOURCE_DIR}/sources/ILCallback.cpp)

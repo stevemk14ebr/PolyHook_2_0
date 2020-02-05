@@ -5,7 +5,7 @@
 #ifndef POLYHOOK_2_0_CAPSTONEDISASSEMBLER_HPP
 #define POLYHOOK_2_0_CAPSTONEDISASSEMBLER_HPP
 
-#include "headers/ADisassembler.hpp"
+#include "polyhook2/ADisassembler.hpp"
 
 #include <capstone/include/capstone/capstone.h>
 

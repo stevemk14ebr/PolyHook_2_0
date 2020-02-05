@@ -10,12 +10,12 @@
 #include <functional>
 using namespace std::placeholders;
 
-#include "headers/Detour/ADetour.hpp"
-#include "headers/Enums.hpp"
-#include "headers/Instruction.hpp"
-#include "headers/ADisassembler.hpp"
-#include "headers/ErrorLog.hpp"
-#include "headers/MemProtector.hpp"
+#include "polyhook2/Detour/ADetour.hpp"
+#include "polyhook2/Enums.hpp"
+#include "polyhook2/Instruction.hpp"
+#include "polyhook2/ADisassembler.hpp"
+#include "polyhook2/ErrorLog.hpp"
+#include "polyhook2/MemProtector.hpp"
 
 namespace PLH {
 

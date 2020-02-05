@@ -5,7 +5,7 @@
 #ifndef POLYHOOK_2_MEMORYPROTECTOR_HPP
 #define POLYHOOK_2_MEMORYPROTECTOR_HPP
 
-#include "headers/Enums.hpp"
+#include "polyhook2/Enums.hpp"
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif

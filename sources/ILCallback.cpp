@@ -1,4 +1,4 @@
-#include "headers/Detour/ILCallback.hpp"
+#include "polyhook2/Detour/ILCallback.hpp"
 
 asmjit::CallConv::Id PLH::ILCallback::getCallConv(const std::string& conv) {
 	if (conv == "cdecl") {

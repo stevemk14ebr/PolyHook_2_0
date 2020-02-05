@@ -1,5 +1,5 @@
-#include "headers/MemProtector.hpp"
-#include "headers/Enums.hpp"
+#include "polyhook2/MemProtector.hpp"
+#include "polyhook2/Enums.hpp"
 
 #include <windows.h>
 

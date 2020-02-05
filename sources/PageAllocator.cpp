@@ -1,4 +1,4 @@
-#include "headers/PageAllocator.hpp"
+#include "polyhook2/PageAllocator.hpp"
 
 std::vector<PLH::SplitPage> PLH::PageAllocator::m_pages;
 std::recursive_mutex PLH::PageAllocator::m_pageMtx;

@@ -4,10 +4,10 @@
 #pragma warning( pop )
 
 #pragma warning( disable : 4200)
-#include "headers/ErrorLog.hpp"
-#include "headers/Enums.hpp"
+#include "polyhook2/ErrorLog.hpp"
+#include "polyhook2/Enums.hpp"
 
-#include "headers/PageAllocator.hpp"
+#include "polyhook2/PageAllocator.hpp"
 
 #include <iostream>
 #include <vector>

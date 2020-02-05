@@ -2,8 +2,8 @@
 
 #include <Catch.hpp>
 
-#include "headers/Virtuals/VTableSwapHook.hpp"
-#include "headers/Tests/TestEffectTracker.hpp"
+#include "polyhook2/Virtuals/VTableSwapHook.hpp"
+#include "polyhook2/Tests/TestEffectTracker.hpp"
 
 EffectTracker vTblSwapEffects;
 

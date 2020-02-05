@@ -4,10 +4,10 @@
 #include <cassert>
 #include <map>
 
-#include "headers/MemProtector.hpp"
-#include "headers/ErrorLog.hpp"
-#include "headers/IHook.hpp"
-#include "headers/Enums.hpp"
+#include "polyhook2/MemProtector.hpp"
+#include "polyhook2/ErrorLog.hpp"
+#include "polyhook2/IHook.hpp"
+#include "polyhook2/Enums.hpp"
 
 namespace PLH {
 

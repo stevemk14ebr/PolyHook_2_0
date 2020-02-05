@@ -2,10 +2,10 @@
 // Created by steve on 7/4/17.
 //
 #include <Catch.hpp>
-#include "headers/Detour/x86Detour.hpp"
-#include "headers/CapstoneDisassembler.hpp"
+#include "polyhook2/Detour/x86Detour.hpp"
+#include "polyhook2/CapstoneDisassembler.hpp"
 
-#include "headers/Tests/TestEffectTracker.hpp"
+#include "polyhook2/Tests/TestEffectTracker.hpp"
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
 the handler or inline the function. NOINLINE attempts to fix the latter, the former

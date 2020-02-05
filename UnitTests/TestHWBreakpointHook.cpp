@@ -5,8 +5,8 @@
 //
 //#include <Catch.hpp>
 //
-//#include "headers/Exceptions/HWBreakPointHook.hpp"
-//#include "headers/tests/TestEffectTracker.hpp"
+//#include "polyhook2/Exceptions/HWBreakPointHook.hpp"
+//#include "polyhook2/tests/TestEffectTracker.hpp"
 //
 //EffectTracker effects3;
 //

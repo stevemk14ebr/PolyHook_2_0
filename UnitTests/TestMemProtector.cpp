@@ -1,5 +1,5 @@
 #include "Catch.hpp"
-#include "headers/MemProtector.hpp"
+#include "polyhook2/MemProtector.hpp"
 
 TEST_CASE("Test protflag translation", "[MemProtector],[Enums]") {
 	SECTION("flags to native") {

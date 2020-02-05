@@ -1,4 +1,4 @@
-#include "headers/Detour/ADetour.hpp"
+#include "polyhook2/Detour/ADetour.hpp"
 
 #include <cmath>
 

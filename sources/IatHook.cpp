@@ -1,4 +1,4 @@
-#include "headers/PE/IatHook.hpp"
+#include "polyhook2/PE/IatHook.hpp"
 
 PLH::IatHook::IatHook(const std::string& dllName, const std::string& apiName, const char* fnCallback, uint64_t* userOrigVar, const std::wstring& moduleName) 
 	: IatHook(dllName, apiName, (uint64_t)fnCallback, userOrigVar, moduleName)
