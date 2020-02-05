@@ -230,3 +230,15 @@ if(DEP_ASMJIT_NEED MATCHES ON)
 	add_subdirectory(${ASMJIT_DIR}) # build it
 	target_link_libraries(${PROJECT_NAME} asmjit)
 endif()
+
+
+#Install targets
+install(TARGETS ${PROJECT_NAME}
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+)
+
+#Install headers
+INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/polyhook2 DESTINATION include/)
+
