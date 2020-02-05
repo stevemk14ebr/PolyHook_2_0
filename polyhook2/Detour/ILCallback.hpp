@@ -15,9 +15,14 @@ namespace PLH {
 	class ILCallback {
 	public:
 		struct Parameters {
-			// must be char* for aliasing rules to work when reading back out
-			char* getArgPtr(const uint8_t idx) const {
-				return (char*)&m_arguments[idx];
+			template<typename T>
+			void setArg(const uint8_t idx, const T val) const {
+				*(T*)getArgPtr(idx) = val;
+			}
+
+			template<typename T>
+			T getArg(const uint8_t idx) const {
+				return *(T*)getArgPtr(idx);
 			}
 
 			// asm depends on this specific type
@@ -31,6 +36,11 @@ namespace PLH {
 			* the compiler not be ridiculous. It's still NOT safe, but it's good enough 99.99% of the time.
 			* Oh and volatile might help this too, so we add that.
 			*/
+		private:
+			// must be char* for aliasing rules to work when reading back out
+			char* getArgPtr(const uint8_t idx) const {
+				return (char*)&m_arguments[idx];
+			}
 		};
 
 		struct ReturnValue {

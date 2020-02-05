@@ -224,13 +224,12 @@ target_link_libraries(${PROJECT_NAME} capstone-static)
 if(DEP_ASMJIT_NEED MATCHES ON)
 	# AsmJit is a dep iff inlinetd is on
 	set(ASMJIT_DIR ${PROJECT_SOURCE_DIR}/asmjit/)
-	set(ASMJIT_BUILD_STATIC ON) # give our project the BUILD_STATIC flag
-	add_definitions(-DASMJIT_BUILD_STATIC) # give asmjit the BUILD_STATIC flag
+	set(ASMJIT_STATIC ON) # give our project the BUILD_STATIC flag
+	add_definitions(-DASMJIT_STATIC) # give asmjit the BUILD_STATIC flag
 	include_directories(${ASMJIT_DIR}/src/) # includes directory is nested in src
 	add_subdirectory(${ASMJIT_DIR}) # build it
 	target_link_libraries(${PROJECT_NAME} asmjit)
 endif()
-
 
 #Install targets
 install(TARGETS ${PROJECT_NAME}
