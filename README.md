@@ -43,6 +43,7 @@ You can build 3 different things. By default an executable is built and the unit
 Read the tests for docs for now until i write some. They are extensive
 
 # Features
+0) Both capstone and zydis are supported as disassembly backends and are fully abstracted
 1) Inline hook (x86/x64 Detour)
     - Places a jmp to a callback at the prologue, and then allocates a trampoline to continue execution of the original function
     - Operates entirely on an intermediate instruction object, disassembler engine is swappable, capstone included by default
