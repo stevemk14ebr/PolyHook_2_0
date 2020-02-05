@@ -1,4 +1,4 @@
-#include "headers/Detour/ILCallback.hpp"
+#include "polyhook2/Detour/ILCallback.hpp"
 
 asmjit::CallConv::Id PLH::ILCallback::getCallConv(const std::string& conv) {
 	if (conv == "cdecl") {
@@ -125,8 +125,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	argsStackIdx.setSize(sizeof(uint64_t));
 	
 	// set i = 0
-	cc.mov(i, 0);  
-	UNREFERENCED_PARAMETER(callback);
+	cc.mov(i, 0);
 	//// mov from arguments registers into the stack structure
 	for (uint8_t argIdx = 0; argIdx < sig.argCount(); argIdx++) {
 		const uint8_t argType = sig.args()[argIdx];

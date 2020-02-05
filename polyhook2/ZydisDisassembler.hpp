@@ -5,7 +5,7 @@
 
 #include <Zydis/Zydis.h>
 
-#include "headers/ADisassembler.hpp"
+#include "polyhook2/ADisassembler.hpp"
 #include "Zycore/Status.h"
 
 #define unreferenced(P) (P)

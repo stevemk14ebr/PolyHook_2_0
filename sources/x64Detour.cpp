@@ -1,7 +1,7 @@
 //
 // Created by steve on 7/5/17.
 //
-#include "headers/Detour/x64Detour.hpp"
+#include "polyhook2/Detour/x64Detour.hpp"
 
 PLH::x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
 

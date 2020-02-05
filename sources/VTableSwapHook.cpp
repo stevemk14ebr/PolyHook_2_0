@@ -1,4 +1,4 @@
-#include "headers/Virtuals/VTableSwapHook.hpp"
+#include "polyhook2/Virtuals/VTableSwapHook.hpp"
 
 PLH::VTableSwapHook::VTableSwapHook(const char* Class, const VFuncMap& redirectMap) 
 	: VTableSwapHook((uint64_t)Class, redirectMap)

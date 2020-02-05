@@ -9,6 +9,19 @@ Article 2: https://www.codeproject.com/Articles/1252212/PolyHook-2-Cplusplus17-x
 Ask for help, chat with others, talk to me here
 * [Official Gitter Chat](https://gitter.im/PolyHook/Lobby)
 
+# Packaging
+PolyHook2 is available on vcpkg. Consider trying that installation method if you prefer. Just install vcpkg from microsofts directions: 
+
+Commands: 
+```
+λ git clone https://github.com/Microsoft/vcpkg.git
+λ cd vcpkg
+λ .\bootstrap-vcpkg.bat -disableMetrics
+λ (as admin) .\vcpkg integrate install
+λ vcpkg.exe install polyhook2
+```
+You then simply include the polyhook headers, be sure to link the generated .lib.
+
 # Build
 ```
 git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
@@ -42,18 +55,21 @@ Read the tests for docs for now until i write some. They are extensive
       - Relocations inside the moved section are resolved (not using relocation table, disassembles using engine)
     - x64 trampoline is not restricted to +- 2GB, can be anywhere, avoids shadow space + no registers spoiled
     - If inline hook fails at an intermediate step the original function will not be malformed. All writes are batched until after we know later steps succeed.
+    
+ 2) Runtime Inline Hook
+    - All the goodness of normal inline hooks, but JIT's a translation stub compatible with the given typedef and ABI. The translation stub will move arguments into a small struct, which is passed as pointer to a callback and allow the spoofing of return value. This allows tools to generate hook translation stubs at runtime, allowing for the full inline hooking of functions where the typedef is not known until runtime.
 
-2) Virtual Function Swap (VFuncSwap)
+3) Virtual Function Swap (VFuncSwap)
     * Swaps the pointers at given indexs in a C++ VTable to point to a callbacks
-3) Virtual Table Swap (VTableSwap)
+4) Virtual Table Swap (VTableSwap)
     * Performs a deep copy on a c++ VTable and replaces the pointer to the table with the newly allocated copy. Then swaps the pointer entries in the copy to point to callbacks
-4) Software Breakpoint Hook (BreakpointHook)
+5) Software Breakpoint Hook (BreakpointHook)
     * Overwrites the first byte of a function with 0xCC and calls the callback in the exception handler. Provides the user with an automatic method to restore the original overwritten byte
-5) Hardware Breakpoint Hook (HWBreakpointHook)
-   * Sets the debug registers of the CPU to add a HW execution BP for the calling thread. The callback is called in the exception handler. Remember HW BP's are per thread, calling thread determines which thread bp is for
-6) Import Address Table Hook (IatHook)
+6) Hardware Breakpoint Hook (HWBreakpointHook)
+   * Sets the debug registers of the CPU to add a HW execution BP for the calling thread. The callback is called in the exception handler. **Remember HW BP's are per thread, the thread calling hook() must be the same as the one that is being hooked. You may find a quick detour, then setting up the HWBP in the detour callback, then unhooking to be a useful construct.**
+7) Import Address Table Hook (IatHook)
     * Resolves loaded modules through PEB, finds IAT, then swaps the thunk pointer to the callback. 
-7) Export Address Table Hook (EatHook)
+8) Export Address Table Hook (EatHook)
     * Resolves loaded modules through PEB, finds EAT, then swaps pointer to export to the callback. Since this is a 32bit offset we optionally allocate a trampoline stub to do the full transfer to callback if it's beyond 32bits.
     
 # Extras

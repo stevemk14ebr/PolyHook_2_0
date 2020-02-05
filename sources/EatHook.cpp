@@ -1,4 +1,4 @@
-#include "headers/PE/EatHook.hpp"
+#include "polyhook2/PE/EatHook.hpp"
 
 PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName, const char* fnCallback, uint64_t* userOrigVar)
 	: EatHook(apiName, moduleName, (uint64_t)fnCallback, userOrigVar)

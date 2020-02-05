@@ -2,8 +2,8 @@
 //
 
 #include "ExampleProject.h"
-#include "headers/CapstoneDisassembler.hpp"
-#include "headers/Detour/x86Detour.hpp"
+#include "polyhook2/CapstoneDisassembler.hpp"
+#include "polyhook2/Detour/x86Detour.hpp"
 
 #include <cstdarg>
 uint64_t hookPrintfTramp = NULL;

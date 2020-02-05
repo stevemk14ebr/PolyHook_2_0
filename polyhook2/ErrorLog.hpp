@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "headers/Enums.hpp"
+#include "polyhook2/Enums.hpp"
 
 namespace PLH {
 
@@ -15,14 +15,11 @@ struct Error {
 
 class ErrorLog {
 public:
-	void push(const std::string& msg, ErrorLevel level) {
-		Error err;
-		err.msg = msg;
-		err.lvl = level;
-		push(err);
+	void push(std::string msg, ErrorLevel level) {
+		push({ std::move(msg), level });
 	}
 
-	void push(const Error& err) {
+	void push(Error err) {
 		switch (err.lvl) {
 		case ErrorLevel::INFO:
 			std::cout << "[+] Info: " << err.msg << std::endl;
@@ -37,13 +34,16 @@ public:
 			std::cout << "Unsupported error message logged " << err.msg << std::endl;
 		}
 		
-		m_log.push_back(err);
+		m_log.push_back(std::move(err));
 	}
 
 	Error pop() {
-		Error err = m_log.back();
-		m_log.pop_back();
-		return err;
+		Error err{};
+		if (!m_log.empty()) {
+			err = std::move(m_log.back());
+			m_log.pop_back();
+		}
+		return std::move(err);
 	}
 
 	static ErrorLog& singleton() {

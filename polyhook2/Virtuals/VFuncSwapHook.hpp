@@ -4,9 +4,9 @@
 #include <cassert>
 #include <map>
 
-#include "headers/IHook.hpp"
-#include "headers/MemProtector.hpp"
-#include "headers/Misc.hpp"
+#include "polyhook2/IHook.hpp"
+#include "polyhook2/MemProtector.hpp"
+#include "polyhook2/Misc.hpp"
 
 namespace PLH {
 typedef std::map<uint16_t, uint64_t> VFuncMap;

@@ -2,8 +2,8 @@
 
 #include <Catch.hpp>
 
-#include "headers/Virtuals/VFuncSwapHook.hpp"
-#include "headers/Tests/TestEffectTracker.hpp"
+#include "polyhook2/Virtuals/VFuncSwapHook.hpp"
+#include "polyhook2/Tests/TestEffectTracker.hpp"
 
 EffectTracker vFuncSwapEffects;
 

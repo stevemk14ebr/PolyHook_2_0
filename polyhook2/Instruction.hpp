@@ -6,6 +6,7 @@
 #define POLYHOOK_2_0_INSTRUCTION_HPP
 
 #include <cassert>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <sstream>
@@ -13,8 +14,8 @@
 #include <iomanip> //setw
 #include <type_traits>
 
-#include "headers/UID.hpp"
-#include "headers/Enums.hpp"
+#include "polyhook2/UID.hpp"
+#include "polyhook2/Enums.hpp"
 namespace PLH {
 class Instruction {
 public:

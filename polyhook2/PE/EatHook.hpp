@@ -4,13 +4,13 @@
 #include <iostream>
 #include <algorithm>
 
-#include "headers/ErrorLog.hpp"
-#include "headers/IHook.hpp"
-#include "headers/MemProtector.hpp"
-#include "headers/Misc.hpp"
-#include "headers/PE/PEB.hpp"
-#include "headers/ADisassembler.hpp"
-#include "headers/PageAllocator.hpp"
+#include "polyhook2/ErrorLog.hpp"
+#include "polyhook2/IHook.hpp"
+#include "polyhook2/MemProtector.hpp"
+#include "polyhook2/Misc.hpp"
+#include "polyhook2/PE/PEB.hpp"
+#include "polyhook2/ADisassembler.hpp"
+#include "polyhook2/PageAllocator.hpp"
 
 #define RVA2VA(type, base, rva) (type)((ULONG_PTR) base + rva)
 

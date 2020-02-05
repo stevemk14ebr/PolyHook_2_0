@@ -1,7 +1,7 @@
 #ifndef POLYHOOK_2_PAGEALLOCATOR_HPP
 #define POLYHOOK_2_PAGEALLOCATOR_HPP
 
-#include "headers/Misc.hpp"
+#include "polyhook2/Misc.hpp"
 #include <vector>
 #include <mutex>
 #include <atomic>
@@ -14,7 +14,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <Windows.h>
+#include <windows.h>
 
 namespace PLH {
 

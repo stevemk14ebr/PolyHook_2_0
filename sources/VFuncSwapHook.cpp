@@ -1,4 +1,4 @@
-#include "headers/Virtuals/VFuncSwapHook.hpp"
+#include "polyhook2/Virtuals/VFuncSwapHook.hpp"
 
 PLH::VFuncSwapHook::VFuncSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap)
     : VFuncSwapHook((uint64_t)Class, redirectMap, userOrigMap)

@@ -1,7 +1,7 @@
 //
 // Created by steve on 7/5/17.
 //
-#include "headers/Detour/x86Detour.hpp"
+#include "polyhook2/Detour/x86Detour.hpp"
 
 PLH::x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
 

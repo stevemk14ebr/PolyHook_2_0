@@ -30,7 +30,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <minwindef.h> 
+#include <minwindef.h>
 typedef void *PPS_POST_PROCESS_INIT_ROUTINE;
 
 typedef struct _LSA_UNICODE_STRING {

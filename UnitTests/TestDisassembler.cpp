@@ -2,8 +2,8 @@
 // Created by steve on 3/22/17.
 //
 #include "Catch.hpp"
-#include "headers/CapstoneDisassembler.hpp"
-#include "headers/ZydisDisassembler.hpp"
+#include "polyhook2/CapstoneDisassembler.hpp"
+#include "polyhook2/ZydisDisassembler.hpp"
 
 #include <iostream>
 #include <vector>
@@ -293,7 +293,7 @@ TEST_CASE("Compare x86 Decompilers", "[ADisassembler],[ZydisDisassembler][Capsto
 		for (const auto &p : disasm.getBranchMap()) {
 			std::cout << std::hex << "dest: " << p.first << " -> " << std::dec << p.second << std::endl;
 		}
-	
+
 		for (size_t i = 0; i < Instructions.size(); i++) {
 			INFO("Index: " << i << " Mnemonic:"
 			<< Instructions[i].getMnemonic());

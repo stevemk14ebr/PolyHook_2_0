@@ -7,10 +7,10 @@
 #pragma warning( pop )
 
 #pragma warning( disable : 4200)
-#include "headers/ErrorLog.hpp"
-#include "headers/Enums.hpp"
+#include "polyhook2/ErrorLog.hpp"
+#include "polyhook2/Enums.hpp"
 
-#include "headers/PageAllocator.hpp"
+#include "polyhook2/PageAllocator.hpp"
 
 #include <iostream>
 #include <vector>
@@ -18,22 +18,32 @@ namespace PLH {
 	class ILCallback {
 	public:
 		struct Parameters {
-			// must be char* for aliasing rules to work when reading back out
-			char* getArgPtr(const uint8_t idx) const {
-				return (char*)&m_arguments[idx];
+			template<typename T>
+			void setArg(const uint8_t idx, const T val) const {
+				*(T*)getArgPtr(idx) = val;
+			}
+
+			template<typename T>
+			T getArg(const uint8_t idx) const {
+				return *(T*)getArgPtr(idx);
 			}
 
 			// asm depends on this specific type
 			volatile uint64_t m_arguments[1];
-			
+
 			/*
 			* Flexible array members like above are not valid in C++ and are U.B. However, we make
 			* sure that we allocate the actual memory we touch when we access beyond index [0]. However,
-			* this is STILL not enough as the compiler is allowed to optmize away U.B. so we make one 
+			* this is STILL not enough as the compiler is allowed to optmize away U.B. so we make one
 			* additional attempt to always access through a char* (must be char*, not unsigned char*) to avoid aliasing rules which helps
 			* the compiler not be ridiculous. It's still NOT safe, but it's good enough 99.99% of the time.
 			* Oh and volatile might help this too, so we add that.
 			*/
+		private:
+			// must be char* for aliasing rules to work when reading back out
+			char* getArgPtr(const uint8_t idx) const {
+				return (char*)&m_arguments[idx];
+			}
 		};
 
 		struct ReturnValue {

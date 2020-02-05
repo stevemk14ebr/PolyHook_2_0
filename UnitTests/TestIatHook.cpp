@@ -1,7 +1,7 @@
 #include <Catch.hpp>
 
-#include "headers/PE/IatHook.hpp"
-#include "headers/Tests/TestEffectTracker.hpp"
+#include "polyhook2/PE/IatHook.hpp"
+#include "polyhook2/Tests/TestEffectTracker.hpp"
 
 EffectTracker iatEffectTracker;
 

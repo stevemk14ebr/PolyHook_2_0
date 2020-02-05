@@ -3,8 +3,8 @@
 
 #include <cassert>
 
-#include "headers/Exceptions/AVehHook.hpp"
-#include "headers/Misc.hpp"
+#include "polyhook2/Exceptions/AVehHook.hpp"
+#include "polyhook2/Misc.hpp"
 
 namespace PLH {
 

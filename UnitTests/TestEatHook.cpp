@@ -1,7 +1,7 @@
 #include <Catch.hpp>
 
-#include "headers/PE/EatHook.hpp"
-#include "headers/Tests/TestEffectTracker.hpp"
+#include "polyhook2/PE/EatHook.hpp"
+#include "polyhook2/Tests/TestEffectTracker.hpp"
 
 EffectTracker eatEffectTracker;
 

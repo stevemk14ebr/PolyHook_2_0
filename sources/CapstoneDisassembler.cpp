@@ -1,7 +1,7 @@
 //
 // Created by steve on 7/5/17.
 //
-#include "headers/CapstoneDisassembler.hpp"
+#include "polyhook2/CapstoneDisassembler.hpp"
 
 PLH::insts_t
 PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {

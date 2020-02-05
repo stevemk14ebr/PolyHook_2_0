@@ -2,11 +2,11 @@
 // Created by steve on 7/4/17.
 //
 #include <Catch.hpp>
-#include "headers/Detour/x86Detour.hpp"
-#include "headers/CapstoneDisassembler.hpp"
-#include "headers/ZydisDisassembler.hpp"
+#include "polyhook2/Detour/x86Detour.hpp"
+#include "polyhook2/CapstoneDisassembler.hpp"
+#include "polyhook2/ZydisDisassembler.hpp"
 
-#include "headers/tests/TestEffectTracker.hpp"
+#include "polyhook2/Tests/TestEffectTracker.hpp"
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
 the handler or inline the function. NOINLINE attempts to fix the latter, the former
@@ -65,7 +65,8 @@ b:  7f f4                   jg     0x1
 */
 unsigned char hookMe3[] = {0x55, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x90, 0x90, 0x7F, 0xF4};
 
-NOINLINE void __declspec(naked) hookMeLoop() {
+NOINLINE void PH_ATTR_NAKED hookMeLoop() {
+#ifdef _MSC_VER
 	__asm {
 		xor eax, eax
 		start :
@@ -74,6 +75,17 @@ NOINLINE void __declspec(naked) hookMeLoop() {
 			jle start
 			ret
 	}
+#elif __GNUC__
+	asm(
+		"xor %eax, %eax;\n\t"
+		"START: inc %eax;\n\t"
+		"cmp $5, %eax;\n\t"
+		"jle START;\n\t"
+		"ret;"
+	);
+#else
+#error "Please implement this for your compiler!"
+#endif
 }
 
 uint64_t hookMeLoopTramp = NULL;
