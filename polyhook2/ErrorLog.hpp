@@ -20,7 +20,6 @@ public:
 	}
 	
 	void push(std::string msg, ErrorLevel level) {
-		if (level >= m_logLevel)
 			push({ std::move(msg), level });
 	}
 
