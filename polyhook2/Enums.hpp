@@ -51,7 +51,8 @@ enum class Mode {
 enum class ErrorLevel {
 	INFO,
 	WARN,
-	SEV
+	SEV,
+	NONE
 };
 }
 #endif //POLYHOOK_2_0_ENUMS_HPP
