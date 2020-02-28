@@ -14,6 +14,9 @@ public:
 	HWBreakPointHook(const char* fnAddress, const char* fnCallback);
 	~HWBreakPointHook();
 
+	bool hook(HANDLE hThread);
+	bool unHook(HANDLE hThread);
+
 	virtual bool hook() override;
 	virtual bool unHook() override;
 	auto getProtectionObject() {
