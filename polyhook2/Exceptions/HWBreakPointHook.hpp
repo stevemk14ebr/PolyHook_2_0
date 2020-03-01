@@ -10,12 +10,9 @@ namespace PLH {
 
 class HWBreakPointHook : public AVehHook {
 public:
-	HWBreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback);
-	HWBreakPointHook(const char* fnAddress, const char* fnCallback);
+	HWBreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback, HANDLE hThread);
+	HWBreakPointHook(const char* fnAddress, const char* fnCallback, HANDLE hThread);
 	~HWBreakPointHook();
-
-	bool hook(HANDLE hThread);
-	bool unHook(HANDLE hThread);
 
 	virtual bool hook() override;
 	virtual bool unHook() override;
@@ -28,6 +25,8 @@ private:
 	uint64_t m_fnCallback;
 	uint64_t m_fnAddress;
 	uint8_t m_regIdx;
+
+	HANDLE m_hThread;
 
 	LONG OnException(EXCEPTION_POINTERS* ExceptionInfo) override;
 };
