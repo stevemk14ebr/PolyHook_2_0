@@ -69,7 +69,7 @@ public:
 
 	virtual bool unHook() override;
 
-	virtual HookType getType() const {
+	virtual HookType getType() const override {
 		return HookType::Detour;
 	}
 
