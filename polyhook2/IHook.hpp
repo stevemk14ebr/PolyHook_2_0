@@ -10,7 +10,8 @@
 #include "polyhook2/Enums.hpp"
 
 #if defined(__clang__)
-
+#define NOINLINE __attribute__((noinline))
+#define PH_ATTR_NAKED __attribute__((naked))
 #elif defined(__GNUC__) || defined(__GNUG__)
 #define NOINLINE __attribute__((noinline))
 #define PH_ATTR_NAKED __attribute__((naked))
