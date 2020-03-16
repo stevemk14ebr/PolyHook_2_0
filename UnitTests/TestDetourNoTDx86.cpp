@@ -89,6 +89,7 @@ NOINLINE void __fastcall hookMeIntFloatDoubleFst(int a, float b, double c) {
 }
 
 NOINLINE void myCallback(const PLH::ILCallback::Parameters* p, const uint8_t count, const PLH::ILCallback::ReturnValue* retVal) {
+	PH_UNUSED(retVal);
 	printf("Argument Count: %d\n", count);
 	for (int i = 0; i < count; i++) {
 		printf("Arg: %d asInt:%d asFloat:%f asDouble:%f\n", i, p->getArg<int>(i), p->getArg<float>(i), p->getArg<double>(i));
@@ -236,6 +237,7 @@ NOINLINE void rw_host(int a, float b, double c) {
 }
 
 NOINLINE void mySecondCallback(const PLH::ILCallback::Parameters* p, const uint8_t count, const PLH::ILCallback::ReturnValue* retVal) {
+	PH_UNUSED(retVal);
 	printf("Argument Count: %d\n", count);
 	for (int i = 0; i < count; i++) {
 		printf("Arg: %d asInt:%d asFloat:%f asDouble:%f\n", i, p->getArg<int>(i), p->getArg<float>(i), p->getArg<double>(i));
@@ -315,6 +317,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 }
 
 NOINLINE int rw_ret_host(int a, float b, double c, int usageType) {
+	PH_UNUSED(usageType);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -327,6 +330,7 @@ NOINLINE int rw_ret_host(int a, float b, double c, int usageType) {
 }
 
 NOINLINE float rw_ret_host_float(int a, float b, double c, int usageType) {
+	PH_UNUSED(usageType);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -339,6 +343,7 @@ NOINLINE float rw_ret_host_float(int a, float b, double c, int usageType) {
 }
 
 NOINLINE double rw_ret_host_double(int a, float b, double c, int usageType) {
+	PH_UNUSED(usageType);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -351,6 +356,7 @@ NOINLINE double rw_ret_host_double(int a, float b, double c, int usageType) {
 }
 
 NOINLINE int __fastcall rw_ret_fst_int(int a, float b, double c, int usageType) {
+	PH_UNUSED(usageType);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -363,6 +369,7 @@ NOINLINE int __fastcall rw_ret_fst_int(int a, float b, double c, int usageType) 
 }
 
 NOINLINE int __cdecl rw_ret_cdecl_int(int a, float b, double c, int usageType) {
+	PH_UNUSED(usageType);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -375,6 +382,7 @@ NOINLINE int __cdecl rw_ret_cdecl_int(int a, float b, double c, int usageType) {
 }
 
 NOINLINE int __stdcall rw_ret_std_int(int a, float b, double c, int usageType) {
+	PH_UNUSED(usageType);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -387,6 +395,7 @@ NOINLINE int __stdcall rw_ret_std_int(int a, float b, double c, int usageType) {
 }
 
 NOINLINE float __fastcall rw_ret_fst_float(int a, float b, double c, int usageType) {
+	PH_UNUSED(usageType);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -399,6 +408,7 @@ NOINLINE float __fastcall rw_ret_fst_float(int a, float b, double c, int usageTy
 }
 
 NOINLINE float __cdecl rw_ret_cdecl_float(int a, float b, double c, int usageType) {
+	PH_UNUSED(usageType);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -411,6 +421,7 @@ NOINLINE float __cdecl rw_ret_cdecl_float(int a, float b, double c, int usageTyp
 }
 
 NOINLINE float __stdcall rw_ret_std_float(int a, float b, double c, int usageType) {
+	PH_UNUSED(usageType);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;

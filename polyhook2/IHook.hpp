@@ -25,6 +25,8 @@ _Pragma("GCC optimize (\"O0\")")
 #define OPTS_ON __pragma(optimize("", on))
 #endif
 
+#define PH_UNUSED(a) (void)a
+
 namespace PLH {
 class IHook {
 public:

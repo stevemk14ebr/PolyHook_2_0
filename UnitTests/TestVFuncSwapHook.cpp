@@ -23,12 +23,12 @@ public:
 typedef int(__thiscall* tVirtNoParams)(uintptr_t pThis);
 PLH::VFuncMap origVFuncs2;
 
-NOINLINE int __fastcall hkVirtNoParams2(uintptr_t pThis, void* edxDEAD) {
+NOINLINE int __fastcall hkVirtNoParams2(uintptr_t pThis) {
 	vFuncSwapEffects.PeakEffect().trigger();
 	return ((tVirtNoParams)origVFuncs2.at(0))(pThis);
 }
 
-NOINLINE int __fastcall hkVirt2NoParams2(uintptr_t pThis, void* edxDEAD) {
+NOINLINE int __fastcall hkVirt2NoParams2(uintptr_t pThis) {
 	vFuncSwapEffects.PeakEffect().trigger();
 	return ((tVirtNoParams)origVFuncs2.at(1))(pThis);
 }

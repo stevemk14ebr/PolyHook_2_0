@@ -71,12 +71,14 @@ unsigned char hookMe4[] = {
 uint64_t nullTramp = NULL;
 NOINLINE void h_nullstub() {
 	volatile int i = 0;
+	PH_UNUSED(i);
 }
 
 #include <stdlib.h>
 uint64_t hookMallocTramp = NULL;
 NOINLINE void* h_hookMalloc(size_t size) {
 	volatile int i = 0;
+	PH_UNUSED(i);
 	effects.PeakEffect().trigger();
 
 	return PLH::FnCast(hookMallocTramp, &malloc)(size);
