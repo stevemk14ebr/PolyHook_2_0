@@ -5,12 +5,12 @@ PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName
 {}
 
 PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName, const uint64_t fnCallback, uint64_t* userOrigVar)
-	: m_apiName(apiName)
-	, m_moduleName(moduleName)
-    , m_userOrigVar(userOrigVar)
+	: m_moduleName(moduleName)
+	, m_apiName(apiName)
     , m_fnCallback(fnCallback)
-	, m_trampoline(0)
+    , m_userOrigVar(userOrigVar)
 	, m_allocator(nullptr)
+	, m_trampoline(0)
 {}
 
 PLH::EatHook::~EatHook() {
