@@ -2,11 +2,11 @@
 // Created by steve on 7/9/18.
 //
 #include <Catch.hpp>
-#include "polyhook2/Detour/X64Detour.hpp"
+#include "polyhook2/Detour/x64Detour.hpp"
 #include "polyhook2/CapstoneDisassembler.hpp"
 #include "polyhook2/ZydisDisassembler.hpp"
 
-#include "polyhook2/tests/TestEffectTracker.hpp"
+#include "polyhook2/Tests/TestEffectTracker.hpp"
 
 EffectTracker effects;
 
