@@ -237,8 +237,8 @@ endif()
 if(DEP_ZYDIS_NEED MATCHES ON)
 	# static by default
 	set(ZYDIS_DIR ${PROJECT_SOURCE_DIR}/zydis/)
-	set(ZYDIS_BUILD_TOOLS OFF)
-	set(ZYDIS_BUILD_EXAMPLES OFF)
+	option(ZYDIS_BUILD_TOOLS "" OFF)
+	option(ZYDIS_BUILD_EXAMPLES "" OFF)
 	include_directories(${ZYDIS_DIR}/dependencies/zycore/include) # zycore includes
 	include_directories(${ZYDIS_DIR}/include) # zydis includes
 	include_directories(${CMAKE_CURRENT_BINARY_DIR}/zydis/dependencies/zycore) # find auto-generated ZycoreExportConfig.h in build dir
