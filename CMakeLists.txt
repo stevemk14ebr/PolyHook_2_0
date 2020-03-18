@@ -182,7 +182,13 @@ endif()
 # add WALL + PDB flags
 if(MSVC)
   # apply wall flags only to plh src files
-  set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS "/MP /W4 /WX /Z7")
+  set(COMPILE_FLAGS_PLH "/W4 /WX /Z7")
+
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(COMPILE_FLAGS_PLH "/MP ${COMPILE_FLAGS_PLH}")
+  endif()
+
+  set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS ${COMPILE_FLAGS_PLH})
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
 
   # force static lib
