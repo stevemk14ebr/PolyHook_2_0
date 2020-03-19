@@ -53,6 +53,7 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 		switch (operand->type)
         {
         case ZYDIS_OPERAND_TYPE_REGISTER:
+        case ZYDIS_OPERAND_TYPE_UNUSED:
        
             break;
         case ZYDIS_OPERAND_TYPE_MEMORY:

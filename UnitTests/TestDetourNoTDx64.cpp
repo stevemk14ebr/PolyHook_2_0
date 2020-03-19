@@ -73,6 +73,8 @@ NOINLINE void hookMeIntFloatDouble(int a, float b, double c) {
 }
 
 NOINLINE void myCallback(const PLH::ILCallback::Parameters* p, const uint8_t count, const PLH::ILCallback::ReturnValue* retVal) {
+	PH_UNUSED(retVal);
+
 	printf("Argument Count: %d\n", count);
 	for (int i = 0; i < count; i++) {
 		printf("Arg: %d asInt:%d asFloat:%f asDouble:%f\n", i, p->getArg<int>(i), p->getArg<float>(i), p->getArg<double>(i));
@@ -136,6 +138,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 
 
 NOINLINE void rw(int a, float b, double c, int type) {
+	PH_UNUSED(type);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -147,6 +150,7 @@ NOINLINE void rw(int a, float b, double c, int type) {
 }
 
 NOINLINE float rw_float(int a, float b, double c, int type) {
+	PH_UNUSED(type);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -159,6 +163,7 @@ NOINLINE float rw_float(int a, float b, double c, int type) {
 }
 
 NOINLINE double rw_double(int a, float b, double c, int type) {
+	PH_UNUSED(type);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;
@@ -171,6 +176,7 @@ NOINLINE double rw_double(int a, float b, double c, int type) {
 }
 
 NOINLINE int rw_int(int a, float b, double c, int type) {
+	PH_UNUSED(type);
 	volatile float ans = 0.0f;
 	ans += (float)a;
 	ans += c;

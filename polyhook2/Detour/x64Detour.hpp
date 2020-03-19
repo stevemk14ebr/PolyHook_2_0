@@ -27,7 +27,7 @@ public:
 	virtual ~x64Detour() = default;
 	virtual bool hook() override;
 
-	Mode getArchType() const;
+	Mode getArchType() const override;
 
 	uint8_t getMinJmpSize() const;
 

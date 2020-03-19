@@ -49,7 +49,7 @@ public:
 			err = std::move(m_log.back());
 			m_log.pop_back();
 		}
-		return std::move(err);
+		return err;
 	}
 
 	static ErrorLog& singleton() {

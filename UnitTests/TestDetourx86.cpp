@@ -51,6 +51,7 @@ unsigned char hookMe2[] = {0x55, 0x8b, 0xec, 0x74, 0xFB, 0x74, 0xea, 0x74, 0xFA,
 uint64_t nullTramp = NULL;
 NOINLINE void __cdecl h_nullstub() {
 	volatile int i = 0;
+	PH_UNUSED(i);
 }
 
 /*
@@ -136,6 +137,7 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::Capstone
 
 		effects.PushEffect();
 		volatile auto result = hookMe1();
+		PH_UNUSED(result);
 		REQUIRE(effects.PopEffect().didExecute());
 		REQUIRE(detour.unHook() == true);
 	}
@@ -181,6 +183,7 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::Capstone
 
 		effects.PushEffect();
 		volatile double result = pFnPowDouble(2, 2);
+		PH_UNUSED(result);
 		detour.unHook();
 		REQUIRE(effects.PopEffect().didExecute());
 	}

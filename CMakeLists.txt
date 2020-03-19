@@ -182,7 +182,13 @@ endif()
 # add WALL + PDB flags
 if(MSVC)
   # apply wall flags only to plh src files
-  set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS "/MP /W4 /WX /Z7")
+  set(COMPILE_FLAGS_PLH "/W4 /WX /Z7")
+
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(COMPILE_FLAGS_PLH "/MP ${COMPILE_FLAGS_PLH}")
+  endif()
+
+  set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS ${COMPILE_FLAGS_PLH})
   target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
 
   # force static lib
@@ -237,8 +243,8 @@ endif()
 if(DEP_ZYDIS_NEED MATCHES ON)
 	# static by default
 	set(ZYDIS_DIR ${PROJECT_SOURCE_DIR}/zydis/)
-	set(ZYDIS_BUILD_TOOLS OFF)
-	set(ZYDIS_BUILD_EXAMPLES OFF)
+	option(ZYDIS_BUILD_TOOLS "" OFF)
+	option(ZYDIS_BUILD_EXAMPLES "" OFF)
 	include_directories(${ZYDIS_DIR}/dependencies/zycore/include) # zycore includes
 	include_directories(${ZYDIS_DIR}/include) # zydis includes
 	include_directories(${CMAKE_CURRENT_BINARY_DIR}/zydis/dependencies/zycore) # find auto-generated ZycoreExportConfig.h in build dir

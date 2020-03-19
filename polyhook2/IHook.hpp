@@ -10,7 +10,8 @@
 #include "polyhook2/Enums.hpp"
 
 #if defined(__clang__)
-
+#define NOINLINE __attribute__((noinline))
+#define PH_ATTR_NAKED __attribute__((naked))
 #elif defined(__GNUC__) || defined(__GNUG__)
 #define NOINLINE __attribute__((noinline))
 #define PH_ATTR_NAKED __attribute__((naked))
@@ -23,6 +24,8 @@ _Pragma("GCC optimize (\"O0\")")
 #define OPTS_OFF __pragma(optimize("", off))
 #define OPTS_ON __pragma(optimize("", on))
 #endif
+
+#define PH_UNUSED(a) (void)a
 
 namespace PLH {
 class IHook {

@@ -35,11 +35,13 @@ cast to the type of pFnCastTo. Second param must be a pointer
 to function type**/
 template<typename T>
 T FnCast(uint64_t fnToCast, T pFnCastTo) {
+	PH_UNUSED(pFnCastTo);
 	return (T)fnToCast;
 }
 
 template<typename T>
 T FnCast(void* fnToCast, T pFnCastTo) {
+	PH_UNUSED(pFnCastTo);
 	return (T)fnToCast;
 }
 
@@ -69,7 +71,7 @@ public:
 
 	virtual bool unHook() override;
 
-	virtual HookType getType() const {
+	virtual HookType getType() const override {
 		return HookType::Detour;
 	}
 

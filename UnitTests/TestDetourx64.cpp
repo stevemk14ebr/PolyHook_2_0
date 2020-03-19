@@ -2,11 +2,11 @@
 // Created by steve on 7/9/18.
 //
 #include <Catch.hpp>
-#include "polyhook2/Detour/X64Detour.hpp"
+#include "polyhook2/Detour/x64Detour.hpp"
 #include "polyhook2/CapstoneDisassembler.hpp"
 #include "polyhook2/ZydisDisassembler.hpp"
 
-#include "polyhook2/tests/TestEffectTracker.hpp"
+#include "polyhook2/Tests/TestEffectTracker.hpp"
 
 EffectTracker effects;
 
@@ -71,12 +71,14 @@ unsigned char hookMe4[] = {
 uint64_t nullTramp = NULL;
 NOINLINE void h_nullstub() {
 	volatile int i = 0;
+	PH_UNUSED(i);
 }
 
 #include <stdlib.h>
 uint64_t hookMallocTramp = NULL;
 NOINLINE void* h_hookMalloc(size_t size) {
 	volatile int i = 0;
+	PH_UNUSED(i);
 	effects.PeakEffect().trigger();
 
 	return PLH::FnCast(hookMallocTramp, &malloc)(size);

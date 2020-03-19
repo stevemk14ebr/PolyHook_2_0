@@ -9,6 +9,8 @@ EffectTracker vTblSwapEffects;
 
 class VirtualTest {
 public:
+	virtual ~VirtualTest() {}
+
 	virtual int NoParamVirt() {
 		return 4;
 	}
@@ -23,21 +25,21 @@ public:
 typedef int(__thiscall* tVirtNoParams)(uintptr_t pThis);
 PLH::VFuncMap origVFuncs;
 
-NOINLINE int __fastcall hkVirtNoParams(uintptr_t pThis, void* edxDEAD) {
-	vTblSwapEffects.PeakEffect().trigger();
-	return ((tVirtNoParams)origVFuncs.at(0))(pThis);
-}
-
-NOINLINE int __fastcall hkVirt2NoParams(uintptr_t pThis, void* edxDEAD) {
+NOINLINE int __fastcall hkVirtNoParams(uintptr_t pThis) {
 	vTblSwapEffects.PeakEffect().trigger();
 	return ((tVirtNoParams)origVFuncs.at(1))(pThis);
+}
+
+NOINLINE int __fastcall hkVirt2NoParams(uintptr_t pThis) {
+	vTblSwapEffects.PeakEffect().trigger();
+	return ((tVirtNoParams)origVFuncs.at(2))(pThis);
 }
 
 TEST_CASE("VTableSwap tests", "[VTableSwap]") {
 	std::shared_ptr<VirtualTest> ClassToHook(new VirtualTest);
 
 	SECTION("Verify vtable redirected") {
-		PLH::VFuncMap redirect = {{(uint16_t)0, (uint64_t)&hkVirtNoParams}};
+		PLH::VFuncMap redirect = {{(uint16_t)1, (uint64_t)&hkVirtNoParams}};
 		PLH::VTableSwapHook hook((char*)ClassToHook.get(), redirect);
 		REQUIRE(hook.hook());
 		origVFuncs = hook.getOriginals();
@@ -50,7 +52,7 @@ TEST_CASE("VTableSwap tests", "[VTableSwap]") {
 	}
 
 	SECTION("Verify multiple vtable redirected") {
-		PLH::VFuncMap redirect = {{(uint16_t)0, (uint64_t)&hkVirtNoParams},{(uint16_t)1, (uint64_t)&hkVirtNoParams}};
+		PLH::VFuncMap redirect = {{(uint16_t)1, (uint64_t)&hkVirtNoParams},{(uint16_t)2, (uint64_t)&hkVirtNoParams}};
 		PLH::VTableSwapHook hook((char*)ClassToHook.get(), redirect);
 		REQUIRE(hook.hook());
 		origVFuncs = hook.getOriginals();

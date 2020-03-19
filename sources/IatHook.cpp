@@ -5,11 +5,11 @@ PLH::IatHook::IatHook(const std::string& dllName, const std::string& apiName, co
 {}
 
 PLH::IatHook::IatHook(const std::string& dllName, const std::string& apiName, const uint64_t fnCallback, uint64_t* userOrigVar, const std::wstring& moduleName) 
-	: m_moduleName(moduleName)
-    , m_dllName(dllName)
+	: m_dllName(dllName)
     , m_apiName(apiName)
-    , m_userOrigVar(userOrigVar)
+    , m_moduleName(moduleName)
     , m_fnCallback(fnCallback)
+    , m_userOrigVar(userOrigVar)
 {}
 
 bool PLH::IatHook::hook() {
