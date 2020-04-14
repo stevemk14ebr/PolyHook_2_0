@@ -98,7 +98,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 
 		asmjit::x86::Reg arg;
 		if (isGeneralReg(argType)) {
-			arg = cc.newInt64();
+			arg = cc.newUIntPtr();
 		} else if (isXmmReg(argType)) {
 			arg = cc.newXmm();
 		} else {
