@@ -17,6 +17,7 @@
 namespace PLH {
 	class ILCallback {
 	public:
+		#pragma pack(1)
 		struct Parameters {
 			template<typename T>
 			void setArg(const uint8_t idx, const T val) const {
@@ -29,7 +30,7 @@ namespace PLH {
 			}
 
 			// asm depends on this specific type
-			volatile uint64_t m_arguments[1];
+			volatile uint64_t m_arguments;
 
 			/*
 			* Flexible array members like above are not valid in C++ and are U.B. However, we make
@@ -41,9 +42,9 @@ namespace PLH {
 			*/
 		private:
 			// must be char* for aliasing rules to work when reading back out
-			char* getArgPtr(const uint8_t idx) const {
-				return (char*)&m_arguments[idx];
-			}
+			char* getArgPtr(const uint8_t idx) {
+			    return ((char*)&m_arguments) + sizeof(uint64_t) * idx;
+		        }
 		};
 
 		struct ReturnValue {
