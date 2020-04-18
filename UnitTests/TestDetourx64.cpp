@@ -84,7 +84,7 @@ NOINLINE void* h_hookMalloc(size_t size) {
 	return PLH::FnCast(hookMallocTramp, &malloc)(size);
 }
 
-TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneDisassembler) {
+TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x64);
 
 	SECTION("Normal function") {
