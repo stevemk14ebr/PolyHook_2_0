@@ -112,7 +112,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
   
 	// setup the stack structure to hold arguments for user callback
 	uint32_t stackSize = (uint32_t)(sizeof(uint64_t) * sig.argCount());
-	argsStack = cc.newStack(stackSize, 4);
+	argsStack = cc.newStack(stackSize, 16);
 	asmjit::x86::Mem argsStackIdx(argsStack);               
 
 	// assigns some register as index reg 
@@ -153,7 +153,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	cc.mov(argCountParam, (uint8_t)sig.argCount());
 
 	// create buffer for ret val
-	asmjit::x86::Mem retStack = cc.newStack(sizeof(uint64_t), 4);
+	asmjit::x86::Mem retStack = cc.newStack(sizeof(uint64_t), 16);
 	asmjit::x86::Gp retStruct = cc.newUIntPtr("retStruct");
 	cc.lea(retStruct, retStack);
 
