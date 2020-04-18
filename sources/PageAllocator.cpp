@@ -14,7 +14,7 @@ PLH::PageAllocator::~PageAllocator() {
 
 	if (m_refCount.fetch_sub(1) == 1) {
 		for (const SplitPage& page : m_pages) {
-			VirtualFree((char*)page.address, (SIZE_T)WIN_PAGE_SZ, MEM_RELEASE);
+			VirtualFree((char*)page.address, 0, MEM_RELEASE);
 		}
 		m_pages.clear();
 	}

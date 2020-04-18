@@ -14,11 +14,7 @@ PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName
 {}
 
 PLH::EatHook::~EatHook() {
-	if (m_trampoline != 0) {
-		VirtualFree((char*)m_trampoline, m_trampolineSize, MEM_RELEASE) ;
-		m_trampoline = 0;
-	}
-
+	// trampoline freed by pageallocator dtor
 	if (m_allocator != nullptr) {
 		delete m_allocator;
 		m_allocator = nullptr;
@@ -74,12 +70,6 @@ bool PLH::EatHook::unHook() {
 	*pExport = (uint32_t)m_origFunc;
 	m_hooked = false;
 	*m_userOrigVar = NULL;
-
-	if (m_trampoline != 0) {
-		VirtualFree((char*)m_trampoline, m_trampolineSize, MEM_RELEASE);
-		m_trampoline = 0;
-	}
-
 	return true;
 }
 
