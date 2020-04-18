@@ -56,5 +56,5 @@ TEST_CASE("Test setting page protections", "[MemProtector]") {
 		REQUIRE(prot.isGood());
 		REQUIRE(prot2.originalProt() == (PLH::ProtFlag::X | PLH::ProtFlag::R | PLH::ProtFlag::W));
 	}
-	VirtualFree(page, 4 * 1024, MEM_RELEASE);
+	VirtualFree(page, 0, MEM_RELEASE);
 }
