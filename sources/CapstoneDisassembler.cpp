@@ -3,6 +3,22 @@
 //
 #include "polyhook2/CapstoneDisassembler.hpp"
 
+PLH::CapstoneDisassembler::CapstoneDisassembler(const PLH::Mode mode) : ADisassembler(mode) {
+	const cs_mode csMode = (mode == PLH::Mode::x64 ? CS_MODE_64 : CS_MODE_32);
+	if (cs_open(CS_ARCH_X86, csMode, &m_capHandle) != CS_ERR_OK) {
+		m_capHandle = NULL;
+		ErrorLog::singleton().push("Failed to initialize capstone", ErrorLevel::SEV);
+	}
+
+	cs_option(m_capHandle, CS_OPT_DETAIL, CS_OPT_ON);
+}
+
+PLH::CapstoneDisassembler::~CapstoneDisassembler() {
+	if (m_capHandle)
+		cs_close(&m_capHandle);
+	m_capHandle = NULL;
+}
+
 PLH::insts_t
 PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
 	cs_insn* insInfo = cs_malloc(m_capHandle);
