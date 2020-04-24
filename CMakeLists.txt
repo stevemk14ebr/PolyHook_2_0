@@ -28,6 +28,12 @@ option(POLYHOOK_FEATURE_INLINENTD "Support inline hooks without specifying typed
 option(POLYHOOK_FEATURE_PE "Implement all win pe hooking functionality" ON)
 option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 
+#force capstone and zydis build for tests
+if(NOT POLYHOOK_BUILD_DLL)
+	set(POLYHOOK_DISASM_CAPSTONE ON)
+	set(POLYHOOK_DISASM_ZYDIS ON)
+endif()
+
 #
 # ASMJIT
 #
