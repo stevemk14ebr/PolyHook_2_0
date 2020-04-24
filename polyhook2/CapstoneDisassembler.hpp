@@ -7,7 +7,7 @@
 
 #include "polyhook2/ADisassembler.hpp"
 
-#include <capstone/include/capstone/capstone.h>
+#include <capstone/capstone.h>
 
 #include <string.h>
 #include <iostream> //for debug printing
