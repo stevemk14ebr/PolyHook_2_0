@@ -1,5 +1,31 @@
 #include "polyhook2/ZydisDisassembler.hpp"
 
+
+PLH::ZydisDisassembler::ZydisDisassembler(PLH::Mode mode) : ADisassembler(mode), m_decoder(new ZydisDecoder()), m_formatter(new ZydisFormatter()) {
+	
+	if (ZYAN_FAILED(ZydisDecoderInit(m_decoder,
+		(mode == PLH::Mode::x64) ? ZYDIS_MACHINE_MODE_LONG_64 : ZYDIS_MACHINE_MODE_LONG_COMPAT_32,
+		(mode == PLH::Mode::x64) ? ZYDIS_ADDRESS_WIDTH_64 : ZYDIS_ADDRESS_WIDTH_32)))
+	{
+		ErrorLog::singleton().push("Failed to initialize zydis decoder", ErrorLevel::SEV);
+		return;
+	}
+
+	if (ZYAN_FAILED(ZydisFormatterInit(m_formatter, ZYDIS_FORMATTER_STYLE_INTEL)))
+	{
+		ErrorLog::singleton().push("Failed to initialize zydis formatter", ErrorLevel::SEV);
+		return;
+	}
+
+	ZydisFormatterSetProperty(m_formatter, ZYDIS_FORMATTER_PROP_FORCE_SEGMENT, ZYAN_TRUE);
+	ZydisFormatterSetProperty(m_formatter, ZYDIS_FORMATTER_PROP_FORCE_SIZE, ZYAN_TRUE);
+}
+
+PLH::ZydisDisassembler::~ZydisDisassembler() {
+	delete m_decoder;
+	delete m_formatter;
+}
+
 PLH::insts_t
 PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
 	insts_t insVec;
@@ -7,7 +33,7 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 
 	ZydisDecodedInstruction insInfo;
 	uint64_t offset = 0;
-	while(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&m_decoder, (char*)(firstInstruction + offset), (ZyanUSize)(End - start - offset), &insInfo)))
+	while(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*)(firstInstruction + offset), (ZyanUSize)(End - start - offset), &insInfo)))
 	{
 		Instruction::Displacement displacement = {};
 		displacement.Absolute = 0;
@@ -37,6 +63,19 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 		offset += insInfo.length;
 	}
 	return insVec;
+}
+
+bool PLH::ZydisDisassembler::getOpStr(ZydisDecodedInstruction* pInstruction, uint64_t addr, std::string* pOpStrOut)
+{
+	char buffer[256];
+	if (ZYAN_SUCCESS(ZydisFormatterFormatInstruction(m_formatter, pInstruction, buffer, sizeof(buffer), addr)))
+	{
+		// remove mnemonic + space (op str is just the right hand side)
+		std::string wholeInstStr(buffer);
+		*pOpStrOut = wholeInstStr.erase(0, wholeInstStr.find(' ') + 1);
+		return true;
+	}
+	return false;
 }
 
 void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const
