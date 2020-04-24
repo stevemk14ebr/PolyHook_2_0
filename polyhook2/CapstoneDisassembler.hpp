@@ -18,21 +18,9 @@ namespace PLH {
 
 class CapstoneDisassembler : public ADisassembler {
 public:
-	CapstoneDisassembler(const PLH::Mode mode) : ADisassembler(mode) {
-		const cs_mode csMode = (mode == PLH::Mode::x64 ? CS_MODE_64 : CS_MODE_32);
-		if (cs_open(CS_ARCH_X86, csMode, &m_capHandle) != CS_ERR_OK) {
-			m_capHandle = NULL;
-			ErrorLog::singleton().push("Failed to initialize capstone", ErrorLevel::SEV);
-		}
+	CapstoneDisassembler(const PLH::Mode mode);
 
-		cs_option(m_capHandle, CS_OPT_DETAIL, CS_OPT_ON);
-	}
-
-	virtual ~CapstoneDisassembler() {
-		if (m_capHandle)
-			cs_close(&m_capHandle);
-		m_capHandle = NULL;
-	}
+	virtual ~CapstoneDisassembler();
 
 	virtual std::vector<PLH::Instruction>
 		disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end) override;

@@ -7,9 +7,13 @@ include(CMakePackageConfigHelpers)
 #
 # Options
 #
-
-option(POLYHOOK_BUILD_SHARED_LIBS "Build polyhook as shared libary" OFF)
 option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" ON)
+
+option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_ASMJIT "Build polyhook as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_CAPSTONE "Build capstone as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_ZYDIS "Build polyhook as shared libary" OFF)
+
 if(MSVC)
 	option(POLYHOOK_BUILD_STATIC_RUNTIME "Use static runtime" ON)
 endif()
@@ -24,13 +28,19 @@ option(POLYHOOK_FEATURE_INLINENTD "Support inline hooks without specifying typed
 option(POLYHOOK_FEATURE_PE "Implement all win pe hooking functionality" ON)
 option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 
+#force capstone and zydis build for tests
+if(NOT POLYHOOK_BUILD_DLL)
+	set(POLYHOOK_DISASM_CAPSTONE ON)
+	set(POLYHOOK_DISASM_ZYDIS ON)
+endif()
+
 #
 # ASMJIT
 #
 
 if(POLYHOOK_FEATURE_INLINENTD)
 
-	if(POLYHOOK_BUILD_SHARED_LIBS)
+	if(POLYHOOK_BUILD_SHARED_ASMJIT)
 		set(ASMJIT_STATIC OFF CACHE BOOL "")
 	else()
 		set(ASMJIT_STATIC ON CACHE BOOL "")
@@ -52,7 +62,7 @@ endif()
 
 if(POLYHOOK_DISASM_CAPSTONE)
 	set(CAPSTONE_BUILD_STATIC_RUNTIME ${POLYHOOK_BUILD_STATIC_RUNTIME} CACHE BOOL "")
-	if(POLYHOOK_BUILD_SHARED_LIBS)
+	if(POLYHOOK_BUILD_SHARED_CAPSTONE)
 		set(CAPSTONE_BUILD_SHARED ON CACHE BOOL "")
 		set(CAPSTONE_BUILD_STATIC OFF CACHE BOOL "")
 		set(CAPSTONE_LIBRARY_NAME "capstone-shared")
@@ -97,8 +107,8 @@ endif()
 #
 
 if(POLYHOOK_DISASM_ZYDIS)
-    set(ZYDIS_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_LIBS} CACHE BOOL "")
-	set(ZYCORE_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_LIBS} CACHE BOOL "")
+    set(ZYDIS_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_ZYDIS} CACHE BOOL "")
+	set(ZYCORE_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_ZYDIS} CACHE BOOL "")
 	set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
 	set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
 
@@ -121,7 +131,7 @@ endif()
 #
 
 if(POLYHOOK_BUILD_DLL)
-	if(POLYHOOK_BUILD_SHARED_LIBS)
+	if(POLYHOOK_BUILD_SHARED_LIB)
 		add_library(${PROJECT_NAME} SHARED)
 	else()
 		add_library(${PROJECT_NAME} STATIC)
