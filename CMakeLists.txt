@@ -1,29 +1,167 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.15)
+
 project(PolyHook_2)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Turn Features On/Off, Set build options
-option(FEATURE_DETOURS "Implement detour functionality" ON)
-option(FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
-option(FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
-option(FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" ON)
-option(FEATURE_PE "Implement all win pe hooking functionality" ON)
-option(BUILD_DLL "Build dll & lib instead of tests" OFF)
-option(BUILD_STATIC "If BUILD_DLL is set, create the type that can be statically linked" ON)
-option(CAPSTONE_FULL "Build all features of capstone." OFF)
+include(CMakePackageConfigHelpers)
 
-# Calculate inclusion of necessary dependencies based on features
+#
+# Options
+#
 
-# for now only inlinentd uses asmjit
-set(DEP_ASMJIT_NEED ${FEATURE_INLINENTD})
-set(DEP_ZYDIS_NEED ON)
-# todo: make inclusion of capstone stuff depend on feature flags
+option(POLYHOOK_BUILD_SHARED_LIBS "Build polyhook as shared libary" OFF)
+option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" ON)
+if(MSVC)
+	option(POLYHOOK_BUILD_STATIC_RUNTIME "Use static runtime" ON)
+endif()
 
-#IDE's like it when header file are included as source files
-set(HEADER_FILES ${PROJECT_SOURCE_DIR}/polyhook2/ADisassembler.hpp
-        ${PROJECT_SOURCE_DIR}/polyhook2/CapstoneDisassembler.hpp
-		${PROJECT_SOURCE_DIR}/polyhook2/ZydisDisassembler.hpp
+option(POLYHOOK_DISASM_CAPSTONE "Enable capstone support" ON)
+option(POLYHOOK_DISASM_CAPSTONE_FULL "Build all features of capstone." OFF)
+option(POLYHOOK_DISASM_ZYDIS "Enable Zydis support." ON)
+
+option(POLYHOOK_FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
+option(POLYHOOK_FEATURE_DETOURS "Implement detour functionality" ON)
+option(POLYHOOK_FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" ON)
+option(POLYHOOK_FEATURE_PE "Implement all win pe hooking functionality" ON)
+option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
+
+#
+# ASMJIT
+#
+
+if(POLYHOOK_FEATURE_INLINENTD)
+
+	if(POLYHOOK_BUILD_SHARED_LIBS)
+		set(ASMJIT_STATIC OFF CACHE BOOL "")
+	else()
+		set(ASMJIT_STATIC ON CACHE BOOL "")
+	endif()
+
+	add_subdirectory(asmjit)
+	if(MSVC)
+		if(POLYHOOK_BUILD_STATIC_RUNTIME)
+			set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+		else()
+			set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+		endif()
+	endif()
+endif()
+
+#
+# Capstone
+#
+
+if(POLYHOOK_DISASM_CAPSTONE)
+	set(CAPSTONE_BUILD_STATIC_RUNTIME ${POLYHOOK_BUILD_STATIC_RUNTIME} CACHE BOOL "")
+	if(POLYHOOK_BUILD_SHARED_LIBS)
+		set(CAPSTONE_BUILD_SHARED ON CACHE BOOL "")
+		set(CAPSTONE_BUILD_STATIC OFF CACHE BOOL "")
+		set(CAPSTONE_LIBRARY_NAME "capstone-shared")
+	else()
+		set(CAPSTONE_BUILD_SHARED OFF CACHE BOOL "")
+		set(CAPSTONE_BUILD_STATIC ON CACHE BOOL "")
+		set(CAPSTONE_LIBRARY_NAME "capstone-static")
+	endif()
+	set(CAPSTONE_BUILD_TESTS OFF CACHE BOOL "")
+	set(CAPSTONE_BUILD_CSTOOL OFF CACHE BOOL "")
+	if(NOT ${POLYHOOK_DISASM_CAPSTONE_FULL})
+		set(CAPSTONE_ARM_SUPPORT OFF CACHE BOOL "ARM support") 
+		set(CAPSTONE_ARM64_SUPPORT OFF CACHE BOOL "ARM64 support") 
+		set(CAPSTONE_M680X_SUPPORT OFF CACHE BOOL "M680X support") 
+		set(CAPSTONE_M68K_SUPPORT OFF CACHE BOOL "M68K support") 
+		set(CAPSTONE_MIPS_SUPPORT OFF CACHE BOOL "MIPS support") 
+		set(CAPSTONE_PPC_SUPPORT OFF CACHE BOOL "PPC support") 
+		set(CAPSTONE_SPARC_SUPPORT OFF CACHE BOOL "SPARC support")
+		set(CAPSTONE_SYSZ_SUPPORT OFF CACHE BOOL "SYSZ support")
+		set(CAPSTONE_XCORE_SUPPORT OFF CACHE BOOL "XCORE support")
+		set(CAPSTONE_TMS320C64X_SUPPORT OFF CACHE BOOL "TMS320C64X support")
+		set(CAPSTONE_M680X_SUPPORT OFF CACHE BOOL "M680X support")
+		set(CAPSTONE_EVM_SUPPORT OFF CACHE BOOL "EVM support")
+	endif()
+
+	add_subdirectory(capstone)
+
+	if(MSVC)
+		if(POLYHOOK_BUILD_STATIC_RUNTIME)
+			set_target_properties(${CAPSTONE_LIBRARY_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+		else()
+			set_target_properties(${CAPSTONE_LIBRARY_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+		endif()
+	endif()
+
+endif()
+
+
+
+#
+# Zydis
+#
+
+if(POLYHOOK_DISASM_ZYDIS)
+    set(ZYDIS_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_LIBS} CACHE BOOL "")
+	set(ZYCORE_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_LIBS} CACHE BOOL "")
+	set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
+	set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
+
+	add_subdirectory(zydis/dependencies/zycore)
+	add_subdirectory(zydis)
+
+	if(MSVC)
+		if(POLYHOOK_BUILD_STATIC_RUNTIME)
+			set_target_properties(Zycore PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+			set_target_properties(Zydis PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+		else()
+			set_target_properties(Zycore PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+			set_target_properties(Zydis PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+		endif()
+	endif()
+endif()
+
+#
+# Polyhook
+#
+
+if(POLYHOOK_BUILD_DLL)
+	if(POLYHOOK_BUILD_SHARED_LIBS)
+		add_library(${PROJECT_NAME} SHARED)
+	else()
+		add_library(${PROJECT_NAME} STATIC)
+	endif()
+else()
+	add_executable(${PROJECT_NAME})
+endif()
+
+set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
+
+if(MSVC)
+    if(POLYHOOK_BUILD_STATIC_RUNTIME)
+		set_target_properties(${PROJECT_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+	else()
+		set_target_properties(${PROJECT_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+	endif()
+
+	if(MSVC)
+		  set(COMPILE_FLAGS_PLH "/W4 /WX /Z7")
+		  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+			set(COMPILE_FLAGS_PLH "/MP ${COMPILE_FLAGS_PLH}")
+		  endif()
+
+		  set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS ${COMPILE_FLAGS_PLH})
+		  target_link_libraries(${PROJECT_NAME} PRIVATE optimized -DEBUG) # mhhm ya pdbs
+	endif()
+
+endif()
+
+target_include_directories(${PROJECT_NAME}
+    PRIVATE
+		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+    INTERFACE
+		$<INSTALL_INTERFACE:include>
+)
+
+#Core
+set(POLYHOOK_CORE_HEADERS ${PROJECT_SOURCE_DIR}/polyhook2/ADisassembler.hpp
         ${PROJECT_SOURCE_DIR}/polyhook2/Enums.hpp
         ${PROJECT_SOURCE_DIR}/polyhook2/IHook.hpp
         ${PROJECT_SOURCE_DIR}/polyhook2/Instruction.hpp
@@ -32,233 +170,183 @@ set(HEADER_FILES ${PROJECT_SOURCE_DIR}/polyhook2/ADisassembler.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/ErrorLog.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/MemProtector.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/PageAllocator.hpp)
+install(FILES ${POLYHOOK_CORE_HEADERS} DESTINATION include/polyhook2)
 
-set(HEADER_IMP_SOURCES 
-		${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp
-		${PROJECT_SOURCE_DIR}/sources/ZydisDisassembler.cpp
-		${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp
-		${PROJECT_SOURCE_DIR}/sources/TestEffectTracker.cpp
-		${PROJECT_SOURCE_DIR}/sources/PageAllocator.cpp)
 
-# only build tests if making exe
-if(BUILD_DLL MATCHES OFF)
-	set(UNIT_TEST_SOURCES
-			${PROJECT_SOURCE_DIR}/MainTests.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestMemProtector.cpp)
-else()
-	set(UNIT_TEST_SOURCES)
+target_sources(${PROJECT_NAME} PRIVATE
+	${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp
+	${PROJECT_SOURCE_DIR}/sources/TestEffectTracker.cpp
+	${PROJECT_SOURCE_DIR}/sources/PageAllocator.cpp)
+
+#DisAsm/Capstone
+if(POLYHOOK_DISASM_CAPSTONE)
+	target_link_libraries(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${CAPSTONE_LIBRARY_NAME}>)
+	install(TARGETS ${CAPSTONE_LIBRARY_NAME} EXPORT exporthack)
+
+	target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp")
+
+	target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/capstone/include>)
+
+	install(FILES ${PROJECT_SOURCE_DIR}/polyhook2/CapstoneDisassembler.hpp DESTINATION include/polyhook2)
 endif()
 
-# Headers, Sources, and Test for detours
-if(FEATURE_DETOURS MATCHES ON) 
-	set(DETOUR_HEADER_FILES ${PROJECT_SOURCE_DIR}/polyhook2/Detour/ADetour.hpp
-			${PROJECT_SOURCE_DIR}/polyhook2/Detour/x64Detour.hpp
-			${PROJECT_SOURCE_DIR}/polyhook2/Detour/x86Detour.hpp)
+#DisAsm/Zydis
+if(POLYHOOK_DISASM_ZYDIS)
+	target_link_libraries(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:Zydis>)
 
-	set(DETOUR_IMP_SOURCES 
-			${PROJECT_SOURCE_DIR}/sources/ADetour.cpp
-			${PROJECT_SOURCE_DIR}/sources/x64Detour.cpp
-			${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp)
+	target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/sources/ZydisDisassembler.cpp")
 
-	set(HEADER_FILES ${HEADER_FILES} ${DETOUR_HEADER_FILES})
-	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${DETOUR_IMP_SOURCES})
+	target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/zydis/include>)
+	target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/zydis/dependencies/zycore/include>)
+	target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/zydis>)
+	
+	install(FILES ${PROJECT_SOURCE_DIR}/polyhook2/ZydisDisassembler.hpp DESTINATION include/polyhook2)
+endif()
+
+#Feature/Detours
+if(POLYHOOK_FEATURE_DETOURS)
+	set(POLYHOOK_DETOUR_HEADERS
+		${PROJECT_SOURCE_DIR}/polyhook2/Detour/ADetour.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x64Detour.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x86Detour.hpp)
+	install(FILES ${POLYHOOK_DETOUR_HEADERS} DESTINATION include/polyhook2/Detour)
+
+	target_sources(${PROJECT_NAME} PRIVATE
+		${PROJECT_SOURCE_DIR}/sources/ADetour.cpp
+		${PROJECT_SOURCE_DIR}/sources/x64Detour.cpp
+		${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp)
 
 	# only build tests if making exe
-	if(BUILD_DLL MATCHES OFF)
-		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-			# 64 bits
-			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx64.cpp)
-		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-			# 32 bits
-			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx86.cpp)
+	if(NOT POLYHOOK_BUILD_DLL)
+		if(CMAKE_SIZEOF_VOID_P EQUAL 8) #64-bit
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx64.cpp)
+		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4) #32-bit
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx86.cpp)
 		endif()
 	endif()
 endif()
 
-if(FEATURE_EXCEPTION MATCHES ON)
-	set(EXCEPTION_HEADER_FILES 
+#Feature/Exception
+if(POLYHOOK_FEATURE_EXCEPTION)
+	set(POLYHOOK_EXCEPTION_HEADERS
 		${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/AVehHook.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/BreakPointHook.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/HWBreakPointHook.hpp)
+	install(FILES ${POLYHOOK_EXCEPTION_HEADERS} DESTINATION include/polyhook2/Exceptions)
 
-	set(EXCEPTION_IMP_SOURCES 
+	target_sources(${PROJECT_NAME} PRIVATE
 		${PROJECT_SOURCE_DIR}/sources/AVehHook.cpp
 		${PROJECT_SOURCE_DIR}/sources/BreakPointHook.cpp
 		${PROJECT_SOURCE_DIR}/sources/HWBreakPointHook.cpp)
 
-	set(HEADER_FILES ${HEADER_FILES} ${EXCEPTION_HEADER_FILES})
-	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${EXCEPTION_IMP_SOURCES})
-
 	# only build tests if making exe
-	if(BUILD_DLL MATCHES OFF)
-		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-				${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp
-				${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp)
+	if(NOT POLYHOOK_BUILD_DLL)
+		target_sources(${PROJECT_NAME} PRIVATE
+			${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp)
 	endif()
 endif()
 
-if(FEATURE_VIRTUALS MATCHES ON)
-	set(VIRTUAL_HEADER_FILES 
-		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VTableSwapHook.hpp
-		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VFuncSwapHook.hpp)
 
-	set(VIRTUAL_IMP_SOURCES
-		${PROJECT_SOURCE_DIR}/sources/VTableSwapHook.cpp
-		${PROJECT_SOURCE_DIR}/sources/VFuncSwapHook.cpp)
+#Feature/Inlinentd
+if(POLYHOOK_FEATURE_INLINENTD)
+	target_link_libraries(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:asmjit>)
 
-	set(HEADER_FILES ${HEADER_FILES} ${VIRTUAL_HEADER_FILES})
-	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${VIRTUAL_IMP_SOURCES})
+	install(FILES ${PROJECT_SOURCE_DIR}/polyhook2/Detour/ILCallback.hpp DESTINATION include/polyhook2/Detour)
+
+	target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/sources/ILCallback.cpp)
 
 	# only build tests if making exe
-	if(BUILD_DLL MATCHES OFF)
-		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES} 
-				${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp
-				${PROJECT_SOURCE_DIR}/UnitTests/TestVFuncSwapHook.cpp)
-	endif()
-endif()
-
-if(FEATURE_PE MATCHES ON)
-	set(PE_HEADER_FILES
-		${PROJECT_SOURCE_DIR}/polyhook2/PE/EatHook.hpp
-		${PROJECT_SOURCE_DIR}/polyhook2/PE/IatHook.hpp
-		${PROJECT_SOURCE_DIR}/polyhook2/PE/PEB.hpp)
-
-	set(PE_IMP_SOURCES 
-		${PROJECT_SOURCE_DIR}/sources/EatHook.cpp
-		${PROJECT_SOURCE_DIR}/sources/IatHook.cpp)
-
-	set(HEADER_FILES ${HEADER_FILES} ${PE_HEADER_FILES})
-	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${PE_IMP_SOURCES})
-
-	# only build tests if making exe
-	if(BUILD_DLL MATCHES OFF)
-		set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
-				${PROJECT_SOURCE_DIR}/UnitTests/TestEatHook.cpp
-				${PROJECT_SOURCE_DIR}/UnitTests/TestIatHook.cpp)
-	endif()
-endif()
-
-if(FEATURE_INLINENTD MATCHES ON)
-	set(NTD_HEADER_FILES
-		${PROJECT_SOURCE_DIR}/polyhook2/Detour/ILCallback.hpp)
-
-	set(NTD_SOURCES 
-		${PROJECT_SOURCE_DIR}/sources/ILCallback.cpp)
-
-	set(HEADER_FILES ${HEADER_FILES} ${NTD_HEADER_FILES})
-	set(HEADER_IMP_SOURCES ${HEADER_IMP_SOURCES} ${NTD_SOURCES})
-
-	# only build tests if making exe
-	if(BUILD_DLL MATCHES OFF)
+	if(NOT POLYHOOK_BUILD_DLL)
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-			# 64 bits
-			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
-				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx64.cpp)
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx64.cpp)
 		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-			# 32 bits
-			set(UNIT_TEST_SOURCES ${UNIT_TEST_SOURCES}
-				${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx86.cpp)
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx86.cpp)
 		endif()
 	endif()
 endif()
 
-include_directories(${PROJECT_SOURCE_DIR})
-set(SOURCE_FILES_PLH ${UNIT_TEST_SOURCES} ${HEADER_IMP_SOURCES} ${HEADER_FILES})
 
-if(BUILD_DLL MATCHES ON) 
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-	if(BUILD_STATIC MATCHES ON)
-	    add_library(PolyHook_2 STATIC ${SOURCE_FILES_PLH})
-	else()
-	    add_library(PolyHook_2 SHARED ${SOURCE_FILES_PLH})
+#Feature/PE
+if(POLYHOOK_FEATURE_PE)
+	set(POLYHOOK_PE_HEADERS
+		${PROJECT_SOURCE_DIR}/polyhook2/PE/EatHook.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/PE/IatHook.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/PE/PEB.hpp)
+	install(FILES ${POLYHOOK_PE_HEADERS} DESTINATION include/polyhook2/PE)
+
+	target_sources(${PROJECT_NAME} PRIVATE
+		${PROJECT_SOURCE_DIR}/sources/EatHook.cpp
+		${PROJECT_SOURCE_DIR}/sources/IatHook.cpp)
+
+	# only build tests if making exe
+	if(NOT POLYHOOK_BUILD_DLL)
+		target_sources(${PROJECT_NAME} PRIVATE
+			${PROJECT_SOURCE_DIR}/UnitTests/TestEatHook.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestIatHook.cpp)
 	endif()
-else()
-    add_executable(PolyHook_2 ${SOURCE_FILES_PLH})
 endif()
 
-# add WALL + PDB flags
-if(MSVC)
-  # apply wall flags only to plh src files
-  set(COMPILE_FLAGS_PLH "/W4 /WX /Z7")
 
-  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(COMPILE_FLAGS_PLH "/MP ${COMPILE_FLAGS_PLH}")
-  endif()
+#Feature/Virtuals
+if(POLYHOOK_FEATURE_VIRTUALS)
+	set(POLYHOOK_VIRTUAL_HEADERS 
+		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VTableSwapHook.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VFuncSwapHook.hpp)
+	install(FILES ${POLYHOOK_VIRTUAL_HEADERS} DESTINATION include/polyhook2/Virtuals)
 
-  set_property(SOURCE ${SOURCE_FILES_PLH} PROPERTY COMPILE_FLAGS ${COMPILE_FLAGS_PLH})
-  target_link_libraries(PolyHook_2 optimized -DEBUG) # mhhm ya pdbs
+	target_sources(${PROJECT_NAME} PRIVATE
+		${PROJECT_SOURCE_DIR}/sources/VTableSwapHook.cpp
+		${PROJECT_SOURCE_DIR}/sources/VFuncSwapHook.cpp)
 
-  # force static lib
-  set(CompilerFlags
-        CMAKE_CXX_FLAGS
-        CMAKE_CXX_FLAGS_DEBUG
-        CMAKE_CXX_FLAGS_RELEASE
-        CMAKE_C_FLAGS
-        CMAKE_C_FLAGS_DEBUG
-        CMAKE_C_FLAGS_RELEASE
-        )
-	foreach(CompilerFlag ${CompilerFlags})
-		string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-	endforeach()
+	# only build tests if making exe
+	if(NOT POLYHOOK_BUILD_DLL)
+		target_sources(${PROJECT_NAME} PRIVATE
+			${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestVFuncSwapHook.cpp)
+	endif()
 endif()
 
-# build and link all the deps
 
-# CAPSTONE
-set(CAPSTONE_BUILD_SHARED OFF CACHE BOOL "")
-set(CAPSTONE_BUILD_TESTS OFF CACHE BOOL "")
-set(CAPSTONE_BUILD_CSTOOL OFF CACHE BOOL "")
-if(NOT ${CAPSTONE_FULL})
-	set(CAPSTONE_ARM_SUPPORT OFF CACHE BOOL "ARM support") 
-	set(CAPSTONE_ARM64_SUPPORT OFF CACHE BOOL "ARM64 support") 
-	set(CAPSTONE_M680X_SUPPORT OFF CACHE BOOL "M680X support") 
-	set(CAPSTONE_M68K_SUPPORT OFF CACHE BOOL "M68K support") 
-	set(CAPSTONE_MIPS_SUPPORT OFF CACHE BOOL "MIPS support") 
-	set(CAPSTONE_PPC_SUPPORT OFF CACHE BOOL "PPC support") 
-	set(CAPSTONE_SPARC_SUPPORT OFF CACHE BOOL "SPARC support")
-	set(CAPSTONE_SYSZ_SUPPORT OFF CACHE BOOL "SYSZ support")
-	set(CAPSTONE_XCORE_SUPPORT OFF CACHE BOOL "XCORE support")
-	set(CAPSTONE_TMS320C64X_SUPPORT OFF CACHE BOOL "TMS320C64X support")
-	set(CAPSTONE_M680X_SUPPORT OFF CACHE BOOL "M680X support")
-	set(CAPSTONE_EVM_SUPPORT OFF CACHE BOOL "EVM support")
+#Tests
+if(NOT POLYHOOK_BUILD_DLL)
+	target_sources(${PROJECT_NAME} PRIVATE
+		${PROJECT_SOURCE_DIR}/MainTests.cpp
+		${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp
+		${PROJECT_SOURCE_DIR}/UnitTests/TestMemProtector.cpp)
 endif()
 
-add_subdirectory(capstone)
-target_link_libraries(${PROJECT_NAME} capstone-static)
 
-# ASMJIT
-if(DEP_ASMJIT_NEED MATCHES ON)
-	# AsmJit is a dep iff inlinetd is on
-	set(ASMJIT_DIR ${PROJECT_SOURCE_DIR}/asmjit/)
-	set(ASMJIT_STATIC ON) # give our project the BUILD_STATIC flag
-	add_definitions(-DASMJIT_STATIC) # give asmjit the BUILD_STATIC flag
-	include_directories(${ASMJIT_DIR}/src/) # includes directory is nested in src
-	add_subdirectory(${ASMJIT_DIR}) # build it
-	target_link_libraries(${PROJECT_NAME} asmjit)
-endif()
+#
+# Install
+#
 
-if(DEP_ZYDIS_NEED MATCHES ON)
-	# static by default
-	set(ZYDIS_DIR ${PROJECT_SOURCE_DIR}/zydis/)
-	option(ZYDIS_BUILD_TOOLS "" OFF)
-	option(ZYDIS_BUILD_EXAMPLES "" OFF)
-	include_directories(${ZYDIS_DIR}/dependencies/zycore/include) # zycore includes
-	include_directories(${ZYDIS_DIR}/include) # zydis includes
-	include_directories(${CMAKE_CURRENT_BINARY_DIR}/zydis/dependencies/zycore) # find auto-generated ZycoreExportConfig.h in build dir
-	add_subdirectory(${ZYDIS_DIR}) # buld it
-	target_link_libraries(${PROJECT_NAME} Zydis)
-endif()
-
-#Install targets
-install(TARGETS ${PROJECT_NAME}
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
+configure_package_config_file(
+		"${PROJECT_NAME}-config.cmake.in"
+		"${PROJECT_NAME}-config.cmake"
+	INSTALL_DESTINATION
+        "lib/${PROJECT_NAME}"
 )
 
-#Install headers
-INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/polyhook2 DESTINATION include/)
+install(
+    FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+    DESTINATION
+        "lib/${PROJECT_NAME}"
+)
 
+install(TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}-targets
+    RUNTIME DESTINATION "bin"
+    LIBRARY DESTINATION "lib"
+    ARCHIVE DESTINATION "lib"
+)
+
+install(
+    EXPORT
+        ${PROJECT_NAME}-targets
+    NAMESPACE
+        ${PROJECT_NAME}::
+    DESTINATION
+        "lib/${PROJECT_NAME}"
+)
