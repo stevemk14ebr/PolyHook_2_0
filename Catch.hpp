@@ -3815,7 +3815,7 @@ namespace Generators {
     template<typename L>
     // Note: The type after -> is weird, because VS2015 cannot parse
     //       the expression used in the typedef inside, when it is in
-    //       return type. Yeah, ¯\_(ツ)_/¯
+    //       return type. 
     auto generate( SourceLineInfo const& lineInfo, L const& generatorExpression ) -> decltype(std::declval<decltype(generatorExpression())>().get()) {
         using UnderlyingType = typename decltype(generatorExpression())::type;
 
