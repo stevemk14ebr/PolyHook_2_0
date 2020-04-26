@@ -22,11 +22,13 @@ Commands:
 ```
 You then simply include the polyhook headers, be sure to link the generated .lib.
 
-# Build
+# Build Manually
 ```
-git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
-cd PolyHook_2_0
-git submodule update --init --recursive
+λ git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
+λ cd PolyHook_2_0
+λ git submodule update --init --recursive
+λ cmake -B"./_build" -DCMAKE_INSTALL_PREFIX="./_install/" -DPOLYHOOK_BUILD_SHARED_LIB=ON
+λ cmake --build "./_build" --config Release --target INSTALL
 ```
 I provide directions for how to setup the visual studio cmake environment only. If you don't want to use visual studio that's fine, this is a standard cmake project and will build from command line just fine.
 
