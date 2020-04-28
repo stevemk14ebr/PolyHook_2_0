@@ -1,5 +1,8 @@
 /**This file is the minimal windows header crap needed for IAT things. Windows sucks, pollutes global namespace**/
 
+#ifndef POLYHOOK_2_0_PEB_HPP
+#define POLYHOOK_2_0_PEB_HPP
+
 // copied from windows.h minwindef failes with No Target Architecture without
 #if !defined(_68K_) && !defined(_MPPC_) && !defined(_X86_) && !defined(_IA64_) && !defined(_AMD64_) && defined(_M_IX86)
 #define _X86_
@@ -150,3 +153,5 @@ typedef struct _PEB {
 	LPVOID                       SystemAssemblyStorageMap;
 	LPVOID                       MinimumStackCommit;
 } PEB, *PPEB;
+
+#endif //POLYHOOK_2_0_PEB_HPP
