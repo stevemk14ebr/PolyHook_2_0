@@ -112,6 +112,7 @@ if(POLYHOOK_DISASM_ZYDIS)
 	set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
 	set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
 
+	add_subdirectory(zydis/dependencies/zycore)
 	add_subdirectory(zydis)
 
 	if(MSVC)
