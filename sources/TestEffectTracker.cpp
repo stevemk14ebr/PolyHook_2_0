@@ -1,7 +1,7 @@
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 
 
-Effect::Effect() : m_uid(UID::singleton()) {
+Effect::Effect() : m_uid(PLH::UID::singleton()) {
 	m_executed = false;
 }
 

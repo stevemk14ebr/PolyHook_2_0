@@ -16,7 +16,7 @@ public:
 	bool didExecute();
 private:
 	bool m_executed;
-	UID m_uid;
+	PLH::UID m_uid;
 };
 
 /**Track if some side effect happened.**/
