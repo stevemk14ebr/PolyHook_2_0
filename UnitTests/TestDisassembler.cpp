@@ -20,7 +20,8 @@ std::vector<uint8_t> x64ASM = {
 	0x83, 0xFA, 0x01,                       //7) cmp edx, 1
 	0x75, 0xE4,                             //8) jne  0x1800182B0   when @0x1800182CA (base + 0xE4(neg) + 0x2)
 	0xE8, 0xCB, 0x57, 0x01, 0x00,           //9) call 0x18002DA9C   when @0x1800182CC (base + 0x157CB + 0x5)
-	0xFF, 0x25, 0xCB, 0x57, 0x01, 0x00,     //10)jmp qword ptr [rip + 0x157cb]  when @0x1800182d1FF
+	0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,     //10)jmp qword ptr [rip + 0x00]
+	0xAB, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xAA
 };
 
 // page 590 for jmp types, page 40 for mod/rm table:
@@ -82,11 +83,13 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 	auto                      Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
 		(uint64_t)&x64ASM.front() + x64ASM.size());
 
+	Instructions.erase(Instructions.begin() + 0xB, Instructions.end());
+
 	uint64_t PrevInstAddress = (uint64_t)&x64ASM.front();
 	size_t   PrevInstSize = 0;
 
-	const char* CorrectMnemonic[] = {"mov", "mov", "push", "sub", "mov", "mov", "mov", "cmp", "jne", "call", "jmp"};
-	const uint8_t CorrectSizes[] = {5, 5, 1, 4, 3, 2, 3, 3, 2, 5, 6};
+	std::vector<char*> CorrectMnemonic = {"mov", "mov", "push", "sub", "mov", "mov", "mov", "cmp", "jne", "call", "jmp"};
+	std::vector<uint8_t> CorrectSizes = {5, 5, 1, 4, 3, 2, 3, 3, 2, 5, 6};
 
 	SECTION("Check disassembler integrity") {
 		REQUIRE(Instructions.size() == 11);
@@ -96,6 +99,25 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 		for (const auto &p : disasm.getBranchMap()) {
 			std::cout << std::hex << "dest: " << p.first << " " << std::dec << p.second << std::endl;
 		}
+
+		for (size_t i = 0; i < Instructions.size(); i++) {
+			INFO("Index: " << i
+				<< " Correct Mnemonic:"
+				<< CorrectMnemonic[i]
+				<< " Mnemonic:"
+				<< filterJXX(Instructions[i].getMnemonic()));
+
+			REQUIRE(filterJXX(Instructions[i].getMnemonic()).compare(CorrectMnemonic[i]) == 0);
+
+			REQUIRE(Instructions[i].size() == CorrectSizes[i]);
+
+			REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
+			PrevInstAddress = Instructions[i].getAddress();
+			PrevInstSize = Instructions[i].size();
+		}
+
+		// special little indirect ff25 jmp
+		REQUIRE(Instructions.back().getDestination() == 0xaa000000000000ab);
 	}
 
 	SECTION("Check branch map") {
@@ -119,22 +141,6 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 		x64ASM = vecCopy;
 		Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
 			(uint64_t)&x64ASM.front() + x64ASM.size());
-	}
-
-	for (size_t i = 0; i < Instructions.size(); i++) {
-		INFO("Index: " << i
-			 << " Correct Mnemonic:"
-			 << CorrectMnemonic[i]
-			 << " Mnemonic:"
-			 << filterJXX(Instructions[i].getMnemonic()));
-
-		REQUIRE(filterJXX(Instructions[i].getMnemonic()).compare(CorrectMnemonic[i]) == 0);
-
-		REQUIRE(Instructions[i].size() == CorrectSizes[i]);
-
-		REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
-		PrevInstAddress = Instructions[i].getAddress();
-		PrevInstSize = Instructions[i].size();
 	}
 
 	SECTION("Check multiple calls") {
