@@ -84,6 +84,19 @@ NOINLINE void* h_hookMalloc(size_t size) {
 	return PLH::FnCast(hookMallocTramp, &malloc)(size);
 }
 
+uint64_t oCreateMutexExA = 0;
+HANDLE
+WINAPI
+hCreateMutexExA(
+	_In_opt_ LPSECURITY_ATTRIBUTES lpMutexAttributes,
+	_In_opt_ LPCSTR lpName,
+	_In_ DWORD dwFlags,
+	_In_ DWORD dwDesiredAccess
+) {
+	printf("kernel32!CreateMutexExA  Name:%s",  lpName);
+	return PLH::FnCast(oCreateMutexExA, &CreateMutexExA)(lpMutexAttributes, lpName, dwFlags, dwDesiredAccess);
+}
+
 TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x64);
 
@@ -94,6 +107,23 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 		effects.PushEffect();
 		hookMe1();
 		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
+	}
+
+	// In release mode win apis usually go through two levels of jmps 
+	/*
+	0xe9 ... jmp iat_thunk
+
+	iat_thunk:
+	0xff 25 ... jmp [api_implementation]
+
+	api_implementation:
+	    sub rsp, ...
+		... the goods ...
+	*/
+	SECTION("WinApi Indirection") {
+		PLH::x64Detour detour((char*)&CreateMutexExA, (char*)&hCreateMutexExA, &oCreateMutexExA, dis);
+		REQUIRE(detour.hook() == true);
 		REQUIRE(detour.unHook() == true);
 	}
 
