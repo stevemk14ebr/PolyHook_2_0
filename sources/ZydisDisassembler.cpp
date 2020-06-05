@@ -98,16 +98,27 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
             break;
         case ZYDIS_OPERAND_TYPE_MEMORY:
 			// Relative to RIP/EIP
-			if(zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE)
+		
+		{
+			bool set = false;
+			if (zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE)
 			{
 				inst.setDisplacementOffset(zydisInst->raw.disp.offset);
 				inst.setRelativeDisplacement(operand->mem.disp.value);
+				set = true;
 			}
 
 			if ((zydisInst->mnemonic == ZydisMnemonic::ZYDIS_MNEMONIC_JMP && inst.size() >= 2 && inst.getBytes().at(0) == 0xff && inst.getBytes().at(1) == 0x25) ||
 				(zydisInst->mnemonic == ZydisMnemonic::ZYDIS_MNEMONIC_CALL && inst.size() >= 2 && inst.getBytes().at(0) == 0xff && inst.getBytes().at(1) == 0x15)) {
+
+				if (!set) {
+					// workaround bug: https://github.com/zyantific/zydis/issues/146
+					inst.setDisplacementOffset(zydisInst->raw.disp.offset);
+					inst.setAbsoluteDisplacement(zydisInst->raw.disp.value);
+				}
 				inst.setIndirect(true);
 			}
+		}
             break;
         case ZYDIS_OPERAND_TYPE_POINTER:
 			
