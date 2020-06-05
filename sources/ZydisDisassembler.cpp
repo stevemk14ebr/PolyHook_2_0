@@ -112,7 +112,7 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 				(zydisInst->mnemonic == ZydisMnemonic::ZYDIS_MNEMONIC_CALL && inst.size() >= 2 && inst.getBytes().at(0) == 0xff && inst.getBytes().at(1) == 0x15)) {
 
 				if (!set) {
-					// workaround bug: https://github.com/zyantific/zydis/issues/146
+					// displacement is absolute on x86 mode
 					inst.setDisplacementOffset(zydisInst->raw.disp.offset);
 					inst.setAbsoluteDisplacement(zydisInst->raw.disp.value);
 				}
