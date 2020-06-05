@@ -10,14 +10,14 @@ std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& funct
 
 	// count instructions until at least length needed or func end
 	for (auto inst : functionInsts) {
-		if (prolLen >= prolOvrwStartOffset)
-			break;
+		prolLen += inst.size();
+		instructionsInRange.push_back(inst);
 
 		if (m_disasm.isFuncEnd(inst))
 			break;
 
-		prolLen += inst.size();
-		instructionsInRange.push_back(inst);
+		if (prolLen >= prolOvrwStartOffset)
+			break;
 	}
 
 	if (prolLen >= prolOvrwStartOffset) {
