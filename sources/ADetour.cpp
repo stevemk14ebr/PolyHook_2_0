@@ -9,12 +9,17 @@ std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& funct
 	PLH::insts_t instructionsInRange;
 
 	// count instructions until at least length needed or func end
+	bool endHit = false;
 	for (auto inst : functionInsts) {
 		prolLen += inst.size();
 		instructionsInRange.push_back(inst);
 
-		if (m_disasm.isFuncEnd(inst))
+		// only safe to overwrite pad bytes once end is hit
+		if (endHit && !m_disasm.isPadBytes(inst))
 			break;
+
+		if (m_disasm.isFuncEnd(inst))
+			endHit = true;
 
 		if (prolLen >= prolOvrwStartOffset)
 			break;

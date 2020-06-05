@@ -86,9 +86,13 @@ public:
 		*/
 		std::string mnemonic = instruction.getMnemonic();
 		auto byts = instruction.getBytes();
-		return (instruction.size() && byts[0] == 0xCC) || 
+		return (instruction.size() == 1 && byts[0] == 0xCC) || 
 			(instruction.size() >= 2 && byts[0] == 0xf3 && byts[1] == 0xc3) ||
 			mnemonic == "ret" || mnemonic == "jmp";
+	}
+
+	static bool isPadBytes(const PLH::Instruction& instruction) {
+		return instruction.size() == 1 && instruction.getBytes()[0] == 0xCC;
 	}
 
 	branch_map_t getBranchMap() {
