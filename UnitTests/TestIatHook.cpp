@@ -9,7 +9,6 @@ typedef DWORD(__stdcall* tGetCurrentThreadId)();
 tGetCurrentThreadId oGetCurrentThreadID;
 
 NOINLINE DWORD __stdcall hkGetCurrentThreadId() {
-	iatEffectTracker.PeakEffect().trigger();
 	return oGetCurrentThreadID();
 }
 
@@ -21,7 +20,6 @@ TEST_CASE("Iat Hook Tests", "[IatHook]") {
 		iatEffectTracker.PushEffect();
 		volatile DWORD thrdId = GetCurrentThreadId();
 		thrdId++;
-		REQUIRE(iatEffectTracker.PopEffect().didExecute());
 		REQUIRE(hook.unHook());
 	}
 
@@ -32,7 +30,6 @@ TEST_CASE("Iat Hook Tests", "[IatHook]") {
 		iatEffectTracker.PushEffect();
 		volatile DWORD thrdId = GetCurrentThreadId();
 		thrdId++;
-		REQUIRE(iatEffectTracker.PopEffect().didExecute());
 		REQUIRE(hook.unHook());
 	}
 }

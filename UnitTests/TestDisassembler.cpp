@@ -20,7 +20,7 @@ std::vector<uint8_t> x64ASM = {
 	0x83, 0xFA, 0x01,                       //7) cmp edx, 1
 	0x75, 0xE4,                             //8) jne  0x1800182B0   when @0x1800182CA (base + 0xE4(neg) + 0x2)
 	0xE8, 0xCB, 0x57, 0x01, 0x00,           //9) call 0x18002DA9C   when @0x1800182CC (base + 0x157CB + 0x5)
-	0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,     //10)jmp qword ptr [rip + 0x00]
+	0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,     //10)jmp qword ptr [rip + 0x00] (relative in x64)
 	0xAB, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xAA
 };
 
@@ -37,6 +37,8 @@ std::vector<uint8_t> x86ASM = {
 	0x8d, 0x87, 0x89, 0x67, 0x00, 0x00, //5) 57b8edcd lea eax, [edi+0x6789]child@4
 	0xeb, 0xf0,                         //6) 57b8edd3 jmp 0x57b8edc5       child@3
 	0xe9, 0x00, 0xff, 0x00, 0x00,        //7) 57b8edd5 jmp 57b9ecda
+	0xFF, 0x25, 0x00, 0x00, 0x00, 0x00, // this displacement is re-written at test time since it's absolute in x86
+	0xAB, 0x00, 0x00, 0xAA
 };
 
 std::string filterJXX(const std::string& lhs) {
@@ -184,20 +186,55 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 }
 
 TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+	// re-write ff 25 displacement to point to data (absolute)
+
+#ifndef _WIN64
+	*(uint32_t*)(x86ASM.data() + 36) = (uint32_t)(x86ASM.data() + 40);
+#else
+	// this test is not suitable for x64 due to ff 25 not being re-written
+	return;
+#endif
+
 	TestType disasm(PLH::Mode::x86);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 		(uint64_t)&x86ASM.front() + x86ASM.size());
 
-	const uint8_t CorrectSizes[] = {2, 6, 5, 6, 2, 6, 2, 5};
-	const char* CorrectMnemonic[] = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp"};
+	Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
+	std::vector<uint8_t> CorrectSizes = {2, 6, 5, 6, 2, 6, 2, 5, 6};
+	std::vector<char*> CorrectMnemonic = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp", "jmp"};
+
+	uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
+	size_t   PrevInstSize = 0;
+
+	for (size_t i = 0; i < Instructions.size(); i++) {
+		INFO("Index: " << i);
+		INFO("Correct Mnemonic:"
+			<< CorrectMnemonic[i]
+			<< " Mnemonic:"
+			<< Instructions[i].getMnemonic());
+
+		REQUIRE(filterJXX(Instructions[i].getMnemonic()).compare(CorrectMnemonic[i]) == 0);
+
+		REQUIRE(Instructions[i].size() == CorrectSizes[i]);
+
+		REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
+		PrevInstAddress = Instructions[i].getAddress();
+		PrevInstSize = Instructions[i].size();
+	}
+	REQUIRE(Instructions.size() == 9);
 
 	SECTION("Check disassembler integrity") {
-		REQUIRE(Instructions.size() == 8);
+		REQUIRE(Instructions.size() == 9);
 		std::cout << Instructions << std::endl;
 
 		for (const auto &p : disasm.getBranchMap()) {
 			std::cout << std::hex << "dest: " << p.first << " -> " << std::dec << p.second << std::endl;
 		}
+
+		// special little indirect ff25 jmp
+#ifndef _WIN64
+		REQUIRE(Instructions.back().getDestination() == 0xaa0000ab);
+#endif
 	}
 
 	SECTION("Check branch map") {
@@ -225,27 +262,6 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 			disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 			(uint64_t)&x86ASM.front() + x86ASM.size());
 	}
-
-	uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
-	size_t   PrevInstSize = 0;
-
-
-	for (size_t i = 0; i < Instructions.size(); i++) {
-		INFO("Index: " << i);
-		INFO("Correct Mnemonic:"
-			 << CorrectMnemonic[i]
-			 << " Mnemonic:"
-			 << Instructions[i].getMnemonic());
-
-		REQUIRE(filterJXX(Instructions[i].getMnemonic()).compare(CorrectMnemonic[i]) == 0);
-
-		REQUIRE(Instructions[i].size() == CorrectSizes[i]);
-
-		REQUIRE(Instructions[i].getAddress() == (PrevInstAddress + PrevInstSize));
-		PrevInstAddress = Instructions[i].getAddress();
-		PrevInstSize = Instructions[i].size();
-	}
-	REQUIRE(Instructions.size() == 8);
 
 	SECTION("Check multiple calls") {
 		PLH::insts_t insts;
@@ -284,6 +300,13 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 }
 
 TEST_CASE("Compare x86 Decompilers", "[ADisassembler],[ZydisDisassembler][CapstoneDisassembler]") {
+#ifndef _WIN64
+	*(uint32_t*)(x86ASM.data() + 36) = (uint32_t)(x86ASM.data() + 40);
+#else
+	// this test is not suitable for x64 due to ff 25 not being re-written
+	return;
+#endif
+
 	// Use capstone as reference
 	PLH::CapstoneDisassembler disasmRef(PLH::Mode::x86);
 	auto                      InstructionsRef = disasmRef.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
@@ -293,8 +316,11 @@ TEST_CASE("Compare x86 Decompilers", "[ADisassembler],[ZydisDisassembler][Capsto
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 		(uint64_t)&x86ASM.front() + x86ASM.size());
 
+	Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
+	Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
+
 	SECTION("Check Integrity") {
-		REQUIRE(Instructions.size() == 8);
+		REQUIRE(Instructions.size() == 9);
 		std::cout << Instructions << std::endl;
 
 		for (const auto &p : disasm.getBranchMap()) {
