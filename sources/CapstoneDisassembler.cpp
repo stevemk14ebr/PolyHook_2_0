@@ -35,6 +35,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 						 displacement,
 						 0,
 						 false,
+			             false,
 						 insInfo->bytes,
 						 insInfo->size,
 						 insInfo->mnemonic,
@@ -68,12 +69,12 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
 			// mem are types like jmp [rip + 0x4] where location is dereference-d
 			if (op.mem.base != getIpReg()) {
 				continue;
-			} else {
-				if (hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) && inst.getBytes().at(0) == 0xff && inst.getBytes().at(1) == 0x25) {
-					// far jmp 0xff, 0x25, holder jmp [0xdeadbeef]
-					inst.setAbsoluteDisplacement(*(uint64_t*)(inst.getAddress() + inst.size() + op.mem.disp));
-					continue;
-				}
+			} 
+
+			if ((hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) && inst.size() >= 2 && inst.getBytes().at(0) == 0xff && inst.getBytes().at(1) == 0x25) ||
+				(hasGroup(capInst, x86_insn_group::X86_GRP_CALL) && inst.size() >= 2 && inst.getBytes().at(0) == 0xff && inst.getBytes().at(1) == 0x15)) {
+				// far jmp 0xff, 0x25, holder jmp [0xdeadbeef]
+				inst.setIndirect(true);
 			}
 
 			const uint8_t offset = x86.encoding.disp_offset;

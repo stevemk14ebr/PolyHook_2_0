@@ -64,6 +64,7 @@ TEST_CASE("Test Instruction UUID generator", "[Instruction],[UID]") {
 									 displacement,
 									 0,
 									 false,
+			                         false,
 									 {},
 									 0,
 									 "nothing",

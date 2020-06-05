@@ -84,7 +84,11 @@ public:
 		* 0xFDFDFDFD : Used by Microsoft's C++ debugging heap to mark "no man's land" guard bytes before and after allocated heap memory
 		* 0xFEEEFEEE : Used by Microsoft's HeapFree() to mark freed heap memory
 		*/
-		return instruction.getMnemonic() == "ret";
+		std::string mnemonic = instruction.getMnemonic();
+		auto byts = instruction.getBytes();
+		return (instruction.size() && byts[0] == 0xCC) || 
+			(instruction.size() >= 2 && byts[0] == 0xf3 && byts[1] == 0xc3) ||
+			mnemonic == "ret" || mnemonic == "jmp";
 	}
 
 	branch_map_t getBranchMap() {

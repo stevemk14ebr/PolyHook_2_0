@@ -28,30 +28,32 @@ public:
 				const Displacement& displacement,
 				const uint8_t displacementOffset,
 				const bool isRelative,
+		        const bool isIndirect,
 				const std::vector<uint8_t>& bytes,
 				const std::string& mnemonic,
 				const std::string& opStr,
 				Mode mode) : m_uid(UID::singleton()) {
 
-		Init(address, displacement, displacementOffset, isRelative, bytes, mnemonic, opStr, false, m_uid, mode);
+		Init(address, displacement, displacementOffset, isRelative, isIndirect, bytes, mnemonic, opStr, false, m_uid, mode);
 	}
 
 	Instruction(uint64_t address,
 				const Displacement& displacement,
 				const uint8_t displacementOffset,
-				bool isRelative,
+				const bool isRelative,
+		        const bool isIndirect,
 				uint8_t bytes[],
-				size_t arrLen,
+				const size_t arrLen,
 				const std::string& mnemonic,
 				const std::string& opStr,
 				Mode mode) : m_uid(UID::singleton()) {
 
 		std::vector<uint8_t> Arr(bytes, bytes + arrLen);
-		Init(address, displacement, displacementOffset, isRelative, Arr, mnemonic, opStr, false, m_uid, mode);
+		Init(address, displacement, displacementOffset, isRelative, isIndirect, Arr, mnemonic, opStr, false, m_uid, mode);
 	}
 
 	Instruction& operator=(const Instruction& rhs) {
-		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative,
+		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative, rhs.m_isIndirect,
 			 rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr, rhs.m_hasDisplacement, rhs.m_uid, rhs.m_mode);
 		return *this;
 	}
@@ -60,11 +62,22 @@ public:
 	* @Notes: Handles eip/rip & immediate branches correctly
 	* **/
 	uint64_t getDestination() const {
+		uint64_t dest = 0;
 		if (isDisplacementRelative()) {
-			uint64_t dest = m_address + m_displacement.Relative + size();
-			return dest;
+			dest = m_address + m_displacement.Relative + size();
+		} else {
+			dest = m_displacement.Absolute;
 		}
-		return m_displacement.Absolute;
+
+		// ff 25 00 00 00 00 goes from jmp qword ptr [rip + 0] to jmp word ptr [rip + 0] on x64 -> x86
+		if (m_isIndirect) {
+			if (m_mode == Mode::x64) {
+				dest = *(uint64_t*)dest;
+			} else {
+				dest = *(uint32_t*)dest;
+			}
+		}
+		return dest;
 	}
 
 	void setDestination(const uint64_t dest) {
@@ -202,11 +215,16 @@ public:
 			return (T)(0 - (from - to) - insSize);
 		return (T)(to - (from + insSize));
 	}
+
+	void setIndirect(const bool isIndirect) {
+		m_isIndirect = isIndirect;
+	}
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
 			  const uint8_t displacementOffset,
 			  const bool isRelative,
+		      const bool isIndirect,
 			  const std::vector<uint8_t>& bytes,
 			  const std::string& mnemonic,
 			  const std::string& opStr,
@@ -217,6 +235,7 @@ private:
 		m_displacement = displacement;
 		m_dispOffset = displacementOffset;
 		m_isRelative = isRelative;
+		m_isIndirect = isIndirect;
 		m_hasDisplacement = hasDisp;
 
 		m_bytes = bytes;
@@ -227,12 +246,13 @@ private:
 		m_mode = mode;
 	}
 
-	uint64_t     m_address;       //Address the instruction is at
-	Displacement m_displacement;  //Where an instruction points too (valid for jmp + call types)
-	uint8_t      m_dispOffset;    //Offset into the byte array where displacement is encoded
-	bool         m_isRelative;    //Does the displacement need to be added to the address to retrieve where it points too?
-	bool         m_hasDisplacement; //Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
-	bool		 m_isBranching; //Does this instrunction jmp/call or otherwise change control flow
+	uint64_t     m_address;         // Address the instruction is at
+	Displacement m_displacement;    // Where an instruction points too (valid for jmp + call types)
+	uint8_t      m_dispOffset;      // Offset into the byte array where displacement is encoded
+	bool         m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
+	bool         m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
+	bool		 m_isBranching;     // Does this instrunction jmp/call or otherwise change control flow
+	bool         m_isIndirect;      // Does this instruction get it's destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
 
 	std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
 	std::string          m_mnemonic; //If you don't know what these two are then gtfo of this source code :)
@@ -305,6 +325,7 @@ inline PLH::insts_t makex64PreferredJump(const uint64_t address, const uint64_t 
 		zeroDisp,
 		0,
 		false,
+		false,
 		raxBytes,
 		"push",
 		"rax", Mode::x64);
@@ -319,17 +340,17 @@ inline PLH::insts_t makex64PreferredJump(const uint64_t address, const uint64_t 
 	movRaxBytes[1] = 0xB8;
 	memcpy(&movRaxBytes[2], &destination, 8);
 
-	Instruction movRax(curInstAddress, zeroDisp, 0, false,
+	Instruction movRax(curInstAddress, zeroDisp, 0, false, false,
 		movRaxBytes, "mov", "rax, " + ss.str(), Mode::x64);
 	curInstAddress += movRax.size();
 
 	std::vector<uint8_t> xchgBytes = { 0x48, 0x87, 0x04, 0x24 };
-	Instruction xchgRspRax(curInstAddress, zeroDisp, 0, false,
+	Instruction xchgRspRax(curInstAddress, zeroDisp, 0, false, false,
 		xchgBytes, "xchg", "QWORD PTR [rsp],rax", Mode::x64);
 	curInstAddress += xchgRspRax.size();
 
 	std::vector<uint8_t> retBytes = { 0xC3 };
-	Instruction ret(curInstAddress, zeroDisp, 0, false,
+	Instruction ret(curInstAddress, zeroDisp, 0, false, false,
 		retBytes, "ret", "", Mode::x64);
 	curInstAddress += ret.size();
 
@@ -347,7 +368,7 @@ inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t de
 	std::vector<uint8_t> destBytes;
 	destBytes.resize(8);
 	memcpy(destBytes.data(), &destination, 8);
-	Instruction specialDest(destHolder, disp, 0, false, destBytes, "dest holder", "", Mode::x64);
+	Instruction specialDest(destHolder, disp, 0, false, false, destBytes, "dest holder", "", Mode::x64);
 
 	std::vector<uint8_t> bytes;
 	bytes.resize(6);
@@ -358,7 +379,7 @@ inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t de
 	std::stringstream ss;
 	ss << std::hex << "[" << destHolder << "] ->" << destination;
 
-	return { Instruction(address, disp, 2, true, bytes, "jmp", ss.str(), Mode::x64),  specialDest };
+	return { Instruction(address, disp, 2, true, true, bytes, "jmp", ss.str(), Mode::x64),  specialDest };
 }
 
 inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destination) {
@@ -372,7 +393,7 @@ inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destinatio
 	std::stringstream ss;
 	ss << std::hex << destination;
 
-	return { Instruction(address, disp, 1, true, bytes, "jmp", ss.str(), Mode::x86) };
+	return { Instruction(address, disp, 1, true, false, bytes, "jmp", ss.str(), Mode::x86) };
 }
 
 
