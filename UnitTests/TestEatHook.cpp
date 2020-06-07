@@ -1,6 +1,7 @@
 #include <Catch.hpp>
 
 #include "polyhook2/PE/EatHook.hpp"
+#include "polyhook2/Tests/StackCanary.hpp"
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 
 EffectTracker eatEffectTracker;
@@ -10,15 +11,18 @@ tEatTestExport oEatTestExport;
 
 extern "C" __declspec(dllexport) NOINLINE void EatTestExport()
 {
+	PLH::StackCanary canary;
 }
 
 NOINLINE void hkEatTestExport()
 {	
+	PLH::StackCanary canary;
 	eatEffectTracker.PeakEffect().trigger();
 }
 
 TEST_CASE("Eat Hook Tests", "[EatHook]") {
 	SECTION("Verify if export is found and hooked") {
+		PLH::StackCanary canary;
 		PLH::EatHook hook("EatTestExport", L"", (char*)&hkEatTestExport, (uint64_t*)&oEatTestExport);
 		REQUIRE(hook.hook());
 
@@ -32,6 +36,7 @@ TEST_CASE("Eat Hook Tests", "[EatHook]") {
 	}
 
 	SECTION("Verify if export is found and hooked when module explicitly named") {
+		PLH::StackCanary canary;
 		PLH::EatHook hook("EatTestExport", L"Polyhook_2.exe", (char*)&hkEatTestExport, (uint64_t*)&oEatTestExport);
 		REQUIRE(hook.hook());
 
@@ -60,7 +65,7 @@ int __stdcall hkEatMessageBox(HWND    hWnd,
 	UNREFERENCED_PARAMETER(lpCaption);
 	UNREFERENCED_PARAMETER(uType);
 	UNREFERENCED_PARAMETER(hWnd);
-
+	PLH::StackCanary canary;
 	tEatMessageBox MsgBox = (tEatMessageBox)oEatMessageBox;
 	MsgBox(0, "My Hook", "text", 0);
 	eatEffectTracker.PeakEffect().trigger();
@@ -68,6 +73,7 @@ int __stdcall hkEatMessageBox(HWND    hWnd,
 }
 
 TEST_CASE("Eat winapi tests", "[EatHook]") {
+	PLH::StackCanary canary;
 	LoadLibrary("User32.dll");
 
 	PLH::EatHook hook("MessageBoxA", L"User32.dll", (char*)&hkEatMessageBox, (uint64_t*)&oEatMessageBox);
@@ -86,6 +92,7 @@ typedef  void(__stdcall* tEatGetSystemTime)(PSYSTEMTIME systemTime);
 tEatGetSystemTime oEatGetSystemTime;
 void WINAPI hkGetSystemTime(PSYSTEMTIME systemTime)
 {
+	PLH::StackCanary canary;
 	eatEffectTracker.PeakEffect().trigger();
 	oEatGetSystemTime(systemTime);
 }
@@ -94,6 +101,7 @@ typedef void(__stdcall* tEatGetLocalTime)(PSYSTEMTIME systemTime);
 tEatGetLocalTime oEatGetLocalTime;
 void WINAPI hkGetLocalTime(PSYSTEMTIME systemTime)
 {
+	PLH::StackCanary canary;
 	eatEffectTracker.PeakEffect().trigger();
 	oEatGetLocalTime(systemTime);
 }
@@ -102,7 +110,7 @@ TEST_CASE("Eat winapi multiple hook", "[EatHook]") {
 	// These are out of module hooks that require a trampoline stub.
 	// Multiple hooks can fail if the trampoline region isn't re-used 
 	// across multiple calls. Or if no free block is found at all
-
+	PLH::StackCanary canary;
 	PLH::EatHook hook_GST("GetSystemTime", L"kernel32.dll", (char*)&hkGetSystemTime, (uint64_t*)&oEatGetSystemTime);
 	REQUIRE(hook_GST.hook());
 	eatEffectTracker.PushEffect();

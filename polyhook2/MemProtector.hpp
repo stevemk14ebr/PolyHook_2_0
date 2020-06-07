@@ -19,6 +19,9 @@ PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs);
 bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs);
 std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag v);
 
+// prefer enum class over enum
+#pragma warning( disable : 26812)
+
 namespace PLH {
 int	TranslateProtection(const PLH::ProtFlag flags);
 ProtFlag TranslateProtection(const int prot);

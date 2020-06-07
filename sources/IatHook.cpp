@@ -10,6 +10,8 @@ PLH::IatHook::IatHook(const std::string& dllName, const std::string& apiName, co
     , m_moduleName(moduleName)
     , m_fnCallback(fnCallback)
     , m_userOrigVar(userOrigVar)
+	, m_hooked(false)
+	, m_origFunc(0)
 {}
 
 bool PLH::IatHook::hook() {

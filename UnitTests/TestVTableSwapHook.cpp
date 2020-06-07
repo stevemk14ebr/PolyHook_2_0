@@ -3,6 +3,7 @@
 #include <Catch.hpp>
 
 #include "polyhook2/Virtuals/VTableSwapHook.hpp"
+#include "polyhook2/Tests/StackCanary.hpp"
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 
 EffectTracker vTblSwapEffects;
@@ -39,6 +40,7 @@ TEST_CASE("VTableSwap tests", "[VTableSwap]") {
 	std::shared_ptr<VirtualTest> ClassToHook(new VirtualTest);
 
 	SECTION("Verify vtable redirected") {
+		PLH::StackCanary canary;
 		PLH::VFuncMap redirect = {{(uint16_t)1, (uint64_t)&hkVirtNoParams}};
 		PLH::VTableSwapHook hook((char*)ClassToHook.get(), redirect);
 		REQUIRE(hook.hook());
@@ -52,6 +54,7 @@ TEST_CASE("VTableSwap tests", "[VTableSwap]") {
 	}
 
 	SECTION("Verify multiple vtable redirected") {
+		PLH::StackCanary canary;
 		PLH::VFuncMap redirect = {{(uint16_t)1, (uint64_t)&hkVirtNoParams},{(uint16_t)2, (uint64_t)&hkVirtNoParams}};
 		PLH::VTableSwapHook hook((char*)ClassToHook.get(), redirect);
 		REQUIRE(hook.hook());

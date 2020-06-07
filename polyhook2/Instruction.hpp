@@ -178,12 +178,12 @@ public:
 		m_hasDisplacement = true;
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
-		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
+		if ((uint32_t)getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
 			__debugbreak();
 			return;
 		}
 
-		assert(getDisplacementOffset() + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Relative));
+		assert((uint32_t)getDisplacementOffset() + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Relative));
 		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Relative, dispSz);
 	}
 

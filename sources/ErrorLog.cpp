@@ -31,7 +31,7 @@ void PLH::ErrorLog::push(PLH::Error err) {
 PLH::Error PLH::ErrorLog::pop() {
 	Error err{};
 	if (!m_log.empty()) {
-		err = std::move(m_log.back());
+		err = m_log.back();
 		m_log.pop_back();
 	}
 	return err;

@@ -19,6 +19,7 @@ enum class HookType {
 	UNKNOWN
 };
 
+
 //unsafe enum by design to allow binary OR
 enum ProtFlag : std::uint8_t {
 	UNSET = 0, // Value means this give no information about protection state (un-read)
