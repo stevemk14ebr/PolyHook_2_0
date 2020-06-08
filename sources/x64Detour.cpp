@@ -156,14 +156,12 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 		m_disasm.writeEncoding(jmpToProl);
 	}
 
-	// each jmp tbl entries holder is one slot down from the previous
-	auto calcJmpHolder = [=] () -> uint64_t {
-		static uint64_t captureAddr = jmpHolderCurAddr;
-		captureAddr -= destHldrSz;
-		return captureAddr;
+	// each jmp tbl entries holder is one slot down from the previous (lambda holds state)
+	const auto makeJmpFn = [=, captureAddress = jmpHolderCurAddr](uint64_t a, uint64_t b) mutable {
+		captureAddress -= destHldrSz;
+		assert(captureAddress > (uint64_t)m_trampoline && (captureAddress + destHldrSz) < (m_trampoline + m_trampolineSz));
+		return makex64MinimumJump(a, b, captureAddress);
 	};
-
-	const auto makeJmpFn = std::bind(makex64MinimumJump, _1, _2, std::bind(calcJmpHolder));
 
 	const uint64_t jmpTblStart = jmpToProlAddr + getMinJmpSize();
 	trampolineOut = relocateTrampoline(prologue, jmpTblStart, delta, getMinJmpSize(),

@@ -34,11 +34,9 @@ See: https://github.com/stevemk14ebr/PolyHook_2_0/pull/59#issuecomment-619223616
 I provide directions below for how to setup the visual studio cmake environment only. If you don't want to use visual studio that's fine, this is a standard cmake project and will build from command line just fine. 
 
 ### Visual Studio 2017/2019
-clone and init with given commands
+clone the project and perform submodule init as above. Do not run the cmake commands, instead:
 
-Open VS 2017, go to file->open->cmake.. this will load the project and start cmake generation. Next (optional step) go to tools->options->cmake->general->CMakeSettings.json path needs to be set to the polyhook2_0 directory that directly contains CMakeSettings.json, this will tell visual studio the build paths and also setup the build types (if it doesn't look right clear all the cmake cache stuff by cmake->clean all & cmake->cache->delete all & cmake->cache->generate. After all the stuff is done finally goto cmake->build all or cmake->build only or if you are in exe mode you can also set a startup item and release mode and use the play button. Capstone and asmjit are both set to automatically build and link, you DO NOT need to build them seperately.
-
-![CMakeSettings.json](https://i.imgur.com/RpHQ5Km.png)
+Open VS 2017, go to file->open->cmake.. this will load the project and start cmake generation. Next goto cmake->build all or cmake->build, you can also set a startup item and release mode to use the play button (do not use the install target). Capstone, Zydis, and asmjit are set to automatically build and link, you DO NOT need to build them seperately.
 
 ### Documentation
 I've setup an example project to show how to use this as a static library. You should clear your cmake cache between changing these options. The dll is built with the cmake option to export all symbols. This is different from the typical windows DLL where things are manually exported via declspec(dllexport), instead it behaves how linux dlls do with all symbols exported by default. This style should make it easier to maintain the code, the downside is there are many exports but i don't care.

@@ -1,5 +1,5 @@
 {
-    // See https://go.microsoft.com//fwlink//?linkid=834763 for more information about this file.
+  // See https://go.microsoft.com//fwlink//?linkid=834763 for more information about this file.
   "configurations": [
     {
       "name": "x86-Debug",

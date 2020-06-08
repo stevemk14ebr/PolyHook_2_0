@@ -46,6 +46,7 @@ public:
 	* an instruction should be disasm instructions -> set relative/absolute displacement() ->
 	**/
 	static void writeEncoding(const Instruction& instruction) {
+		assert(instruction.size() <= instruction.getBytes().size());
 		memcpy((void*)instruction.getAddress(), &instruction.getBytes()[0], instruction.size());
 	}
 

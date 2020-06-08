@@ -123,7 +123,7 @@ PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblS
 			assert(inst.hasDisplacement());
 			// make an entry pointing to where inst did point to
 			auto entry = makeJmp(jmpTblCurAddr, inst.getDestination());
-
+			std::cout << entry << std::endl;
 			// move inst to trampoline and point instruction to entry
 			inst.setAddress(inst.getAddress() + delta);
 			inst.setDestination(jmpTblCurAddr);
