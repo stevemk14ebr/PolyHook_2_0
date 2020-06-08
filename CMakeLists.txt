@@ -184,8 +184,8 @@ set(POLYHOOK_CORE_HEADERS ${PROJECT_SOURCE_DIR}/polyhook2/ADisassembler.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/ErrorLog.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/MemProtector.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/PageAllocator.hpp
-		${PROJECT_SOURCE_DIR}/polyhook2/TestEffectTracker.hpp
-		${PROJECT_SOURCE_DIR}/polyhook2/StackCanary.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Tests/TestEffectTracker.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Tests/StackCanary.hpp
 		)
 install(FILES ${POLYHOOK_CORE_HEADERS} DESTINATION include/polyhook2)
 
