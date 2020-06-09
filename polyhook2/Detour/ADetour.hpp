@@ -94,7 +94,7 @@ protected:
 	/**If function starts with a jump follow it until the first non-jump instruction, recursively. This handles already hooked functions
 	and also compilers that emit jump tables on function call. Returns true if resolution was successful (nothing to resolve, or resolution worked),
 	false if resolution failed.**/
-	bool followJmp(insts_t& functionInsts, const uint8_t curDepth = 0, const uint8_t depth = 3);
+	bool followJmp(insts_t& functionInsts, const uint8_t curDepth = 0, const uint8_t depth = 5);
 
 	/**Expand the prologue up to the address of the last jmp that points back into the prologue. This
 	is necessary because we modify the location of things in the prologue, so re-entrant jmps point

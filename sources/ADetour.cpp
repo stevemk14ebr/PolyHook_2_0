@@ -33,8 +33,13 @@ std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& funct
 }
 
 bool PLH::Detour::followJmp(PLH::insts_t& functionInsts, const uint8_t curDepth, const uint8_t depth) {
-	if (functionInsts.size() <= 0 || curDepth >= depth) {
+	if (functionInsts.size() <= 0) {
 		ErrorLog::singleton().push("Couldn't decompile instructions at followed jmp", ErrorLevel::WARN);
+		return false;
+	}
+
+	if (curDepth >= depth) {
+		ErrorLog::singleton().push("Prologue jmp resolution hit max depth, prologue too deep", ErrorLevel::WARN);
 		return false;
 	}
 
