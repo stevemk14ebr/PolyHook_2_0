@@ -6,11 +6,11 @@
 EffectTracker iatEffectTracker;
 
 typedef DWORD(__stdcall* tGetCurrentThreadId)();
-tGetCurrentThreadId oGetCurrentThreadID;
+uint64_t oGetCurrentThreadID;
 
 NOINLINE DWORD __stdcall hkGetCurrentThreadId() {
 	iatEffectTracker.PeakEffect().trigger();
-	return oGetCurrentThreadID();
+	return ((tGetCurrentThreadId)oGetCurrentThreadID)();
 }
 
 TEST_CASE("Iat Hook Tests", "[IatHook]") {

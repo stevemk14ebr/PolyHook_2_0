@@ -7,7 +7,7 @@
 EffectTracker eatEffectTracker;
 
 typedef void(* tEatTestExport)();
-tEatTestExport oEatTestExport;
+uint64_t oEatTestExport;
 
 extern "C" __declspec(dllexport) NOINLINE void EatTestExport()
 {
@@ -54,7 +54,7 @@ typedef  int(__stdcall* tEatMessageBox)(HWND    hWnd,
 	LPCTSTR lpText,
 	LPCTSTR lpCaption,
 	UINT    uType);
-tEatMessageBox  oEatMessageBox;
+uint64_t  oEatMessageBox;
 
 int __stdcall hkEatMessageBox(HWND    hWnd,
 	LPCTSTR lpText,
@@ -89,21 +89,21 @@ TEST_CASE("Eat winapi tests", "[EatHook]") {
 }
 
 typedef  void(__stdcall* tEatGetSystemTime)(PSYSTEMTIME systemTime);
-tEatGetSystemTime oEatGetSystemTime;
+uint64_t oEatGetSystemTime;
 void WINAPI hkGetSystemTime(PSYSTEMTIME systemTime)
 {
 	PLH::StackCanary canary;
 	eatEffectTracker.PeakEffect().trigger();
-	oEatGetSystemTime(systemTime);
+	((tEatGetSystemTime)oEatGetSystemTime)(systemTime);
 }
 
 typedef void(__stdcall* tEatGetLocalTime)(PSYSTEMTIME systemTime);
-tEatGetLocalTime oEatGetLocalTime;
+uint64_t oEatGetLocalTime;
 void WINAPI hkGetLocalTime(PSYSTEMTIME systemTime)
 {
 	PLH::StackCanary canary;
 	eatEffectTracker.PeakEffect().trigger();
-	oEatGetLocalTime(systemTime);
+	((tEatGetLocalTime)oEatGetLocalTime)(systemTime);
 }
 
 TEST_CASE("Eat winapi multiple hook", "[EatHook]") {
