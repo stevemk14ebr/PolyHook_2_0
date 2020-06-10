@@ -176,6 +176,7 @@ bool PLH::x64Detour::hook() {
 	}
 	
 	// Nop the space between jmp and end of prologue
+	assert(roundProlSz >= minProlSz);
 	const uint8_t nopSz = (uint8_t)(roundProlSz - minProlSz);
 	std::memset((char*)(m_fnAddress + minProlSz), 0x90, (size_t)nopSz);
 
