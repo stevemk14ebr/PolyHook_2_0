@@ -43,28 +43,28 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 
 			if (contiguous >= minSz) {
 				delete[] data;
-				return addr + i;
+				return addr + i - contiguous + 1;
 			}
 		}
 	}
 
-	memset(data, 0, 64000);
-	read = 0;
-	if (ReadProcessMemory(hSelf, (char*)(addr - 64000), data, 64000, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
-		uint32_t contiguous = 0;
-		for (uint32_t i = 0; i < read; i++) {
-			if (data[i] == 0xCC) {
-				contiguous++;
-			} else {
-				contiguous = 0;
-			}
+	//memset(data, 0, 64000);
+	//read = 0;
+	//if (ReadProcessMemory(hSelf, (char*)(addr - 64000), data, 64000, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+	//	uint32_t contiguous = 0;
+	//	for (uint32_t i = 0; i < read; i++) {
+	//		if (data[i] == 0xCC) {
+	//			contiguous++;
+	//		} else {
+	//			contiguous = 0;
+	//		}
 
-			if (contiguous >= minSz) {
-				delete[] data;
-				return addr + i;
-			}
-		}
-	}
+	//		if (contiguous >= minSz) {
+	//			delete[] data;
+	//			return addr - 64000 + i - contiguous;
+	//		}
+	//	}
+	//}
 
 	delete[] data;
 	return {};
@@ -158,7 +158,6 @@ bool PLH::x64Detour::hook() {
 	}
 
 	*m_userTrampVar = m_trampoline;
-
 
 	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
 	if (useMinJmp) {

@@ -70,7 +70,7 @@ NOINLINE void hookMeFloat(float a) {
 
 NOINLINE void hookMeIntFloatDouble(int a, float b, double c) {
 	PLH::StackCanary canary;
-	volatile float ans = 0.0f;
+	float ans = 10.0f;
 	ans += (float)a;
 	ans += c;
 	ans += b;
@@ -96,7 +96,7 @@ NOINLINE void myCallback(const PLH::ILCallback::Parameters* p, const uint8_t cou
 
 TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	PLH::ILCallback callback;
-
+	std::cout << std::hex << &hookMeIntFloatDouble << std::dec << std::endl;
 	SECTION("Integer argument") {
 		PLH::StackCanary canary;
 		asmjit::FuncSignatureT<void, int> sig;

@@ -49,6 +49,8 @@ class Detour : public PLH::IHook {
 public:
 	Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : m_disasm(dis) {
 		assert(fnAddress != 0 && fnCallback != 0);
+		assert(sizeof(*userTrampVar) == sizeof(uint64_t) && "Given trampoline holder to small");
+
 		m_fnAddress = fnAddress;
 		m_fnCallback = fnCallback;
 		m_trampoline = NULL;
@@ -59,6 +61,8 @@ public:
 
 	Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : m_disasm(dis) {
 		assert(fnAddress != nullptr && fnCallback != nullptr);
+		assert(sizeof(*userTrampVar) == sizeof(uint64_t) && "Given trampoline holder to small");
+
 		m_fnAddress = (uint64_t)fnAddress;
 		m_fnCallback = (uint64_t)fnCallback;
 		m_trampoline = NULL;

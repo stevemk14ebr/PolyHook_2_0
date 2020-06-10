@@ -26,9 +26,10 @@ std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& funct
 	}
 
 	if (prolLen >= prolOvrwStartOffset) {
-		prolOvrwEndOffset = prolLen;
 		return instructionsInRange;
 	}
+
+	prolOvrwEndOffset = prolLen;
 	return std::nullopt;
 }
 
