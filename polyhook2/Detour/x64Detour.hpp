@@ -8,6 +8,7 @@
 #include <sstream>
 #include <algorithm>
 #include <functional>
+#include <optional>
 using namespace std::placeholders;
 
 #include "polyhook2/Detour/ADetour.hpp"
@@ -34,6 +35,9 @@ public:
 	uint8_t getPrefJmpSize() const;
 private:
 	bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
+
+	// assumes we are looking within a +-2GB window
+	std::optional<uint64_t> findNearestCodeCave(uint64_t addr, uint8_t minSize);
 };
 }
 #endif //POLYHOOK_2_X64DETOUR_HPP
