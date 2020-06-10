@@ -25,10 +25,11 @@ std::optional<PLH::insts_t> PLH::Detour::calcNearestSz(const PLH::insts_t& funct
 			break;
 	}
 
+	prolOvrwEndOffset = prolLen;
 	if (prolLen >= prolOvrwStartOffset) {
-		prolOvrwEndOffset = prolLen;
 		return instructionsInRange;
 	}
+
 	return std::nullopt;
 }
 
@@ -83,7 +84,7 @@ bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
 
 		minProlSz = maxAddr - prolStart;
 
-		// expand prol by one entry size, may fail if prol to small
+		// expand prol by one entry size, may fail if prol too small
 		auto prolOpt = calcNearestSz(func, minProlSz, roundProlSz);
 		if (!prolOpt)
 			return false;

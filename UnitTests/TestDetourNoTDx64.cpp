@@ -96,7 +96,6 @@ NOINLINE void myCallback(const PLH::ILCallback::Parameters* p, const uint8_t cou
 
 TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	PLH::ILCallback callback;
-
 	SECTION("Integer argument") {
 		PLH::StackCanary canary;
 		asmjit::FuncSignatureT<void, int> sig;

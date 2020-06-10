@@ -23,6 +23,53 @@ uint8_t PLH::x64Detour::getPrefJmpSize() const {
 	return 16;
 }
 
+std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8_t minSz) {
+	HANDLE hSelf = GetCurrentProcess();
+	unsigned char* data = new unsigned char[64000];
+	memset(data, 0, 64000);
+
+	// RPM so we don't pagefault, careful to check for partial reads
+
+	// Search Above
+	SIZE_T read = 0;
+	if (ReadProcessMemory(hSelf, (char*)addr, data, 64000, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+		uint32_t contiguous = 0;
+		for (uint32_t i = 0; i < read; i++) {
+			if (data[i] == 0xCC) {
+				contiguous++;
+			} else {
+				contiguous = 0;
+			}
+
+			if (contiguous >= minSz) {
+				delete[] data;
+				return addr + i - contiguous + 1;
+			}
+		}
+	}
+
+	//memset(data, 0, 64000);
+	//read = 0;
+	//if (ReadProcessMemory(hSelf, (char*)(addr - 64000), data, 64000, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+	//	uint32_t contiguous = 0;
+	//	for (uint32_t i = 0; i < read; i++) {
+	//		if (data[i] == 0xCC) {
+	//			contiguous++;
+	//		} else {
+	//			contiguous = 0;
+	//		}
+
+	//		if (contiguous >= minSz) {
+	//			delete[] data;
+	//			return addr - 64000 + i - contiguous;
+	//		}
+	//	}
+	//}
+
+	delete[] data;
+	return {};
+}
+
 bool PLH::x64Detour::hook() {
 	// ------- Must resolve callback first, so that m_disasm branchmap is filled for prologue stuff
 	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100);
@@ -59,21 +106,36 @@ bool PLH::x64Detour::hook() {
 	uint64_t minProlSz = getPrefJmpSize(); // min size of patches that may split instructions
 	uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
 
+	std::optional<PLH::insts_t> prologueOpt;
+	bool useMinJmp = false;
 	insts_t prologue;
 	{
 		// find the prologue section we will overwrite with jmp + zero or more nops
-		auto prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
+		prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
 		if (!prologueOpt) {
-			ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
-			return false;
+		trysmall:
+			// try the smaller 6 byte jmp
+			if (roundProlSz >= getMinJmpSize()) {
+				minProlSz = getMinJmpSize();
+				roundProlSz = minProlSz;
+				prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
+			}
+
+			if (prologueOpt) {
+				useMinJmp = true;
+			} else {
+				ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
+				return false;
+			}
 		}
 
 		assert(roundProlSz >= minProlSz);
 		prologue = *prologueOpt;
 
 		if (!expandProlSelfJmps(prologue, insts, minProlSz, roundProlSz)) {
-			ErrorLog::singleton().push("Function needs a prologue jmp table but it's too small to insert one", ErrorLevel::SEV);
-			return false;
+			//ErrorLog::singleton().push("Function needs a prologue jmp table but it's too small to insert one", ErrorLevel::SEV);
+			//return false;
+			goto trysmall;
 		}
 	}
 
@@ -82,21 +144,39 @@ bool PLH::x64Detour::hook() {
 	
 	{   // copy all the prologue stuff to trampoline
 		insts_t jmpTblOpt;
-		if (!makeTrampoline(prologue, jmpTblOpt))
-			return false;
+		if (!makeTrampoline(prologue, jmpTblOpt)) {
+			if (useMinJmp) {
+				return false;
+			} else {
+				goto trysmall;
+			}
+		}
 
 		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz)) + "\n", ErrorLevel::INFO);
-		if (jmpTblOpt.empty())
+		if (!jmpTblOpt.empty())
 			ErrorLog::singleton().push("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
 	}
 
 	*m_userTrampVar = m_trampoline;
 
 	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
-	const auto prolJmp = makex64PreferredJump(m_fnAddress, m_fnCallback);
-	m_disasm.writeEncoding(prolJmp);
+	if (useMinJmp) {
+		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
+		auto cave = findNearestCodeCave(m_fnAddress, 8);
+		if (!cave) {
+			ErrorLog::singleton().push("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
+			return false;
+		}
 
+		const auto prolJmp = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+		m_disasm.writeEncoding(prolJmp);
+	} else {
+		const auto prolJmp = makex64PreferredJump(m_fnAddress, m_fnCallback);
+		m_disasm.writeEncoding(prolJmp);
+	}
+	
 	// Nop the space between jmp and end of prologue
+	assert(roundProlSz >= minProlSz);
 	const uint8_t nopSz = (uint8_t)(roundProlSz - minProlSz);
 	std::memset((char*)(m_fnAddress + minProlSz), 0x90, (size_t)nopSz);
 
