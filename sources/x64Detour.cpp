@@ -122,39 +122,25 @@ bool PLH::x64Detour::hook() {
 	// --------------- END RECURSIVE JMP RESOLUTION ---------------------
 	ErrorLog::singleton().push("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
-	uint64_t minProlSz = getPrefJmpSize(); // min size of patches that may split instructions
+	uint64_t minProlSz = getMinJmpSize(); // min size of patches that may split instructions
 	uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
 
 	std::optional<PLH::insts_t> prologueOpt;
-	bool useMinJmp = false;
 	insts_t prologue;
 	{
 		// find the prologue section we will overwrite with jmp + zero or more nops
 		prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
 		if (!prologueOpt) {
-		trysmall:
-			// try the smaller 6 byte jmp
-			if (roundProlSz >= getMinJmpSize()) {
-				minProlSz = getMinJmpSize();
-				roundProlSz = minProlSz;
-				prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
-			}
-
-			if (prologueOpt) {
-				useMinJmp = true;
-			} else {
-				ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
-				return false;
-			}
+			ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
+			return false;
 		}
 
 		assert(roundProlSz >= minProlSz);
 		prologue = *prologueOpt;
 
 		if (!expandProlSelfJmps(prologue, insts, minProlSz, roundProlSz)) {
-			//ErrorLog::singleton().push("Function needs a prologue jmp table but it's too small to insert one", ErrorLevel::SEV);
-			//return false;
-			goto trysmall;
+			ErrorLog::singleton().push("Function needs a prologue jmp table but it's too small to insert one", ErrorLevel::SEV);
+			return false;
 		}
 	}
 
@@ -164,11 +150,7 @@ bool PLH::x64Detour::hook() {
 	{   // copy all the prologue stuff to trampoline
 		insts_t jmpTblOpt;
 		if (!makeTrampoline(prologue, jmpTblOpt)) {
-			if (useMinJmp) {
-				return false;
-			} else {
-				goto trysmall;
-			}
+			return false;
 		}
 
 		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz)) + "\n", ErrorLevel::INFO);
@@ -179,22 +161,17 @@ bool PLH::x64Detour::hook() {
 	*m_userTrampVar = m_trampoline;
 
 	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
-	if (useMinJmp) {
-		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
-		auto cave = findNearestCodeCave(m_fnAddress, 8);
-		if (!cave) {
-			ErrorLog::singleton().push("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
-			return false;
-		}
-
-		MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
-		const auto prolJmp = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
-		m_disasm.writeEncoding(prolJmp);
-	} else {
-		const auto prolJmp = makex64PreferredJump(m_fnAddress, m_fnCallback);
-		m_disasm.writeEncoding(prolJmp);
+	// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
+	auto cave = findNearestCodeCave(m_fnAddress, 8);
+	if (!cave) {
+		ErrorLog::singleton().push("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
+		return false;
 	}
-	
+
+	MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
+	const auto prolJmp = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+	m_disasm.writeEncoding(prolJmp);
+
 	// Nop the space between jmp and end of prologue
 	assert(roundProlSz >= minProlSz);
 	const uint8_t nopSz = (uint8_t)(roundProlSz - minProlSz);
