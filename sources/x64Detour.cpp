@@ -25,46 +25,65 @@ uint8_t PLH::x64Detour::getPrefJmpSize() const {
 
 std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8_t minSz) {
 	HANDLE hSelf = GetCurrentProcess();
-	unsigned char* data = new unsigned char[64000];
-	memset(data, 0, 64000);
+	const uint64_t chunkSize = 64000;
+	unsigned char* data = new unsigned char[chunkSize];
 
 	// RPM so we don't pagefault, careful to check for partial reads
+	auto calc_2gb_below = [](uint64_t address) -> uint64_t
+	{
+		return (address > (uint64_t)0x7ff80000) ? address - 0x7ff80000 : 0x80000;
+	};
 
-	// Search Above
-	SIZE_T read = 0;
-	if (ReadProcessMemory(hSelf, (char*)addr, data, 64000, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
-		uint32_t contiguous = 0;
-		for (uint32_t i = 0; i < read; i++) {
-			if (data[i] == 0xCC) {
-				contiguous++;
-			} else {
-				contiguous = 0;
-			}
+	auto calc2gb_above = [](uint64_t address) -> uint64_t
+	{
+		return (address < (uint64_t)0xffffffff80000000) ? address + 0x7ff80000 : (uint64_t)0xfffffffffff80000;
+	};
 
-			if (contiguous >= minSz) {
-				delete[] data;
-				return addr + i - contiguous + 1;
+	// Search 2GB above
+	for (uint64_t search = addr; (search + chunkSize) < calc2gb_above(addr); search += chunkSize) {
+		memset(data, 0, chunkSize);
+
+		SIZE_T read = 0;
+		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+			uint32_t contiguous = 0;
+			for (uint32_t i = 0; i < read; i++) {
+				if (data[i] == 0xCC) {
+					contiguous++;
+				}
+				else {
+					contiguous = 0;
+				}
+
+				if (contiguous >= minSz) {
+					delete[] data;
+					return addr + i - contiguous + 1;
+				}
 			}
 		}
 	}
 
-	//memset(data, 0, 64000);
-	//read = 0;
-	//if (ReadProcessMemory(hSelf, (char*)(addr - 64000), data, 64000, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
-	//	uint32_t contiguous = 0;
-	//	for (uint32_t i = 0; i < read; i++) {
-	//		if (data[i] == 0xCC) {
-	//			contiguous++;
-	//		} else {
-	//			contiguous = 0;
-	//		}
+	// Search 2GB below
+	for (uint64_t search = addr; (search - chunkSize) >= calc_2gb_below(addr); search -= chunkSize) {
+		memset(data, 0, chunkSize);
 
-	//		if (contiguous >= minSz) {
-	//			delete[] data;
-	//			return addr - 64000 + i - contiguous;
-	//		}
-	//	}
-	//}
+		SIZE_T read = 0;
+		if (ReadProcessMemory(hSelf, (char*)(search - chunkSize), data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+			uint32_t contiguous = 0;
+			for (uint32_t i = 0; i < read; i++) {
+				if (data[i] == 0xCC) {
+					contiguous++;
+				}
+				else {
+					contiguous = 0;
+				}
+
+				if (contiguous >= minSz) {
+					delete[] data;
+					return addr - chunkSize + i - contiguous + 1;
+				}
+			}
+		}
+	}
 
 	delete[] data;
 	return {};
@@ -168,6 +187,7 @@ bool PLH::x64Detour::hook() {
 			return false;
 		}
 
+		MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
 		const auto prolJmp = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
 		m_disasm.writeEncoding(prolJmp);
 	} else {
