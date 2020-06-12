@@ -33,7 +33,7 @@ public:
 		return HookType::VEHHOOK;
 	}
 
-	virtual eException& EventException();
+	static eException& EventException();
 protected:
 	// May not allocate or acquire synchonization objects in this
 	virtual LONG OnException(EXCEPTION_POINTERS* ExceptionInfo) = 0;
