@@ -11,20 +11,17 @@ public:
 	void operator+=(const Event& event);
 
 	template<typename... Args>
-	void Invoke(Args&& ...Params)
+	typename Event::result_type Invoke(Args&& ...Params)
 	{
-		for (auto&& event : m_Events)
-		{
-			event(std::forward<Args>(Params)...);
-		}
+		return m_Event(std::forward<Args>(Params)...);
 	}
 private:
-	std::vector<Event> m_Events;
+	Event m_Event;
 };
 
 template<typename T>
 void EventDispatcher<T>::operator+=(const Event& event)
 {
-	m_Events.push_back(event);
+	m_Event = event;
 }
 }

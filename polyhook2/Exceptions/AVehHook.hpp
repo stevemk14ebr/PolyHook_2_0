@@ -23,7 +23,7 @@ public:
 	uint16_t m_count = 0;
 };
 
-typedef EventDispatcher<void(EXCEPTION_POINTERS*)> eException;
+typedef EventDispatcher<bool(EXCEPTION_POINTERS*, DWORD*)> eException;
 class AVehHook : public IHook {
 public:
 	AVehHook();

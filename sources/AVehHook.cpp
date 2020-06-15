@@ -39,8 +39,10 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	DWORD ExceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 	uint64_t ip = ExceptionInfo->ContextRecord->XIP;
 
-	// invoke callbacks
-	m_onException.Invoke(ExceptionInfo);
+	// invoke callback
+	DWORD code = EXCEPTION_CONTINUE_SEARCH;
+	if (m_onException.Invoke(ExceptionInfo, &code) == false)
+		return code;
 
 	switch (ExceptionCode) {
 	case 0xE06D7363: // oooh aaahh a magic value
