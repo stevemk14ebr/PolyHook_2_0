@@ -38,6 +38,31 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 	{
 		return (address < (uint64_t)0xffffffff80000000) ? address + 0x7ff80000 : (uint64_t)0xfffffffffff80000;
 	};
+	
+	// Search 2GB below
+	for (uint64_t search = addr - chunkSize; (search + chunkSize) >= calc_2gb_below(addr); search -= chunkSize) {
+		memset(data, 0, chunkSize);
+
+		SIZE_T read = 0;
+		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+			uint32_t contiguous = 0;
+
+			// read from highest address first (closest to prologue)
+			for (size_t i = read - 1; i >= 0; i--) {
+				if (data[i] == 0xCC) {
+					contiguous++;
+				}
+				else {
+					contiguous = 0;
+				}
+
+				if (contiguous >= minSz) {
+					delete[] data;
+					return search + i;
+				}
+			}
+		}
+	}
 
 	// Search 2GB above
 	for (uint64_t search = addr; (search + chunkSize) < calc2gb_above(addr); search += chunkSize) {
@@ -46,7 +71,8 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 		SIZE_T read = 0;
 		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
 			uint32_t contiguous = 0;
-			for (uint32_t i = 0; i < read; i++) {
+
+			for (size_t i = 0; i < read; i++) {
 				if (data[i] == 0xCC) {
 					contiguous++;
 				}
@@ -56,30 +82,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 
 				if (contiguous >= minSz) {
 					delete[] data;
-					return addr + i - contiguous + 1;
-				}
-			}
-		}
-	}
-
-	// Search 2GB below
-	for (uint64_t search = addr; (search - chunkSize) >= calc_2gb_below(addr); search -= chunkSize) {
-		memset(data, 0, chunkSize);
-
-		SIZE_T read = 0;
-		if (ReadProcessMemory(hSelf, (char*)(search - chunkSize), data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
-			uint32_t contiguous = 0;
-			for (uint32_t i = 0; i < read; i++) {
-				if (data[i] == 0xCC) {
-					contiguous++;
-				}
-				else {
-					contiguous = 0;
-				}
-
-				if (contiguous >= minSz) {
-					delete[] data;
-					return addr - chunkSize + i - contiguous + 1;
+					return search + i - contiguous + 1;
 				}
 			}
 		}

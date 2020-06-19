@@ -25,6 +25,11 @@ std::vector<uint8_t> x64ASM = {
 	0xAB, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xAA
 };
 
+std::vector<uint8_t> x64ASM2 = { 
+	0x48, 0x8B, 0x05, 0x10, 0x00, 0x00, 0x00,  // mov    rax,QWORD PTR[rip + 0x10]  
+    0x48, 0x8B, 0x90, 0x55, 0x02, 0x00, 0x00  // mov    rdx,QWORD PTR[rax + 0x255]
+};
+
 // page 590 for jmp types, page 40 for mod/rm table:
 // https://www-ssl.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf
 // stolen from capstones unit tests
@@ -313,6 +318,24 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 		std::cout << insts << std::endl;
 	}
 }
+
+TEMPLATE_TEST_CASE("Test Disassemblers x64 Two", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+	PLH::StackCanary canaryg;
+	TestType disasm(PLH::Mode::x64);
+	PLH::insts_t Instructions = disasm.disassemble((uint64_t)&x64ASM2.front(), (uint64_t)&x64ASM2.front(),
+		(uint64_t)&x64ASM2.front() + x64ASM2.size());
+
+	SECTION("Verify relative displacements") {
+		REQUIRE(Instructions.at(0).m_isRelative);
+		REQUIRE(Instructions.at(0).m_hasDisplacement);
+		REQUIRE(Instructions.at(0).m_isIndirect == false);
+		REQUIRE(Instructions.at(0).getDestination() == Instructions.at(0).getAddress() + Instructions.at(0).size() + 0x10);
+
+		REQUIRE(Instructions.at(1).m_isRelative == false);
+		REQUIRE(Instructions.at(1).m_isIndirect == false);
+	}
+}
+
 
 // unreachable code
 #pragma warning(disable: 4702)
