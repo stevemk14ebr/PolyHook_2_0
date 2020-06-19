@@ -104,7 +104,7 @@ public:
 	{
 		if (inst.isBranching()) {
 			// search back, check if new instruction points to older ones (one to one)
-			auto destInst = std::find_if(insVec.begin(), insVec.end(), [=] (const Instruction& oldIns) {
+			auto destInst = std::find_if(insVec.begin(), insVec.end(), [&] (const Instruction& oldIns) {
 				return oldIns.getAddress() == inst.getDestination();
 			});
 
