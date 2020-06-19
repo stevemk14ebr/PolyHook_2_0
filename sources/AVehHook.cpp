@@ -3,6 +3,7 @@
 PLH::RefCounter PLH::AVehHook::m_refCount;
 void* PLH::AVehHook::m_hHandler;
 std::map<uint64_t, PLH::AVehHook*> PLH::AVehHook::m_impls;
+PLH::eException PLH::AVehHook::m_onException;
 
 // https://reverseengineering.stackexchange.com/questions/14992/what-are-the-vectored-continue-handlers
 PLH::AVehHook::AVehHook() {
@@ -30,10 +31,19 @@ PLH::AVehHook::~AVehHook() {
 	}
 }
 
+PLH::eException& PLH::AVehHook::EventException() {
+	return m_onException;
+}
+
 LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	DWORD ExceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 	uint64_t ip = ExceptionInfo->ContextRecord->XIP;
-	
+
+	// invoke callback
+	DWORD code = EXCEPTION_CONTINUE_SEARCH;
+	if (m_onException.Invoke(ExceptionInfo, &code) == false)
+		return code;
+
 	switch (ExceptionCode) {
 	case 0xE06D7363: // oooh aaahh a magic value
         std::cout << "C++ exception thrown" << std::endl;

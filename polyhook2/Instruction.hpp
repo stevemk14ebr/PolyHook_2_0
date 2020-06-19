@@ -178,7 +178,7 @@ public:
 		m_hasDisplacement = true;
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
-		if ((uint32_t)getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
+		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
 			__debugbreak();
 			return;
 		}
@@ -196,12 +196,12 @@ public:
 		m_hasDisplacement = true;
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
-		if (getDisplacementOffset() + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Absolute)) {
+		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Absolute)) {
 			__debugbreak();
 			return;
 		}
 
-		assert(getDisplacementOffset() + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Absolute));
+		assert(((uint32_t)getDisplacementOffset()) + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Absolute));
 		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, dispSz);
 	}
 
@@ -219,6 +219,11 @@ public:
 	void setIndirect(const bool isIndirect) {
 		m_isIndirect = isIndirect;
 	}
+
+	bool         m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
+	bool         m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
+	bool		 m_isBranching;     // Does this instrunction jmp/call or otherwise change control flow
+	bool         m_isIndirect;      // Does this instruction get it's destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
@@ -249,10 +254,6 @@ private:
 	uint64_t     m_address;         // Address the instruction is at
 	Displacement m_displacement;    // Where an instruction points too (valid for jmp + call types)
 	uint8_t      m_dispOffset;      // Offset into the byte array where displacement is encoded
-	bool         m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
-	bool         m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
-	bool		 m_isBranching;     // Does this instrunction jmp/call or otherwise change control flow
-	bool         m_isIndirect;      // Does this instruction get it's destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
 
 	std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
 	std::string          m_mnemonic; //If you don't know what these two are then gtfo of this source code :)

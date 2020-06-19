@@ -25,46 +25,68 @@ uint8_t PLH::x64Detour::getPrefJmpSize() const {
 
 std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8_t minSz) {
 	HANDLE hSelf = GetCurrentProcess();
-	unsigned char* data = new unsigned char[64000];
-	memset(data, 0, 64000);
+	const uint64_t chunkSize = 64000;
+	unsigned char* data = new unsigned char[chunkSize];
 
 	// RPM so we don't pagefault, careful to check for partial reads
+	auto calc_2gb_below = [](uint64_t address) -> uint64_t
+	{
+		return (address > (uint64_t)0x7ff80000) ? address - 0x7ff80000 : 0x80000;
+	};
 
-	// Search Above
-	SIZE_T read = 0;
-	if (ReadProcessMemory(hSelf, (char*)addr, data, 64000, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
-		uint32_t contiguous = 0;
-		for (uint32_t i = 0; i < read; i++) {
-			if (data[i] == 0xCC) {
-				contiguous++;
-			} else {
-				contiguous = 0;
-			}
+	auto calc2gb_above = [](uint64_t address) -> uint64_t
+	{
+		return (address < (uint64_t)0xffffffff80000000) ? address + 0x7ff80000 : (uint64_t)0xfffffffffff80000;
+	};
+	
+	// Search 2GB below
+	for (uint64_t search = addr - chunkSize; (search + chunkSize) >= calc_2gb_below(addr); search -= chunkSize) {
+		memset(data, 0, chunkSize);
 
-			if (contiguous >= minSz) {
-				delete[] data;
-				return addr + i - contiguous + 1;
+		SIZE_T read = 0;
+		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+			uint32_t contiguous = 0;
+
+			// read from highest address first (closest to prologue)
+			for (size_t i = read - 1; i >= 0; i--) {
+				if (data[i] == 0xCC) {
+					contiguous++;
+				}
+				else {
+					contiguous = 0;
+				}
+
+				if (contiguous >= minSz) {
+					delete[] data;
+					return search + i;
+				}
 			}
 		}
 	}
 
-	//memset(data, 0, 64000);
-	//read = 0;
-	//if (ReadProcessMemory(hSelf, (char*)(addr - 64000), data, 64000, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
-	//	uint32_t contiguous = 0;
-	//	for (uint32_t i = 0; i < read; i++) {
-	//		if (data[i] == 0xCC) {
-	//			contiguous++;
-	//		} else {
-	//			contiguous = 0;
-	//		}
+	// Search 2GB above
+	for (uint64_t search = addr; (search + chunkSize) < calc2gb_above(addr); search += chunkSize) {
+		memset(data, 0, chunkSize);
 
-	//		if (contiguous >= minSz) {
-	//			delete[] data;
-	//			return addr - 64000 + i - contiguous;
-	//		}
-	//	}
-	//}
+		SIZE_T read = 0;
+		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+			uint32_t contiguous = 0;
+
+			for (size_t i = 0; i < read; i++) {
+				if (data[i] == 0xCC) {
+					contiguous++;
+				}
+				else {
+					contiguous = 0;
+				}
+
+				if (contiguous >= minSz) {
+					delete[] data;
+					return search + i - contiguous + 1;
+				}
+			}
+		}
+	}
 
 	delete[] data;
 	return {};
@@ -103,39 +125,25 @@ bool PLH::x64Detour::hook() {
 	// --------------- END RECURSIVE JMP RESOLUTION ---------------------
 	ErrorLog::singleton().push("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
-	uint64_t minProlSz = getPrefJmpSize(); // min size of patches that may split instructions
+	uint64_t minProlSz = getMinJmpSize(); // min size of patches that may split instructions
 	uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
 
 	std::optional<PLH::insts_t> prologueOpt;
-	bool useMinJmp = false;
 	insts_t prologue;
 	{
 		// find the prologue section we will overwrite with jmp + zero or more nops
 		prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
 		if (!prologueOpt) {
-		trysmall:
-			// try the smaller 6 byte jmp
-			if (roundProlSz >= getMinJmpSize()) {
-				minProlSz = getMinJmpSize();
-				roundProlSz = minProlSz;
-				prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
-			}
-
-			if (prologueOpt) {
-				useMinJmp = true;
-			} else {
-				ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
-				return false;
-			}
+			ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
+			return false;
 		}
 
 		assert(roundProlSz >= minProlSz);
 		prologue = *prologueOpt;
 
 		if (!expandProlSelfJmps(prologue, insts, minProlSz, roundProlSz)) {
-			//ErrorLog::singleton().push("Function needs a prologue jmp table but it's too small to insert one", ErrorLevel::SEV);
-			//return false;
-			goto trysmall;
+			ErrorLog::singleton().push("Function needs a prologue jmp table but it's too small to insert one", ErrorLevel::SEV);
+			return false;
 		}
 	}
 
@@ -145,11 +153,7 @@ bool PLH::x64Detour::hook() {
 	{   // copy all the prologue stuff to trampoline
 		insts_t jmpTblOpt;
 		if (!makeTrampoline(prologue, jmpTblOpt)) {
-			if (useMinJmp) {
-				return false;
-			} else {
-				goto trysmall;
-			}
+			return false;
 		}
 
 		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz)) + "\n", ErrorLevel::INFO);
@@ -160,21 +164,17 @@ bool PLH::x64Detour::hook() {
 	*m_userTrampVar = m_trampoline;
 
 	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
-	if (useMinJmp) {
-		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
-		auto cave = findNearestCodeCave(m_fnAddress, 8);
-		if (!cave) {
-			ErrorLog::singleton().push("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
-			return false;
-		}
-
-		const auto prolJmp = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
-		m_disasm.writeEncoding(prolJmp);
-	} else {
-		const auto prolJmp = makex64PreferredJump(m_fnAddress, m_fnCallback);
-		m_disasm.writeEncoding(prolJmp);
+	// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
+	auto cave = findNearestCodeCave(m_fnAddress, 8);
+	if (!cave) {
+		ErrorLog::singleton().push("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
+		return false;
 	}
-	
+
+	MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
+	const auto prolJmp = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+	m_disasm.writeEncoding(prolJmp);
+
 	// Nop the space between jmp and end of prologue
 	assert(roundProlSz >= minProlSz);
 	const uint8_t nopSz = (uint8_t)(roundProlSz - minProlSz);

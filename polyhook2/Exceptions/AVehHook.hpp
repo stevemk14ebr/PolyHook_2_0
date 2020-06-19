@@ -8,6 +8,7 @@
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/IHook.hpp"
 #include "polyhook2/Enums.hpp"
+#include "polyhook2/EventDispatcher.hpp"
 
 namespace PLH {
 
@@ -22,6 +23,7 @@ public:
 	uint16_t m_count = 0;
 };
 
+typedef EventDispatcher<bool(EXCEPTION_POINTERS*, DWORD*)> eException;
 class AVehHook : public IHook {
 public:
 	AVehHook();
@@ -30,6 +32,8 @@ public:
 	virtual HookType getType() const {
 		return HookType::VEHHOOK;
 	}
+
+	static eException& EventException();
 protected:
 	// May not allocate or acquire synchonization objects in this
 	virtual LONG OnException(EXCEPTION_POINTERS* ExceptionInfo) = 0;
@@ -38,6 +42,7 @@ protected:
 	static void* m_hHandler;
 	static std::map<uint64_t, AVehHook*> m_impls;
 	static LONG CALLBACK Handler(EXCEPTION_POINTERS* ExceptionInfo);
+	static eException m_onException;
 };
 }
 
