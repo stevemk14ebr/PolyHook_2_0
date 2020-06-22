@@ -46,13 +46,16 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 		SIZE_T read = 0;
 		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
 			uint32_t contiguous = 0;
+			assert(read <= chunkSize);
+			if (read == 0)
+				continue;
 
 			// read from highest address first (closest to prologue)
 			for (size_t i = read - 1; i > 0; i--) {
+				assert(i >= 0);
 				if (data[i] == 0xCC) {
 					contiguous++;
-				}
-				else {
+				} else {
 					contiguous = 0;
 				}
 
@@ -72,11 +75,11 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
 			uint32_t contiguous = 0;
 
+			assert(read <= chunkSize);
 			for (size_t i = 0; i < read; i++) {
 				if (data[i] == 0xCC) {
 					contiguous++;
-				}
-				else {
+				} else {
 					contiguous = 0;
 				}
 
