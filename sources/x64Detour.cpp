@@ -48,7 +48,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 			uint32_t contiguous = 0;
 
 			// read from highest address first (closest to prologue)
-			for (size_t i = read - 1; i >= 0; i--) {
+			for (size_t i = read - 1; i > 0; i--) {
 				if (data[i] == 0xCC) {
 					contiguous++;
 				}
