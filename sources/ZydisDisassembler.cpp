@@ -60,6 +60,8 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 
 		// searches instruction vector and updates references
 		addToBranchMap(insVec, inst);
+		if (isFuncEnd(inst))
+			break;
 
 		offset += insInfo.length;
 	}

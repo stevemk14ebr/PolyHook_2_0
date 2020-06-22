@@ -2,13 +2,13 @@
 
 PLH::StackCanary::StackCanary() {
 	for (int i = 0; i < 50; i++) {
-		buf[i] = 0xCC;
+		buf[i] = 0xCE;
 	}
 }
 
 bool PLH::StackCanary::isStackGood() {
 	for (int i = 0; i < 50; i++) {
-		if (buf[i] != 0xCC)
+		if (buf[i] != 0xCE)
 			return false;
 	}
 	return true;

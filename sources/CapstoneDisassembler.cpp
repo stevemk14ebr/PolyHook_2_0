@@ -47,6 +47,9 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 
 		// searches instruction vector and updates references
 		addToBranchMap(insVec, inst);
+
+		if (isFuncEnd(inst))
+			break;
 	}
 	cs_free(insInfo, 1);
 	return insVec;

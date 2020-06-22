@@ -93,7 +93,7 @@ public:
 	}
 
 	static bool isPadBytes(const PLH::Instruction& instruction) {
-		return instruction.size() == 1 && instruction.getBytes()[0] == 0xCC;
+		return instruction.size() == 1 && (instruction.getBytes()[0] == 0xCC || instruction.getBytes()[0] == 0x90);
 	}
 
 	branch_map_t getBranchMap() {

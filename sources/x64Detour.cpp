@@ -45,7 +45,8 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 
 		SIZE_T read = 0;
 		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
-			uint32_t contiguous = 0;
+			uint32_t contiguousInt3 = 0;
+			uint32_t contiguousNop = 0;
 			assert(read <= chunkSize);
 			if (read == 0)
 				continue;
@@ -54,12 +55,18 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 			for (size_t i = read - 1; i > 0; i--) {
 				assert(i >= 0);
 				if (data[i] == 0xCC) {
-					contiguous++;
+					contiguousInt3++;
 				} else {
-					contiguous = 0;
+					contiguousInt3 = 0;
 				}
 
-				if (contiguous >= minSz) {
+				if (data[i] == 0x90) {
+					contiguousNop++;
+				} else {
+					contiguousNop = 0;
+				}
+
+				if (contiguousInt3 >= minSz || contiguousNop >= minSz) {
 					delete[] data;
 					return search + i;
 				}
@@ -73,19 +80,26 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 
 		SIZE_T read = 0;
 		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
-			uint32_t contiguous = 0;
+			uint32_t contiguousInt3 = 0;
+			uint32_t contiguousNop = 0;
 
 			assert(read <= chunkSize);
 			for (size_t i = 0; i < read; i++) {
 				if (data[i] == 0xCC) {
-					contiguous++;
+					contiguousInt3++;
 				} else {
-					contiguous = 0;
+					contiguousInt3 = 0;
 				}
 
-				if (contiguous >= minSz) {
+				if (data[i] == 0x90) {
+					contiguousNop++;
+				} else {
+					contiguousNop = 0;
+				}
+
+				if (contiguousInt3 >= minSz || contiguousNop >= minSz) {
 					delete[] data;
-					return search + i - contiguous + 1;
+					return search + i - contiguousInt3 + 1;
 				}
 			}
 		}
@@ -181,7 +195,7 @@ bool PLH::x64Detour::hook() {
 	// Nop the space between jmp and end of prologue
 	assert(roundProlSz >= minProlSz);
 	const uint8_t nopSz = (uint8_t)(roundProlSz - minProlSz);
-	std::memset((char*)(m_fnAddress + minProlSz), 0x90, (size_t)nopSz);
+	writeNop(m_fnAddress + minProlSz, nopSz);
 
 	m_hooked = true;
 	return true;

@@ -60,6 +60,37 @@ bool PLH::Detour::followJmp(PLH::insts_t& functionInsts, const uint8_t curDepth,
 	return followJmp(functionInsts, curDepth + 1); // recurse
 }
 
+void PLH::Detour::writeNop(uint64_t base, uint32_t size) {
+	// we absolutely, MUST, never emit more than 8 0x90 single byte nops in a row
+	/**
+	https://stackoverflow.com/questions/25545470/long-multi-byte-nops-commonly-understood-macros-or-other-notation
+	90                              NOP
+    6690                            66 NOP
+    0f1f00                          NOP DWORD ptr [EAX]
+    0f1f4000                        NOP DWORD ptr [EAX + 00H]
+    0f1f440000                      NOP DWORD ptr [EAX + EAX*1 + 00H]
+    660f1f440000                    66 NOP DWORD ptr [EAX + EAX*1 + 00H]
+    0f1f8000000000                  NOP DWORD ptr [EAX + 00000000H]
+    0f1f840000000000                NOP DWORD ptr [EAX + EAX*1 + 00000000H]
+    660f1f840000000000              66 NOP DWORD ptr [EAX + EAX*1 + 00000000H]
+	**/
+	if (size >= 2) {
+		uint64_t fat = size / 2;
+		bool leftOver = size % 2;
+		for (uint64_t i = 0; i < fat; i++) {
+			*(uint16_t*)(base + i * 2) = 0x6690;
+		}
+
+		if (leftOver) {
+			*(uint8_t*)(base + fat * 2) = 0x90;
+		}
+	} else if(size == 1) {
+		*(uint8_t*)base = 0x90;
+	} else {
+		// this case is a nop for the nop routine :p
+	}
+}
+
 bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
 									 const insts_t& func,
 									 uint64_t& minProlSz,

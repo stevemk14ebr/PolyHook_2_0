@@ -158,6 +158,7 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 	SECTION("Jmp into prol w/src out of range") {
 		PLH::StackCanary canary;
 		PLH::x64Detour detour((char*)&hookMe4, (char*)&h_nullstub, &nullTramp, dis);
+
 		REQUIRE(detour.hook() == true);
 		REQUIRE(detour.unHook() == true);
 	}
