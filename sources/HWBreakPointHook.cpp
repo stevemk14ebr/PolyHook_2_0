@@ -3,8 +3,10 @@
 PLH::HWBreakPointHook::HWBreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback, HANDLE hThread) : AVehHook() {
 	m_fnCallback = fnCallback;
 	m_fnAddress = fnAddress;
-	assert(m_impls.find(m_fnAddress) == m_impls.end());
-	m_impls.insert(AVehHookImpEntry((uint64_t)fnAddress, this));
+
+	auto entry = AVehHookImpEntry(fnAddress, this);
+	assert(m_impls.find(entry) == m_impls.end());
+	m_impls.insert(entry);
 
 	m_hThread = hThread;
 }
@@ -12,8 +14,10 @@ PLH::HWBreakPointHook::HWBreakPointHook(const uint64_t fnAddress, const uint64_t
 PLH::HWBreakPointHook::HWBreakPointHook(const char* fnAddress, const char* fnCallback, HANDLE hThread) : AVehHook() {
 	m_fnCallback = (uint64_t)fnCallback;
 	m_fnAddress = (uint64_t)fnAddress;
-	assert(m_impls.find(m_fnAddress) == m_impls.end());
-	m_impls.insert(AVehHookImpEntry((uint64_t)fnAddress, this));
+
+	auto entry = AVehHookImpEntry((uint64_t)fnAddress, this);
+	assert(m_impls.find(entry) == m_impls.end());
+	m_impls.insert(entry);
 
 	m_hThread = hThread;
 }

@@ -3,15 +3,19 @@
 PLH::BreakPointHook::BreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback) : AVehHook() {
 	m_fnCallback = fnCallback;
 	m_fnAddress = fnAddress;
-	assert(m_impls.find(m_fnAddress) == m_impls.end());
-	m_impls.insert(AVehHookImpEntry((uint64_t)fnAddress, this));
+
+	auto entry = AVehHookImpEntry(fnAddress, this);
+	assert(m_impls.find(entry) == m_impls.end());
+	m_impls.insert(entry);
 }
 
 PLH::BreakPointHook::BreakPointHook(const char* fnAddress, const char* fnCallback) : AVehHook() {
 	m_fnCallback = (uint64_t)fnCallback;
 	m_fnAddress = (uint64_t)fnAddress;
-	assert(m_impls.find(m_fnAddress) == m_impls.end());
-	m_impls.insert(AVehHookImpEntry((uint64_t)fnAddress, this));
+
+	auto entry = AVehHookImpEntry((uint64_t)fnAddress, this);
+	assert(m_impls.find(entry) == m_impls.end());
+	m_impls.insert(entry);
 }
 
 PLH::BreakPointHook::~BreakPointHook() {
