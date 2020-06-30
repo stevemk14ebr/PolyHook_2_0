@@ -4,7 +4,7 @@ PLH::HWBreakPointHook::HWBreakPointHook(const uint64_t fnAddress, const uint64_t
 	m_fnCallback = fnCallback;
 	m_fnAddress = fnAddress;
 	assert(m_impls.find(m_fnAddress) == m_impls.end());
-	m_impls[fnAddress] = this;
+	m_impls.insert(AVehHookImpEntry((uint64_t)fnAddress, this));
 
 	m_hThread = hThread;
 }
@@ -13,13 +13,13 @@ PLH::HWBreakPointHook::HWBreakPointHook(const char* fnAddress, const char* fnCal
 	m_fnCallback = (uint64_t)fnCallback;
 	m_fnAddress = (uint64_t)fnAddress;
 	assert(m_impls.find(m_fnAddress) == m_impls.end());
-	m_impls[(uint64_t)fnAddress] = this;
+	m_impls.insert(AVehHookImpEntry((uint64_t)fnAddress, this));
 
 	m_hThread = hThread;
 }
 
 PLH::HWBreakPointHook::~HWBreakPointHook() {
-	m_impls.erase(m_fnAddress);
+	m_impls.erase(AVehHookImpEntry(m_fnAddress, this));
 }
 
 bool PLH::HWBreakPointHook::hook()

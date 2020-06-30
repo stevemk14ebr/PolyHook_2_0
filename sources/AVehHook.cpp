@@ -2,8 +2,9 @@
 
 PLH::RefCounter PLH::AVehHook::m_refCount;
 void* PLH::AVehHook::m_hHandler;
-std::map<uint64_t, PLH::AVehHook*> PLH::AVehHook::m_impls;
+std::unordered_set<PLH::AVehHookImpEntry> PLH::AVehHook::m_impls;
 PLH::eException PLH::AVehHook::m_onException;
+PLH::eException PLH::AVehHook::m_onUnhandledException;
 
 // https://reverseengineering.stackexchange.com/questions/14992/what-are-the-vectored-continue-handlers
 PLH::AVehHook::AVehHook() {
@@ -35,13 +36,17 @@ PLH::eException& PLH::AVehHook::EventException() {
 	return m_onException;
 }
 
+PLH::eException& PLH::AVehHook::EventUnhandledException() {
+	return m_onUnhandledException;
+}
+
 LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	DWORD ExceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 	uint64_t ip = ExceptionInfo->ContextRecord->XIP;
 
 	// invoke callback
 	DWORD code = EXCEPTION_CONTINUE_SEARCH;
-	if (m_onException.Invoke(ExceptionInfo, &code) == false)
+	if (m_onException.Invoke(ExceptionInfo, &code))
 		return code;
 
 	switch (ExceptionCode) {
@@ -51,12 +56,24 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	case EXCEPTION_BREAKPOINT:
 	case EXCEPTION_SINGLE_STEP:
 		// lookup which instance to forward exception to
-        const auto it = m_impls.find(ip);
-
-		if (it != m_impls.end()) {
-			return it->second->OnException(ExceptionInfo);
+		for (const auto& hk : m_impls) {
+			switch (hk.type) {
+			case AVehHookImpType::SINGLE:
+				if (hk.startAddress == ip) {
+					return hk.impl->OnException(ExceptionInfo);
+				}
+				break;
+			case AVehHookImpType::RANGE:
+				if (ip >= hk.startAddress && ip < hk.endAddress) {
+					return hk.impl->OnException(ExceptionInfo);
+				}
+				break;
+			}
 		}
 		break;
+	default:
+		if (m_onUnhandledException.Invoke(ExceptionInfo, &code))
+			return code;
 	}
 	return EXCEPTION_CONTINUE_SEARCH;
 }
