@@ -44,7 +44,7 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	DWORD ExceptionCode = ExceptionInfo->ExceptionRecord->ExceptionCode;
 	uint64_t ip = ExceptionInfo->ContextRecord->XIP;
 
-	// invoke callback
+	// invoke callback (let users filter)
 	DWORD code = EXCEPTION_CONTINUE_SEARCH;
 	if (m_onException.Invoke(ExceptionInfo, &code))
 		return code;
@@ -53,6 +53,9 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 	case 0xE06D7363: // oooh aaahh a magic value
         std::cout << "C++ exception thrown" << std::endl;
 		break;
+	// these could all reasonably be hooked by someone
+	case EXCEPTION_GUARD_PAGE:
+	case EXCEPTION_ACCESS_VIOLATION:
 	case EXCEPTION_BREAKPOINT:
 	case EXCEPTION_SINGLE_STEP:
 		// lookup which instance to forward exception to
@@ -72,6 +75,7 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 		}
 		break;
 	default:
+		// let users extend manually
 		if (m_onUnhandledException.Invoke(ExceptionInfo, &code))
 			return code;
 	}
