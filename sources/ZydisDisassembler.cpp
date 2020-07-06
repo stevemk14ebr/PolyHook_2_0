@@ -31,13 +31,14 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 	insts_t insVec;
 	m_branchMap.clear();
 
-	auto size = (uint32_t)(End - start);
-	uint8_t* buf = new uint8_t[size];
-	memcpy(buf, (char*)firstInstruction, (uint32_t)size);
+	assert(End - start > 0);
+	if (End - start <= 0) {
+		return insVec;
+	}
 
 	ZydisDecodedInstruction insInfo;
 	uint64_t offset = 0;
-	while(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*)(buf + offset), (ZyanUSize)(End - start - offset), &insInfo)))
+	while(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*)(firstInstruction + offset), (ZyanUSize)(End - start - offset), &insInfo)))
 	{
 		Instruction::Displacement displacement = {};
 		displacement.Absolute = 0;
@@ -69,7 +70,6 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 
 		offset += insInfo.length;
 	}
-	delete[] buf;
 	return insVec;
 }
 
