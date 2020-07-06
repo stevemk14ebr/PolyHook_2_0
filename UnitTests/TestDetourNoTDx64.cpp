@@ -100,7 +100,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 		PLH::StackCanary canary;
 		asmjit::FuncSignatureT<void, int> sig;
 		sig.setCallConv(asmjit::CallConv::kIdX86Win64);
-		uint64_t JIT = callback.getJitFunc(sig, &myCallback);
+		uint64_t JIT = callback.getJitFunc(sig, asmjit::ArchInfo::kIdHost, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -115,7 +115,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 
 	SECTION("Floating argument") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("void", {"float"}, &myCallback);
+		uint64_t JIT = callback.getJitFunc("void", {"float"}, asmjit::ArchInfo::kIdHost, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -130,7 +130,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 
 	SECTION("Int, float, double arguments, string parsing types") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &myCallback);
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::ArchInfo::kIdHost, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -241,7 +241,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 
 	SECTION("Int, float, double arguments host") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double", "int" }, &mySecondCallback);
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -256,7 +256,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 
 	SECTION("Int, float, double arguments, float ret, host") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, &mySecondCallback);
+		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -272,7 +272,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 
 	SECTION("Int, float, double arguments, double ret, host") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("double", { "int", "float", "double", "int" }, &mySecondCallback);
+		uint64_t JIT = callback.getJitFunc("double", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);

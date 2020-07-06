@@ -107,7 +107,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	PLH::ILCallback callback;
 
 	SECTION("Integer argument") {
-		uint64_t JIT = callback.getJitFunc("void", { "int" }, &myCallback);
+		uint64_t JIT = callback.getJitFunc("void", { "int" }, asmjit::ArchInfo::kIdHost, &myCallback);
 		REQUIRE(JIT != 0);
 		
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -121,7 +121,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	}
 
 	SECTION("Floating argument") {
-		uint64_t JIT = callback.getJitFunc("void", { "float" }, &myCallback);
+		uint64_t JIT = callback.getJitFunc("void", { "float" }, asmjit::ArchInfo::kIdHost, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -135,7 +135,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	}
 
 	SECTION("Int, float, double arguments standard") {
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &myCallback, "stdcall");
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::ArchInfo::kIdHost, &myCallback, "stdcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -149,7 +149,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	}
 
 	SECTION("Int, float, double arguments cdecl") {
-		uint64_t JIT = callback.getJitFunc("void", {"int", "float", "double"}, &myCallback, "cdecl");
+		uint64_t JIT = callback.getJitFunc("void", {"int", "float", "double"}, asmjit::ArchInfo::kIdHost, &myCallback, "cdecl");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -163,7 +163,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	}
 
 	SECTION("Int, float, double arguments fastcall") {
-		uint64_t JIT = callback.getJitFunc("void", {"int", "float", "double"}, &myCallback, "fastcall");
+		uint64_t JIT = callback.getJitFunc("void", {"int", "float", "double"}, asmjit::ArchInfo::kIdHost, &myCallback, "fastcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -177,7 +177,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	}
 
 	SECTION("Verify return address spoofing doesn't crash") {
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &myCallback, "fastcall");
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::ArchInfo::kIdHost, &myCallback, "fastcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -259,7 +259,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 	PLH::ILCallback callback;
 
 	SECTION("Int, float, double arguments host") {
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &mySecondCallback);
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::ArchInfo::kIdHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -273,7 +273,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 	}
 
 	SECTION("Int, float, double arguments fastcall") {
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &mySecondCallback, "fastcall");
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::ArchInfo::kIdHost, &mySecondCallback, "fastcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -287,7 +287,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 	}
 
 	SECTION("Int, float, double arguments cdecl") {
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &mySecondCallback, "cdecl");
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::ArchInfo::kIdHost, &mySecondCallback, "cdecl");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -301,7 +301,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 	}
 
 	SECTION("Int, float, double arguments stdcall") {
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, &mySecondCallback, "stdcall");
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::ArchInfo::kIdHost, &mySecondCallback, "stdcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -472,7 +472,7 @@ TEST_CASE("ILCallback Return and Argument Re-Writing", "[ILCallback]") {
 	PLH::ILCallback callback;
 
 	SECTION("Minimal host, int, float, double, int return") {
-		uint64_t JIT = callback.getJitFunc("int", { "int", "float", "double", "int" }, &myThirdCallback);
+		uint64_t JIT = callback.getJitFunc("int", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &myThirdCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -488,7 +488,7 @@ TEST_CASE("ILCallback Return and Argument Re-Writing", "[ILCallback]") {
 	}
 
 	SECTION("Minimal host, int, float, double, float return") {
-		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, &myThirdCallback);
+		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &myThirdCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -504,7 +504,7 @@ TEST_CASE("ILCallback Return and Argument Re-Writing", "[ILCallback]") {
 	}
 
 	SECTION("Minimal host, int, float, double, double return") {
-		uint64_t JIT = callback.getJitFunc("double", { "int", "float", "double", "int" }, &myThirdCallback);
+		uint64_t JIT = callback.getJitFunc("double", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &myThirdCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -521,7 +521,7 @@ TEST_CASE("ILCallback Return and Argument Re-Writing", "[ILCallback]") {
 
 
 	SECTION("int, float, double, int return, stdcall") {
-		uint64_t JIT = callback.getJitFunc("int", { "int", "float", "double", "int" }, &myThirdCallback, "stdcall");
+		uint64_t JIT = callback.getJitFunc("int", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &myThirdCallback, "stdcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -538,7 +538,7 @@ TEST_CASE("ILCallback Return and Argument Re-Writing", "[ILCallback]") {
 
 
 	SECTION("int, float, double, int return, cdecl") {
-		uint64_t JIT = callback.getJitFunc("int", { "int", "float", "double", "int" }, &myThirdCallback, "cdecl");
+		uint64_t JIT = callback.getJitFunc("int", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &myThirdCallback, "cdecl");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -554,7 +554,7 @@ TEST_CASE("ILCallback Return and Argument Re-Writing", "[ILCallback]") {
 	}
 
 	SECTION("int, float, double, int return, fastcall") {
-		uint64_t JIT = callback.getJitFunc("int", { "int", "float", "double", "int" }, &myThirdCallback, "fastcall");
+		uint64_t JIT = callback.getJitFunc("int", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &myThirdCallback, "fastcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -570,7 +570,7 @@ TEST_CASE("ILCallback Return and Argument Re-Writing", "[ILCallback]") {
 	}
 
 	SECTION("int, float, double, float return, fastcall") {
-		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, &myThirdCallback, "fastcall");
+		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &myThirdCallback, "fastcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -587,7 +587,7 @@ TEST_CASE("ILCallback Return and Argument Re-Writing", "[ILCallback]") {
 	}
 
 	SECTION("int, float, double, float return, cdecl") {
-		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, &myThirdCallback, "cdecl");
+		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &myThirdCallback, "cdecl");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);
@@ -604,7 +604,7 @@ TEST_CASE("ILCallback Return and Argument Re-Writing", "[ILCallback]") {
 	}
 
 	SECTION("int, float, double, float return, std") {
-		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, &myThirdCallback, "stdcall");
+		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &myThirdCallback, "stdcall");
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x86);

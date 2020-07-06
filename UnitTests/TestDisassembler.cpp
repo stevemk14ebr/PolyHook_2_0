@@ -213,7 +213,8 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 		(uint64_t)&x86ASM.front() + x86ASM.size());
 
-	Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
+	// TODO: full buffer isn't disassembled
+	//Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
 	std::vector<uint8_t> CorrectSizes = {2, 6, 5, 6, 2, 6, 2, 5, 6};
 	std::vector<char*> CorrectMnemonic = {"add", "add", "add", "jne", "je", "lea", "jmp", "jmp", "jmp"};
 
@@ -356,8 +357,9 @@ TEST_CASE("Compare x86 Decompilers", "[ADisassembler],[ZydisDisassembler][Capsto
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 		(uint64_t)&x86ASM.front() + x86ASM.size());
 
-	Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
-	Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
+	// TODO: full buffer not disassembled
+	//Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
+	//Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
 
 	SECTION("Check Integrity") {
 		PLH::StackCanary canary;

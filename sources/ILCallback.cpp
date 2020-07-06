@@ -56,7 +56,7 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 	return asmjit::Type::kIdVoid;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH::ILCallback::tUserCallback callback) {;
+uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asmjit::ArchInfo::Id arch, const PLH::ILCallback::tUserCallback callback) {;
 	/*AsmJit is smart enough to track register allocations and will forward
 	  the proper registers the right values and fixup any it dirtied earlier.
 	  This can only be done if it knows the signature, and ABI, so we give it 
@@ -74,7 +74,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	  physical registers may be inserted as nodes.
 	*/
 	asmjit::CodeHolder code;                      
-	code.init(asmjit::CodeInfo(asmjit::ArchInfo::kIdHost));			
+	code.init(asmjit::CodeInfo(arch));			
 	
 	// initialize function
 	asmjit::x86::Compiler cc(&code);            
@@ -252,14 +252,14 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const PLH
 	return m_callbackBuf;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const tUserCallback callback, std::string callConv/* = ""*/) {
+uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const asmjit::ArchInfo::Id arch, const tUserCallback callback, std::string callConv/* = ""*/) {
 	asmjit::FuncSignature sig = {};
 	std::vector<uint8_t> args;
 	for (const std::string& s : paramTypes) {
 		args.push_back(getTypeId(s));
 	}
 	sig.init(getCallConv(callConv),asmjit::FuncSignature::kNoVarArgs, getTypeId(retType), args.data(), (uint32_t)args.size());
-	return getJitFunc(sig, callback);
+	return getJitFunc(sig, arch, callback);
 }
 
 uint64_t* PLH::ILCallback::getTrampolineHolder() {
