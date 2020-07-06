@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <cctype>
+#include <iomanip>
 
 namespace PLH {
 
