@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cctype>
 #include <iomanip>
+#include <sstream>
 
 namespace PLH {
 
