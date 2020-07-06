@@ -26,6 +26,10 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 	m_branchMap.clear();
 
 	uint64_t size = End - start;
+	assert(size > 0);
+	if (size <= 0)
+		return insVec;
+
 	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&size, &start, insInfo)) {
 		// Set later by 'SetDisplacementFields'
 		Instruction::Displacement displacement = {};
@@ -51,6 +55,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 		if (isFuncEnd(inst))
 			break;
 	}
+
 	cs_free(insInfo, 1);
 	return insVec;
 }
