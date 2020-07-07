@@ -10,7 +10,7 @@ PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redire
 {}
 
 bool PLH::VTableSwapHook::hook() {
-	MemoryProtector prot(m_class, sizeof(void*), ProtFlag::R | ProtFlag::W);
+	MemoryProtector prot(m_class, sizeof(void*), ProtFlag::R | ProtFlag::W, *this);
 	m_origVtable = *(uintptr_t**)m_class;
 	m_vFuncCount = countVFuncs();
 	if (m_vFuncCount <= 0)
@@ -41,7 +41,7 @@ bool PLH::VTableSwapHook::unHook() {
 	if (!m_Hooked)
 		return false;
 
-	MemoryProtector prot(m_class, sizeof(void*), ProtFlag::R | ProtFlag::W);
+	MemoryProtector prot(m_class, sizeof(void*), ProtFlag::R | ProtFlag::W, *this);
 	*(uint64_t**)m_class = (uint64_t*)m_origVtable;
 	
 	m_newVtable.reset();

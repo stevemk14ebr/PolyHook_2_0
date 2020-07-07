@@ -5,6 +5,7 @@
 #include "polyhook2/CapstoneDisassembler.hpp"
 #include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/Tests/StackCanary.hpp"
+#include "polyhook2/MemAccessor.hpp"
 
 #include <iostream>
 #include <vector>
@@ -91,7 +92,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x64);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
-		(uint64_t)&x64ASM.front() + x64ASM.size());
+		(uint64_t)&x64ASM.front() + x64ASM.size(), PLH::MemAccessor());
 
 	Instructions.erase(Instructions.begin() + 0xB, Instructions.end());
 
@@ -142,10 +143,10 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 		PLH::StackCanary canary;
 		auto vecCopy = x64ASM;
 		Instructions[8].setRelativeDisplacement(0x00);
-		disasm.writeEncoding(Instructions[8]);
+		disasm.writeEncoding(Instructions[8], PLH::MemAccessor());
 
 		Instructions[9].setRelativeDisplacement(0x00);
-		disasm.writeEncoding(Instructions[9]);
+		disasm.writeEncoding(Instructions[9], PLH::MemAccessor());
 
 		REQUIRE(Instructions[8].getDestination() == Instructions[8].getAddress() + Instructions[8].size());
 		REQUIRE(Instructions[9].getDestination() == Instructions[9].getAddress() + Instructions[9].size());
@@ -153,7 +154,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 		// undo writes
 		x64ASM = vecCopy;
 		Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
-			(uint64_t)&x64ASM.front() + x64ASM.size());
+			(uint64_t)&x64ASM.front() + x64ASM.size(), PLH::MemAccessor());
 	}
 
 	SECTION("Check multiple calls") {
@@ -161,14 +162,14 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 		PLH::insts_t insts;
 		for (int i = 0; i < 100; i++) {
 			insts = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
-				(uint64_t)&x64ASM.front() + x64ASM.size());
+				(uint64_t)&x64ASM.front() + x64ASM.size(), PLH::MemAccessor());
 		}
 	}
 
 	SECTION("Verify branching, relative fields") {
 		PLH::StackCanary canary;
 		PLH::insts_t insts = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
-			(uint64_t)&x64ASM.front() + x64ASM.size());
+			(uint64_t)&x64ASM.front() + x64ASM.size(), PLH::MemAccessor());
 
 		REQUIRE(insts.at(0).hasDisplacement() == false);
 		REQUIRE(insts.at(0).isBranching() == false);
@@ -193,7 +194,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 			randomBuf[i] = randByte();
 
 		auto insts = disasm.disassemble((uint64_t)randomBuf, (uint64_t)0x0,
-										500);
+										500, PLH::MemAccessor());
 		std::cout << insts << std::endl;
 	}
 }
@@ -211,7 +212,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x86);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-		(uint64_t)&x86ASM.front() + x86ASM.size());
+		(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
 
 	// TODO: full buffer isn't disassembled
 	//Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
@@ -266,10 +267,10 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 		PLH::StackCanary canary;
 		auto vecCopy = x86ASM;
 		Instructions[3].setRelativeDisplacement(0x00);
-		disasm.writeEncoding(Instructions[3]);
+		disasm.writeEncoding(Instructions[3], PLH::MemAccessor());
 
 		Instructions[6].setRelativeDisplacement(0x00);
-		disasm.writeEncoding(Instructions[6]);
+		disasm.writeEncoding(Instructions[6], PLH::MemAccessor());
 
 		REQUIRE(Instructions[3].getDestination() == Instructions[3].getAddress() + Instructions[3].size());
 		REQUIRE(Instructions[6].getDestination() == Instructions[6].getAddress() + Instructions[6].size());
@@ -278,7 +279,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 		x86ASM = vecCopy;
 		Instructions =
 			disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-			(uint64_t)&x86ASM.front() + x86ASM.size());
+			(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
 	}
 
 	SECTION("Check multiple calls") {
@@ -286,14 +287,14 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 		PLH::insts_t insts;
 		for (int i = 0; i < 100; i++) {
 			insts = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-				(uint64_t)&x86ASM.front() + x86ASM.size());
+				(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
 		}
 	}
 
 	SECTION("Verify branching, relative fields") {
 		PLH::StackCanary canary;
 		PLH::insts_t insts = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-			(uint64_t)&x86ASM.front() + x86ASM.size());
+			(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
 
 		REQUIRE(insts.at(4).isBranching());
 		REQUIRE(insts.at(4).hasDisplacement());
@@ -315,7 +316,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 			randomBuf[i] = randByte();
 
 		auto insts = disasm.disassemble((uint64_t)randomBuf, (uint64_t)0x0,
-										500);
+										500, PLH::MemAccessor());
 		std::cout << insts << std::endl;
 	}
 }
@@ -324,7 +325,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64 Two", "[ADisassembler],[CapstoneDisas
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x64);
 	PLH::insts_t Instructions = disasm.disassemble((uint64_t)&x64ASM2.front(), (uint64_t)&x64ASM2.front(),
-		(uint64_t)&x64ASM2.front() + x64ASM2.size());
+		(uint64_t)&x64ASM2.front() + x64ASM2.size(), PLH::MemAccessor());
 
 	SECTION("Verify relative displacements") {
 		REQUIRE(Instructions.at(0).m_isRelative);
@@ -351,11 +352,11 @@ TEST_CASE("Compare x86 Decompilers", "[ADisassembler],[ZydisDisassembler][Capsto
 	// Use capstone as reference
 	PLH::CapstoneDisassembler disasmRef(PLH::Mode::x86);
 	auto                      InstructionsRef = disasmRef.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-		(uint64_t)&x86ASM.front() + x86ASM.size());
+		(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
 
 	PLH::ZydisDisassembler disasm(PLH::Mode::x86);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-		(uint64_t)&x86ASM.front() + x86ASM.size());
+		(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
 
 	// TODO: full buffer not disassembled
 	//Instructions.erase(Instructions.begin() + 0x9, Instructions.end());

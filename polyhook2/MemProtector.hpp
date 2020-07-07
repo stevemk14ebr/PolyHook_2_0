@@ -5,6 +5,7 @@
 #ifndef POLYHOOK_2_MEMORYPROTECTOR_HPP
 #define POLYHOOK_2_MEMORYPROTECTOR_HPP
 
+#include "polyhook2/MemAccessor.hpp"
 #include "polyhook2/Enums.hpp"
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -28,13 +29,13 @@ ProtFlag TranslateProtection(const int prot);
 
 class MemoryProtector {
 public:
-	MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot, bool unsetOnDestroy = true) {
+	MemoryProtector(const uint64_t address, const uint64_t length, const PLH::ProtFlag prot, MemAccessor& accessor, bool unsetOnDestroy = true) : m_accessor(accessor) {
 		m_address = address;
 		m_length = length;
 		unsetLater = unsetOnDestroy;
 
 		m_origProtection = PLH::ProtFlag::UNSET;
-		m_origProtection = protect(address, length, TranslateProtection(prot));
+		m_origProtection = m_accessor.mem_protect(address, length, prot, status);
 	}
 
 	PLH::ProtFlag originalProt() {
@@ -49,17 +50,11 @@ public:
 		if (m_origProtection == PLH::ProtFlag::UNSET || !unsetLater)
 			return;
 
-		protect(m_address, m_length, TranslateProtection(m_origProtection));
+		m_accessor.mem_protect(m_address, m_length, m_origProtection, status);
 	}
 private:
-	PLH::ProtFlag protect(const uint64_t address, const uint64_t length, int prot) {
-		DWORD orig;
-		DWORD dwProt = prot;
-		status = VirtualProtect((char*)address, (SIZE_T)length, dwProt, &orig) != 0;
-		return TranslateProtection(orig);
-	}
-
 	PLH::ProtFlag m_origProtection;
+	MemAccessor& m_accessor;
 
 	uint64_t m_address;
 	uint64_t m_length;

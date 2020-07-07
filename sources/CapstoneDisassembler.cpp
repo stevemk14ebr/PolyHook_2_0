@@ -20,7 +20,7 @@ PLH::CapstoneDisassembler::~CapstoneDisassembler() {
 }
 
 PLH::insts_t
-PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
+PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End, const MemAccessor& accessor) {
 	cs_insn* insInfo = cs_malloc(m_capHandle);
 	insts_t insVec;
 	m_branchMap.clear();
@@ -30,7 +30,14 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 	if (size <= 0)
 		return insVec;
 
-	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&firstInstruction, (size_t*)&size, &start, insInfo)) {
+	// copy potentially remote memory to local buffer
+	uint8_t* buf = new uint8_t[(uint32_t)size];
+
+	// bufAddr updated by cs_disasm_iter
+	uint64_t bufAddr = (uint64_t)buf;
+	accessor.mem_copy((uint64_t)buf, firstInstruction, size);
+
+	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&bufAddr, (size_t*)&size, &start, insInfo)) {
 		// Set later by 'SetDisplacementFields'
 		Instruction::Displacement displacement = {};
 		displacement.Absolute = 0;
@@ -55,7 +62,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 		if (isFuncEnd(inst))
 			break;
 	}
-
+	delete[] buf;
 	cs_free(insInfo, 1);
 	return insVec;
 }

@@ -23,14 +23,14 @@ PLH::BreakPointHook::~BreakPointHook() {
 }
 
 bool PLH::BreakPointHook::hook() {
-	MemoryProtector prot(m_fnAddress, 1, ProtFlag::R | ProtFlag::W | ProtFlag::X);
+	MemoryProtector prot(m_fnAddress, 1, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
 	m_origByte = *(uint8_t*)m_fnAddress;
 	*(uint8_t*)m_fnAddress = 0xCC;
 	return true;
 }
 
 bool PLH::BreakPointHook::unHook() {
-	MemoryProtector prot(m_fnAddress, 1, ProtFlag::R | ProtFlag::W | ProtFlag::X);
+	MemoryProtector prot(m_fnAddress, 1, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
 	*(uint8_t*)m_fnAddress = m_origByte;
 	return true;
 }

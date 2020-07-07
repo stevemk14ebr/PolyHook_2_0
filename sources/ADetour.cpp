@@ -56,7 +56,7 @@ bool PLH::Detour::followJmp(PLH::insts_t& functionInsts, const uint8_t curDepth,
 	}
 
 	uint64_t dest = functionInsts.front().getDestination();
-	functionInsts = m_disasm.disassemble(dest, dest, dest + 100);
+	functionInsts = m_disasm.disassemble(dest, dest, dest + 100, *this);
 	return followJmp(functionInsts, curDepth + 1); // recurse
 }
 
@@ -78,14 +78,17 @@ void PLH::Detour::writeNop(uint64_t base, uint32_t size) {
 		uint64_t fat = size / 2;
 		bool leftOver = size % 2;
 		for (uint64_t i = 0; i < fat; i++) {
-			*(uint16_t*)(base + i * 2) = 0x6690;
+			uint16_t multi_nop = 0x9066;
+			mem_copy(base + i * 2, (uint64_t)&multi_nop, sizeof(multi_nop));
 		}
 
 		if (leftOver) {
-			*(uint8_t*)(base + fat * 2) = 0x90;
+			uint8_t nop = 0x90;
+			mem_copy(base + fat * 2, (uint64_t)&nop, sizeof(nop));
 		}
 	} else if(size == 1) {
-		*(uint8_t*)base = 0x90;
+		uint8_t nop = 0x90;
+		mem_copy(base, (uint64_t)&nop, sizeof(nop));
 	} else {
 		// this case is a nop for the nop routine :p
 	}
@@ -173,8 +176,8 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 bool PLH::Detour::unHook() {
 	assert(m_hooked);
 
-	MemoryProtector prot(m_fnAddress, PLH::calcInstsSz(m_originalInsts), ProtFlag::R | ProtFlag::W | ProtFlag::X);
-	m_disasm.writeEncoding(m_originalInsts);
+	MemoryProtector prot(m_fnAddress, PLH::calcInstsSz(m_originalInsts), ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
+	m_disasm.writeEncoding(m_originalInsts, *this);
 	
 	if (m_trampoline != NULL) {
 		delete[](char*)m_trampoline;

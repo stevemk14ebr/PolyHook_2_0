@@ -7,7 +7,7 @@ include(CMakePackageConfigHelpers)
 #
 # Options
 #
-option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" ON)
+option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" OFF)
 
 option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook as shared libary" OFF)
 option(POLYHOOK_BUILD_SHARED_ASMJIT "Build polyhook as shared libary" OFF)
@@ -183,6 +183,7 @@ set(POLYHOOK_CORE_HEADERS ${PROJECT_SOURCE_DIR}/polyhook2/ADisassembler.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/UID.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/ErrorLog.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/MemProtector.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/MemAccessor.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/PageAllocator.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Tests/TestEffectTracker.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Tests/StackCanary.hpp
@@ -193,6 +194,7 @@ install(FILES ${POLYHOOK_CORE_HEADERS} DESTINATION include/polyhook2)
 
 target_sources(${PROJECT_NAME} PRIVATE
 	${PROJECT_SOURCE_DIR}/sources/MemProtector.cpp
+	${PROJECT_SOURCE_DIR}/sources/MemAccessor.cpp
 	${PROJECT_SOURCE_DIR}/sources/TestEffectTracker.cpp
 	${PROJECT_SOURCE_DIR}/sources/StackCanary.cpp
 	${PROJECT_SOURCE_DIR}/sources/PageAllocator.cpp

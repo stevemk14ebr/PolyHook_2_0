@@ -23,7 +23,7 @@ public:
 	virtual ~CapstoneDisassembler();
 
 	virtual std::vector<PLH::Instruction>
-		disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end) override;
+		disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end, const MemAccessor& accessor) override;
 private:
 	x86_reg getIpReg() const {
 		if (m_mode == PLH::Mode::x64)

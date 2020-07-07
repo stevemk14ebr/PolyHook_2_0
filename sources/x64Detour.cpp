@@ -24,7 +24,6 @@ uint8_t PLH::x64Detour::getPrefJmpSize() const {
 }
 
 std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8_t minSz) {
-	HANDLE hSelf = GetCurrentProcess();
 	const uint64_t chunkSize = 64000;
 	unsigned char* data = new unsigned char[chunkSize];
 
@@ -43,8 +42,8 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 	for (uint64_t search = addr - chunkSize; (search + chunkSize) >= calc_2gb_below(addr); search -= chunkSize) {
 		memset(data, 0, chunkSize);
 
-		SIZE_T read = 0;
-		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+		size_t read = 0;
+		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
 			uint32_t contiguousInt3 = 0;
 			uint32_t contiguousNop = 0;
 			assert(read <= chunkSize);
@@ -78,8 +77,8 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 	for (uint64_t search = addr; (search + chunkSize) < calc2gb_above(addr); search += chunkSize) {
 		memset(data, 0, chunkSize);
 
-		SIZE_T read = 0;
-		if (ReadProcessMemory(hSelf, (char*)search, data, chunkSize, &read) || GetLastError() == ERROR_PARTIAL_COPY) {
+		size_t read = 0;
+		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
 			uint32_t contiguousInt3 = 0;
 			uint32_t contiguousNop = 0;
 
@@ -111,7 +110,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 
 bool PLH::x64Detour::hook() {
 	// ------- Must resolve callback first, so that m_disasm branchmap is filled for prologue stuff
-	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100);
+	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100, *this);
 	if (callbackInsts.empty()) {
 		ErrorLog::singleton().push("Disassembler unable to decode any valid callback instructions", ErrorLevel::SEV);
 		return false;
@@ -125,7 +124,7 @@ bool PLH::x64Detour::hook() {
 	// update given fn callback address to resolved one
 	m_fnCallback = callbackInsts.front().getAddress();
 
-	insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100);
+	insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
 	if (insts.empty()) {
 		ErrorLog::singleton().push("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
 		return false;
@@ -173,14 +172,14 @@ bool PLH::x64Detour::hook() {
 			return false;
 		}
 
-		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz)) + "\n", ErrorLevel::INFO);
+		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz, *this)) + "\n", ErrorLevel::INFO);
 		if (!jmpTblOpt.empty())
 			ErrorLog::singleton().push("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
 	}
 
 	*m_userTrampVar = m_trampoline;
 
-	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
+	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
 	// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
 	auto cave = findNearestCodeCave(m_fnAddress, 8);
 	if (!cave) {
@@ -188,9 +187,9 @@ bool PLH::x64Detour::hook() {
 		return false;
 	}
 
-	MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
+	MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 	const auto prolJmp = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
-	m_disasm.writeEncoding(prolJmp);
+	m_disasm.writeEncoding(prolJmp, *this);
 
 	// Nop the space between jmp and end of prologue
 	assert(roundProlSz >= minProlSz);
@@ -241,7 +240,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	} while (instsNeedingEntry.size() > neededEntryCount);
 
 	const int64_t delta = m_trampoline - prolStart;
-	MemoryProtector prot(m_trampoline, m_trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
+	MemoryProtector prot(m_trampoline, m_trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 
 	// Insert jmp from trampoline -> prologue after overwritten section
 	const uint64_t jmpToProlAddr = m_trampoline + prolSz;
@@ -250,7 +249,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 		const auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prologue.front().getAddress() + prolSz, jmpHolderCurAddr);
 
 		ErrorLog::singleton().push("Jmp To Prol:\n" + instsToStr(jmpToProl) + "\n", ErrorLevel::INFO);
-		m_disasm.writeEncoding(jmpToProl);
+		m_disasm.writeEncoding(jmpToProl, *this);
 	}
 
 	// each jmp tbl entries holder is one slot down from the previous (lambda holds state)

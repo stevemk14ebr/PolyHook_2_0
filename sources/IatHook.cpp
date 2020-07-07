@@ -21,7 +21,7 @@ bool PLH::IatHook::hook() {
 		return false;
 
 	// IAT is by default a writeable section
-	MemoryProtector prot((uint64_t)&pThunk->u1.Function, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W);
+	MemoryProtector prot((uint64_t)&pThunk->u1.Function, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W, *this);
 	m_origFunc = (uint64_t)pThunk->u1.Function;
 	pThunk->u1.Function = (uintptr_t)m_fnCallback;
 	m_hooked = true;
@@ -39,7 +39,7 @@ bool PLH::IatHook::unHook() {
 	if (pThunk == nullptr)
 		return false;
 
-	MemoryProtector prot((uint64_t)&pThunk->u1.Function, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W);
+	MemoryProtector prot((uint64_t)&pThunk->u1.Function, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W, *this);
 	pThunk->u1.Function = (uintptr_t)m_origFunc;
 	m_hooked = false;
 	*m_userOrigVar = NULL;

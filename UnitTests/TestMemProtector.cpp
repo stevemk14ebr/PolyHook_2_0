@@ -31,32 +31,33 @@ TEST_CASE("Test setting page protections", "[MemProtector]") {
 	char* page = (char*)VirtualAlloc(0, 4 * 1024, MEM_COMMIT, PAGE_NOACCESS);
 	bool isGood = page != nullptr; // indirection because catch reads var, causing access violation
 	REQUIRE(isGood);
+	PLH::MemAccessor accessor;
 
 	{
-		PLH::MemoryProtector prot((uint64_t)page, 4 * 1024, PLH::ProtFlag::R);
+		PLH::MemoryProtector prot((uint64_t)page, 4 * 1024, PLH::ProtFlag::R, accessor);
 		REQUIRE(prot.isGood());
 		REQUIRE(prot.originalProt() == PLH::ProtFlag::NONE);
 
-		PLH::MemoryProtector prot1((uint64_t)page, 4 * 1024, PLH::ProtFlag::W);
+		PLH::MemoryProtector prot1((uint64_t)page, 4 * 1024, PLH::ProtFlag::W, accessor);
 		REQUIRE(prot1.isGood());
 		REQUIRE(prot1.originalProt() == PLH::ProtFlag::R);
 
-		PLH::MemoryProtector prot2((uint64_t)page, 4 * 1024, PLH::ProtFlag::X);
+		PLH::MemoryProtector prot2((uint64_t)page, 4 * 1024, PLH::ProtFlag::X, accessor);
 		REQUIRE(prot2.isGood());
 		REQUIRE((prot2.originalProt() & PLH::ProtFlag::W));
 	}
 
 	// protection should now be NOACCESS if destructors worked
 	{
-		PLH::MemoryProtector prot((uint64_t)page, 4 * 1024, PLH::ProtFlag::X | PLH::ProtFlag::R);
+		PLH::MemoryProtector prot((uint64_t)page, 4 * 1024, PLH::ProtFlag::X | PLH::ProtFlag::R, accessor);
 		REQUIRE(prot.isGood());
 		REQUIRE(prot.originalProt() == PLH::ProtFlag::NONE);
 
-		PLH::MemoryProtector prot1((uint64_t)page, 4 * 1024, PLH::ProtFlag::X | PLH::ProtFlag::W);
+		PLH::MemoryProtector prot1((uint64_t)page, 4 * 1024, PLH::ProtFlag::X | PLH::ProtFlag::W, accessor);
 		REQUIRE(prot.isGood());
 		REQUIRE((prot1.originalProt() == (PLH::ProtFlag::X | PLH::ProtFlag::R)));
 
-		PLH::MemoryProtector prot2((uint64_t)page, 4 * 1024, PLH::ProtFlag::X | PLH::ProtFlag::R | PLH::ProtFlag::W);
+		PLH::MemoryProtector prot2((uint64_t)page, 4 * 1024, PLH::ProtFlag::X | PLH::ProtFlag::R | PLH::ProtFlag::W, accessor);
 		REQUIRE(prot.isGood());
 		REQUIRE(prot2.originalProt() == (PLH::ProtFlag::X | PLH::ProtFlag::R | PLH::ProtFlag::W));
 	}

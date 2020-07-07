@@ -8,6 +8,7 @@
 
 #include "polyhook2/ADisassembler.hpp"
 #include "polyhook2/Enums.hpp"
+#include "polyhook2/MemAccessor.hpp"
 
 #if defined(__clang__)
 #define NOINLINE __attribute__((noinline))
@@ -28,7 +29,7 @@ _Pragma("GCC optimize (\"O0\")")
 #define PH_UNUSED(a) (void)a
 
 namespace PLH {
-class IHook {
+class IHook : public MemAccessor {
 public:
 	IHook() {
 		m_debugSet = false;

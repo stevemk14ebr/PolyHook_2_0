@@ -21,7 +21,7 @@ uint8_t PLH::x86Detour::getJmpSize() const {
 
 bool PLH::x86Detour::hook() {
 	// ------- Must resolve callback first, so that m_disasm branchmap is filled for prologue stuff
-	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100);
+	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100, *this);
 	if (callbackInsts.empty()) {
 		ErrorLog::singleton().push("Disassembler unable to decode any valid callback instructions", ErrorLevel::SEV);
 		return false;
@@ -35,7 +35,7 @@ bool PLH::x86Detour::hook() {
 	// update given fn callback address to resolved one
 	m_fnCallback = callbackInsts.front().getAddress();
 
-	insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100);
+	insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
 	if (insts.size() <= 0) {
 		ErrorLog::singleton().push("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
 		return false;
@@ -82,16 +82,16 @@ bool PLH::x86Detour::hook() {
 		if (!makeTrampoline(prologue, jmpTblOpt))
 			return false;
 
-		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz)) + "\n", ErrorLevel::INFO);
+		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz, *this)) + "\n", ErrorLevel::INFO);
 		if (!jmpTblOpt.empty())
 			ErrorLog::singleton().push("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
 	}
 
 	*m_userTrampVar = m_trampoline;
 
-	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X);
+	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
 	const auto prolJmp = makex86Jmp(m_fnAddress, m_fnCallback);
-	m_disasm.writeEncoding(prolJmp);
+	m_disasm.writeEncoding(prolJmp, *this);
 
 	// Nop the space between jmp and end of prologue
 	assert(roundProlSz >= minProlSz);
@@ -141,13 +141,13 @@ bool PLH::x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	} while (instsNeedingEntry.size() > neededEntryCount);
 
 	const int64_t delta = m_trampoline - prolStart;
-	MemoryProtector prot(m_trampoline, m_trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, false);
+	MemoryProtector prot(m_trampoline, m_trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 
 	// Insert jmp from trampoline -> prologue after overwritten section
 	const uint64_t jmpToProlAddr = m_trampoline + prolSz;
 	{
 		const auto jmpToProl = makex86Jmp(jmpToProlAddr, prologue.front().getAddress() + prolSz);
-		m_disasm.writeEncoding(jmpToProl);
+		m_disasm.writeEncoding(jmpToProl, *this);
 	}
 
 	const uint64_t jmpTblStart = jmpToProlAddr + getJmpSize();

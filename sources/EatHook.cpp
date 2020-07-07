@@ -40,7 +40,7 @@ bool PLH::EatHook::hook() {
 			return false;
 		}
 
-		PLH::ADisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback));
+		PLH::ADisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback), *this);
 		offset = m_trampoline - m_moduleBase;
 
 		ErrorLog::singleton().push("EAT hook offset is > 32bit's. Allocation of trampoline necessary", ErrorLevel::INFO);
@@ -48,7 +48,7 @@ bool PLH::EatHook::hook() {
 
 	// Just like IAT, EAT is by default a writeable section
 	// any EAT entry must be an offset
-	MemoryProtector prot((uint64_t)pExport, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W);
+	MemoryProtector prot((uint64_t)pExport, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W, *this);
 	m_origFunc = *pExport; // original offset
 	*pExport = (uint32_t)offset;
 	m_hooked = true;
@@ -66,7 +66,7 @@ bool PLH::EatHook::unHook() {
 	if (pExport == nullptr)
 		return false;
 
-	MemoryProtector prot((uint64_t)pExport, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W);
+	MemoryProtector prot((uint64_t)pExport, sizeof(uintptr_t), ProtFlag::R | ProtFlag::W, *this);
 	*pExport = (uint32_t)m_origFunc;
 	m_hooked = false;
 	*m_userOrigVar = NULL;

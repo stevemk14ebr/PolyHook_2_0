@@ -139,7 +139,7 @@ PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblS
 			inst.setDestination(jmpTblCurAddr);
 			jmpTblCurAddr += jmpSz;
 
-			m_disasm.writeEncoding(entry);
+			m_disasm.writeEncoding(entry, *this);
 			jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());
 		} else if (std::find(instsNeedingReloc.begin(), instsNeedingReloc.end(), inst) != instsNeedingReloc.end()) {
 			assert(inst.hasDisplacement());
@@ -151,7 +151,7 @@ PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblS
 			inst.setAddress(inst.getAddress() + delta);
 		}
 
-		m_disasm.writeEncoding(inst);
+		m_disasm.writeEncoding(inst, *this);
 	}
 	return jmpTblEntries;
 }

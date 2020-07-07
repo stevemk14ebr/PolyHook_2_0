@@ -19,7 +19,7 @@ public:
 	virtual ~ZydisDisassembler();
 
 	virtual std::vector<PLH::Instruction>
-		disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end) override;
+		disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end, const MemAccessor& accessor) override;
 private:
 
 	bool getOpStr(ZydisDecodedInstruction* pInstruction, uint64_t addr, std::string* pOpStrOut);

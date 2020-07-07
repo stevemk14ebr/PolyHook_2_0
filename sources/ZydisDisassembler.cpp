@@ -27,18 +27,23 @@ PLH::ZydisDisassembler::~ZydisDisassembler() {
 }
 
 PLH::insts_t
-PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End) {
+PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End, const MemAccessor& accessor) {
 	insts_t insVec;
 	m_branchMap.clear();
 
-	assert(End - start > 0);
-	if (End - start <= 0) {
+	uint64_t size = End - start;
+	assert(size > 0);
+	if (size <= 0) {
 		return insVec;
 	}
 
+	// copy potentially remote memory to local buffer
+	uint8_t* buf = new uint8_t[(uint32_t)size];
+	accessor.mem_copy((uint64_t)buf, firstInstruction, size);
+
 	ZydisDecodedInstruction insInfo;
 	uint64_t offset = 0;
-	while(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*)(firstInstruction + offset), (ZyanUSize)(End - start - offset), &insInfo)))
+	while(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*)(buf + offset), (ZyanUSize)(size - offset), &insInfo)))
 	{
 		Instruction::Displacement displacement = {};
 		displacement.Absolute = 0;
@@ -54,7 +59,7 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 						 0,
 						 false,
 			             false,
-						 (uint8_t*)((unsigned char*)firstInstruction + offset),
+						 (uint8_t*)((unsigned char*)buf + offset),
 						 insInfo.length,
 						 ZydisMnemonicGetString(insInfo.mnemonic),
 						 opstr,
@@ -70,6 +75,7 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 
 		offset += insInfo.length;
 	}
+	delete[] buf;
 	return insVec;
 }
 
