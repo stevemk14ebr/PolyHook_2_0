@@ -1,8 +1,7 @@
 #ifndef POLYHOOK_2_0_ILCALLBACK_HPP
 #define POLYHOOK_2_0_ILCALLBACK_HPP
 
-#pragma warning( push )
-#pragma warning( disable : 4245)
+#pragma warning(push, 0)  
 #include <asmjit/asmjit.h>
 #pragma warning( pop )
 

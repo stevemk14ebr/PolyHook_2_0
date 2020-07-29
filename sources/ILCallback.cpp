@@ -56,6 +56,8 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 	return asmjit::Type::kIdVoid;
 }
 
+// TODO: remove this
+#pragma warning( disable : 4996)
 uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asmjit::ArchInfo::Id arch, const PLH::ILCallback::tUserCallback callback) {;
 	/*AsmJit is smart enough to track register allocations and will forward
 	  the proper registers the right values and fixup any it dirtied earlier.
@@ -74,7 +76,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	  physical registers may be inserted as nodes.
 	*/
 	asmjit::CodeHolder code;                      
-	code.init(asmjit::CodeInfo(arch));			
+	code.init(asmjit::CodeInfo(arch));
 	
 	// initialize function
 	asmjit::x86::Compiler cc(&code);            
@@ -207,26 +209,10 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 
 	cc.func()->frame().addDirtyRegs(origPtr);
 	
-	
-
 	cc.endFunc();
-	
-	/*
-		finalize() Manually so we can mutate node list (for future use). In asmjit the compiler inserts implicit calculated 
-		nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
-		Asmjit finalize applies optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
-	*/
-	cc.runPasses();
-
-	/* 
-		Passes will also do virtual register allocations, which may be assigned multiple concrete
-		registers throughout the lifetime of the function. So we must only emit raw assembly with
-		concrete registers from this point on (after runPasses call).
-	*/
 
 	// write to buffer
-	asmjit::x86::Assembler assembler(&code);
-	cc.serialize(&assembler);
+	cc.finalize();
 
 	// worst case, overestimates for case trampolines needed
 	code.flatten();
