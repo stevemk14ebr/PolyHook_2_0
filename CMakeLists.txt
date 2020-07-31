@@ -199,7 +199,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 	${PROJECT_SOURCE_DIR}/sources/StackCanary.cpp
 	${PROJECT_SOURCE_DIR}/sources/PageAllocator.cpp
 	${PROJECT_SOURCE_DIR}/sources/ErrorLog.cpp
-	${PROJECT_SOURCE_DIR}/sources/UID.cpp )
+	${PROJECT_SOURCE_DIR}/sources/UID.cpp)
 
 #DisAsm/Capstone
 if(POLYHOOK_DISASM_CAPSTONE)
@@ -346,6 +346,7 @@ if(POLYHOOK_FEATURE_VIRTUALS)
 	if(NOT POLYHOOK_BUILD_DLL)
 		target_sources(${PROJECT_NAME} PRIVATE
 			${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook2.cpp
 			${PROJECT_SOURCE_DIR}/UnitTests/TestVFuncSwapHook.cpp)
 	endif()
 endif()
