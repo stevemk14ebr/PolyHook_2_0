@@ -4,6 +4,10 @@ PLH::VTableSwapHook::VTableSwapHook(const char* Class, const VFuncMap& redirectM
 	: VTableSwapHook((uint64_t)Class, redirectMap)
 {}
 
+PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class)
+	: VTableSwapHook(Class, PLH::VFuncMap{ })
+{}
+
 PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap) 
 	: m_class(Class)
 	, m_redirectMap(redirectMap)
