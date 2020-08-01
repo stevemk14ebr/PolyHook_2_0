@@ -335,3 +335,4 @@ CMakeCache.txt
 cmake-*
 _build/
 _install/
+out/
