@@ -32,7 +32,7 @@ bool PLH::HWBreakPointHook::hook()
 	ZeroMemory(&ctx, sizeof(ctx));
 	ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
 	if (!GetThreadContext(m_hThread, &ctx)) {
-		ErrorLog::singleton().push("Failed to get thread context", ErrorLevel::SEV);
+		Log::log("Failed to get thread context", ErrorLevel::SEV);
 		return false;
 	}
 
@@ -45,7 +45,7 @@ bool PLH::HWBreakPointHook::hook()
 	}
 
 	if (!freeReg) {
-		ErrorLog::singleton().push("All HW BP's are used", ErrorLevel::SEV);
+		Log::log("All HW BP's are used", ErrorLevel::SEV);
 		return false;
 	}
 
@@ -72,7 +72,7 @@ bool PLH::HWBreakPointHook::hook()
 
 	// undefined, suspendthread needed
 	if (!SetThreadContext(m_hThread, &ctx)) {
-		ErrorLog::singleton().push("Failed to set thread context", ErrorLevel::SEV);
+		Log::log("Failed to set thread context", ErrorLevel::SEV);
 	}
 
 	return true;
@@ -83,7 +83,7 @@ bool PLH::HWBreakPointHook::unHook() {
 	ZeroMemory(&ctx, sizeof(ctx));
 	ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
 	if (!GetThreadContext(m_hThread, &ctx)) {
-		ErrorLog::singleton().push("Failed to get thread context", ErrorLevel::SEV);
+		Log::log("Failed to get thread context", ErrorLevel::SEV);
 		return false;
 	}
 
@@ -91,7 +91,7 @@ bool PLH::HWBreakPointHook::unHook() {
 
 	//Still need to call suspend thread
 	if (!SetThreadContext(m_hThread, &ctx)) {
-		ErrorLog::singleton().push("Failed to set thread context", ErrorLevel::SEV);
+		Log::log("Failed to set thread context", ErrorLevel::SEV);
 		return false;
 	}
 	return true;

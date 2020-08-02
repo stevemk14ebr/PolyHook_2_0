@@ -11,7 +11,7 @@ PLH::AVehHook::AVehHook() {
 	if (m_refCount.m_count == 0) {
 		m_hHandler = AddVectoredExceptionHandler(1, &AVehHook::Handler);
 		if (m_hHandler == NULL) {
-			ErrorLog::singleton().push("Failed to add VEH", ErrorLevel::SEV);
+			Log::log("Failed to add VEH", ErrorLevel::SEV);
 		}
 	}
 
@@ -27,7 +27,7 @@ PLH::AVehHook::~AVehHook() {
 		ULONG status = RemoveVectoredExceptionHandler(m_hHandler);
 		m_hHandler = nullptr;
 		if (status == 0) {
-			ErrorLog::singleton().push("Failed to remove VEH", ErrorLevel::SEV);
+			Log::log("Failed to remove VEH", ErrorLevel::SEV);
 		}
 	}
 }
