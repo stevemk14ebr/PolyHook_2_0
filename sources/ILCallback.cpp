@@ -102,7 +102,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 		} else if (isXmmReg(argType)) {
 			arg = cc.newXmm();
 		} else {
-			ErrorLog::singleton().push("Parameters wider than 64bits not supported", ErrorLevel::SEV);
+			Log::log("Parameters wider than 64bits not supported", ErrorLevel::SEV);
 			return 0;
 		}
 
@@ -136,7 +136,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 		} else if(isXmmReg(argType)) {
 			cc.movq(argsStackIdx, argRegisters.at(argIdx).as<asmjit::x86::Xmm>());
 		} else {
-			ErrorLog::singleton().push("Parameters wider than 64bits not supported", ErrorLevel::SEV);
+			Log::log("Parameters wider than 64bits not supported", ErrorLevel::SEV);
 			return 0;
 		}
 
@@ -173,7 +173,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 		}else if (isXmmReg(argType)) {
 			cc.movq(argRegisters.at(arg_idx).as<asmjit::x86::Xmm>(), argsStackIdx);
 		}else {
-			ErrorLog::singleton().push("Parameters wider than 64bits not supported", ErrorLevel::SEV);
+			Log::log("Parameters wider than 64bits not supported", ErrorLevel::SEV);
 			return 0;
 		}
 
@@ -248,7 +248,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	code.relocateToBase(m_callbackBuf);
 	code.copyFlattenedData((unsigned char*)m_callbackBuf, size);
 
-	ErrorLog::singleton().push("JIT Stub:\n" + std::string(log.data()), ErrorLevel::INFO);
+	Log::log("JIT Stub:\n" + std::string(log.data()), ErrorLevel::INFO);
 	return m_callbackBuf;
 }
 

@@ -112,12 +112,12 @@ bool PLH::x64Detour::hook() {
 	// ------- Must resolve callback first, so that m_disasm branchmap is filled for prologue stuff
 	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100, *this);
 	if (callbackInsts.empty()) {
-		ErrorLog::singleton().push("Disassembler unable to decode any valid callback instructions", ErrorLevel::SEV);
+		Log::log("Disassembler unable to decode any valid callback instructions", ErrorLevel::SEV);
 		return false;
 	}
 
 	if (!followJmp(callbackInsts)) {
-		ErrorLog::singleton().push("Callback jmp resolution failed", ErrorLevel::SEV);
+		Log::log("Callback jmp resolution failed", ErrorLevel::SEV);
 		return false;
 	}
 
@@ -126,12 +126,12 @@ bool PLH::x64Detour::hook() {
 
 	insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
 	if (insts.empty()) {
-		ErrorLog::singleton().push("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
+		Log::log("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
 		return false;
 	}
 
 	if (!followJmp(insts)) {
-		ErrorLog::singleton().push("Prologue jmp resolution failed", ErrorLevel::SEV);
+		Log::log("Prologue jmp resolution failed", ErrorLevel::SEV);
 		return false;
 	}
 
@@ -139,7 +139,7 @@ bool PLH::x64Detour::hook() {
 	m_fnAddress = insts.front().getAddress();
 
 	// --------------- END RECURSIVE JMP RESOLUTION ---------------------
-	ErrorLog::singleton().push("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
+	Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
 	uint64_t minProlSz = getMinJmpSize(); // min size of patches that may split instructions
 	uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
@@ -150,7 +150,7 @@ bool PLH::x64Detour::hook() {
 		// find the prologue section we will overwrite with jmp + zero or more nops
 		prologueOpt = calcNearestSz(insts, minProlSz, roundProlSz);
 		if (!prologueOpt) {
-			ErrorLog::singleton().push("Function too small to hook safely!", ErrorLevel::SEV);
+			Log::log("Function too small to hook safely!", ErrorLevel::SEV);
 			return false;
 		}
 
@@ -158,13 +158,13 @@ bool PLH::x64Detour::hook() {
 		prologue = *prologueOpt;
 
 		if (!expandProlSelfJmps(prologue, insts, minProlSz, roundProlSz)) {
-			ErrorLog::singleton().push("Function needs a prologue jmp table but it's too small to insert one", ErrorLevel::SEV);
+			Log::log("Function needs a prologue jmp table but it's too small to insert one", ErrorLevel::SEV);
 			return false;
 		}
 	}
 
 	m_originalInsts = prologue;
-	ErrorLog::singleton().push("Prologue to overwrite:\n" + instsToStr(prologue) + "\n", ErrorLevel::INFO);
+	Log::log("Prologue to overwrite:\n" + instsToStr(prologue) + "\n", ErrorLevel::INFO);
 	
 	{   // copy all the prologue stuff to trampoline
 		insts_t jmpTblOpt;
@@ -172,9 +172,9 @@ bool PLH::x64Detour::hook() {
 			return false;
 		}
 
-		ErrorLog::singleton().push("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz, *this)) + "\n", ErrorLevel::INFO);
+		Log::log("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz, *this)) + "\n", ErrorLevel::INFO);
 		if (!jmpTblOpt.empty())
-			ErrorLog::singleton().push("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
+			Log::log("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
 	}
 
 	*m_userTrampVar = m_trampoline;
@@ -183,7 +183,7 @@ bool PLH::x64Detour::hook() {
 	// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
 	auto cave = findNearestCodeCave(m_fnAddress, 8);
 	if (!cave) {
-		ErrorLog::singleton().push("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
+		Log::log("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
 		return false;
 	}
 
@@ -219,7 +219,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	uint8_t retries = 0;
 	do {
 		if (retries++ > 4) {
-			ErrorLog::singleton().push("Failed to calculate trampoline information", ErrorLevel::SEV);
+			Log::log("Failed to calculate trampoline information", ErrorLevel::SEV);
 			return false;
 		}
 
@@ -248,7 +248,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	{
 		const auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prologue.front().getAddress() + prolSz, jmpHolderCurAddr);
 
-		ErrorLog::singleton().push("Jmp To Prol:\n" + instsToStr(jmpToProl) + "\n", ErrorLevel::INFO);
+		Log::log("Jmp To Prol:\n" + instsToStr(jmpToProl) + "\n", ErrorLevel::INFO);
 		m_disasm.writeEncoding(jmpToProl, *this);
 	}
 

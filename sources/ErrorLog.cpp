@@ -1,10 +1,26 @@
 #include "polyhook2/ErrorLog.hpp"
 
+std::shared_ptr<PLH::Logger> PLH::Log::m_logger = nullptr;
+
+void PLH::Log::registerLogger(std::shared_ptr<Logger> logger) {
+	m_logger = logger;
+}
+
+void PLH::Log::log(std::string msg, ErrorLevel level) {
+	if (m_logger) m_logger->log(std::move(msg), level);
+}
+
 void PLH::ErrorLog::setLogLevel(PLH::ErrorLevel level) {
 	m_logLevel = level;
 }
 
-void PLH::ErrorLog::push(std::string msg, PLH::ErrorLevel level) {
+void PLH::ErrorLog::log(std::string msg, ErrorLevel level)
+{
+	push({ std::move(msg), level });
+}
+
+void PLH::ErrorLog::push(std::string msg, ErrorLevel level)
+{
 	push({ std::move(msg), level });
 }
 

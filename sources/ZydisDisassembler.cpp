@@ -7,13 +7,13 @@ PLH::ZydisDisassembler::ZydisDisassembler(PLH::Mode mode) : ADisassembler(mode),
 		(mode == PLH::Mode::x64) ? ZYDIS_MACHINE_MODE_LONG_64 : ZYDIS_MACHINE_MODE_LONG_COMPAT_32,
 		(mode == PLH::Mode::x64) ? ZYDIS_ADDRESS_WIDTH_64 : ZYDIS_ADDRESS_WIDTH_32)))
 	{
-		ErrorLog::singleton().push("Failed to initialize zydis decoder", ErrorLevel::SEV);
+		Log::log("Failed to initialize zydis decoder", ErrorLevel::SEV);
 		return;
 	}
 
 	if (ZYAN_FAILED(ZydisFormatterInit(m_formatter, ZYDIS_FORMATTER_STYLE_INTEL)))
 	{
-		ErrorLog::singleton().push("Failed to initialize zydis formatter", ErrorLevel::SEV);
+		Log::log("Failed to initialize zydis formatter", ErrorLevel::SEV);
 		return;
 	}
 
