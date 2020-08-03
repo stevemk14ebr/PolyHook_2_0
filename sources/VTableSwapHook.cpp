@@ -9,8 +9,13 @@ PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class)
 {}
 
 PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap) 
-	: m_class(Class)
+	: m_newVtable(nullptr)
+	, m_origVtable(nullptr)
+	, m_class(Class)
+	, m_vFuncCount(0)
 	, m_redirectMap(redirectMap)
+	, m_origVFuncs()
+	, m_Hooked(false)
 {}
 
 bool PLH::VTableSwapHook::hook() {
