@@ -70,4 +70,18 @@ TEST_CASE("VTableSwap tests", "[VTableSwap]") {
 		REQUIRE(vTblSwapEffects.PopEffect().didExecute());
 		REQUIRE(hook.unHook());
 	}
+
+	SECTION("Verify invalid virtual function behaviour") {
+		PLH::StackCanary canary;
+		PLH::VFuncMap redirect = { {(uint16_t)10000, (uint64_t)&hkVirtNoParams} };
+		PLH::VTableSwapHook hook((char*)ClassToHook.get(), redirect);
+		REQUIRE(!hook.hook());
+		origVFuncs = hook.getOriginals();
+		REQUIRE(origVFuncs.size() == 0);
+
+		vTblSwapEffects.PushEffect();
+		ClassToHook->NoParamVirt();
+		REQUIRE(!vTblSwapEffects.PopEffect().didExecute());
+		REQUIRE(!hook.unHook());
+	}
 }

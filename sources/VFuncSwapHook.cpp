@@ -6,8 +6,12 @@ PLH::VFuncSwapHook::VFuncSwapHook(const char* Class, const VFuncMap& redirectMap
 
 PLH::VFuncSwapHook::VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap) 
 	: m_class(Class)
+	, m_vtable(nullptr)
+	, m_vFuncCount(0)
 	, m_redirectMap(redirectMap)
+	, m_origVFuncs()
 	, m_userOrigMap(userOrigMap)
+	, m_Hooked(false)
 {}
 
 bool PLH::VFuncSwapHook::hook() {
