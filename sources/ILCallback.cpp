@@ -56,7 +56,7 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 	return asmjit::Type::kIdVoid;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asmjit::ArchInfo::Id arch, const PLH::ILCallback::tUserCallback callback) {;
+uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asmjit::Environment::Arch arch, const PLH::ILCallback::tUserCallback callback) {;
 	/*AsmJit is smart enough to track register allocations and will forward
 	  the proper registers the right values and fixup any it dirtied earlier.
 	  This can only be done if it knows the signature, and ABI, so we give it 
@@ -73,8 +73,10 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	  be spoiled and must be manually marked dirty. After endFunc ONLY concrete
 	  physical registers may be inserted as nodes.
 	*/
-	asmjit::CodeHolder code;                      
-	code.init(asmjit::CodeInfo(arch));			
+	asmjit::CodeHolder code;        
+	auto env = asmjit::hostEnvironment();
+	env.setArch(arch);
+	code.init(env);
 	
 	// initialize function
 	asmjit::x86::Compiler cc(&code);            
@@ -157,11 +159,16 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	asmjit::x86::Gp retStruct = cc.newUIntPtr("retStruct");
 	cc.lea(retStruct, retStack);
 
+	asmjit::InvokeNode* invokeNode;
+	cc.invoke(&invokeNode,
+		(uint64_t)callback,
+		asmjit::FuncSignatureT<void, Parameters*, uint8_t, ReturnValue*>()
+	);
+
 	// call to user provided function (use ABI of host compiler)
-	auto call = cc.call(asmjit::Imm(static_cast<int64_t>((intptr_t)callback)), asmjit::FuncSignatureT<void, Parameters*, uint8_t, ReturnValue*>(asmjit::CallConv::kIdHost));
-	call->setArg(0, argStruct);
-	call->setArg(1, argCountParam);
-	call->setArg(2, retStruct);
+	invokeNode->setArg(0, argStruct);
+	invokeNode->setArg(1, argCountParam);
+	invokeNode->setArg(2, retStruct);
 
 	// mov from arguments stack structure into regs
 	cc.mov(i, 0); // reset idx
@@ -186,9 +193,10 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	cc.mov(origPtr, (uintptr_t)getTrampolineHolder());
 	cc.mov(origPtr, asmjit::x86::ptr(origPtr));
 
-	auto origCall = cc.call(origPtr, sig);
+	asmjit::InvokeNode* origInvokeNode;
+	cc.invoke(&origInvokeNode, origPtr, sig);
 	for (uint8_t argIdx = 0; argIdx < sig.argCount(); argIdx++) {
-		origCall->setArg(argIdx, argRegisters.at(argIdx));
+		origInvokeNode->setArg(argIdx, argRegisters.at(argIdx));
 	}
 	
 	if (sig.hasRet()) {
@@ -207,26 +215,10 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 
 	cc.func()->frame().addDirtyRegs(origPtr);
 	
-	
-
 	cc.endFunc();
-	
-	/*
-		finalize() Manually so we can mutate node list (for future use). In asmjit the compiler inserts implicit calculated 
-		nodes around some instructions, such as call where it will emit implicit movs for params and stack stuff.
-		Asmjit finalize applies optimization and reg assignment 'passes', then serializes via assembler (we do these steps manually).
-	*/
-	cc.runPasses();
-
-	/* 
-		Passes will also do virtual register allocations, which may be assigned multiple concrete
-		registers throughout the lifetime of the function. So we must only emit raw assembly with
-		concrete registers from this point on (after runPasses call).
-	*/
 
 	// write to buffer
-	asmjit::x86::Assembler assembler(&code);
-	cc.serialize(&assembler);
+	cc.finalize();
 
 	// worst case, overestimates for case trampolines needed
 	code.flatten();
@@ -252,7 +244,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	return m_callbackBuf;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const asmjit::ArchInfo::Id arch, const tUserCallback callback, std::string callConv/* = ""*/) {
+uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const asmjit::Environment::Arch arch, const tUserCallback callback, std::string callConv/* = ""*/) {
 	asmjit::FuncSignature sig = {};
 	std::vector<uint8_t> args;
 	for (const std::string& s : paramTypes) {
