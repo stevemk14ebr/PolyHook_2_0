@@ -13,35 +13,6 @@ printf inside the body can mitigate this significantly. Do serious checking in d
 or releasewithdebinfo mode (relwithdebinfo optimizes sliiiightly less)**/
 
 EffectTracker effectsNTD64;
-
-typedef int(*Func)(void);
-TEST_CASE("Minimal Example", "[AsmJit]") {
-	PLH::StackCanary canary;
-	asmjit::JitRuntime rt;                          // Runtime specialized for JIT code execution.
-
-	asmjit::CodeHolder code;                        // Holds code and relocation information.
-	code.init(rt.codeInfo());					// Initialize to the same arch as JIT runtime.
-
-	asmjit::x86::Assembler a(&code);                  // Create and attach X86Assembler to `code`.
-	a.mov(asmjit::x86::eax, 1);                     // Move one to 'eax' register.
-	a.ret();										// Return from function.
-	// ----> X86Assembler is no longer needed from here and can be destroyed <----
-	
-	Func fn;
-	asmjit::Error err = rt.add(&fn, &code);         // Add the generated code to the runtime.
-	if (err) {
-		REQUIRE(false);
-	}
-	
-	int result = fn();                      // Execute the generated code.
-	REQUIRE(result == 1);
-
-	// All classes use RAII, all resources will be released before `main()` returns,
-	// the generated function can be, however, released explicitly if you intend to
-	// reuse or keep the runtime alive, which you should in a production-ready code.
-	rt.release(fn);
-}
-
 #include "polyhook2/Detour/x64Detour.hpp"
 #include "polyhook2/CapstoneDisassembler.hpp"
 
@@ -99,8 +70,8 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 	SECTION("Integer argument") {
 		PLH::StackCanary canary;
 		asmjit::FuncSignatureT<void, int> sig;
-		sig.setCallConv(asmjit::CallConv::kIdX86Win64);
-		uint64_t JIT = callback.getJitFunc(sig, asmjit::ArchInfo::kIdHost, &myCallback);
+		sig.setCallConv(asmjit::CallConv::kIdX64Windows);
+		uint64_t JIT = callback.getJitFunc(sig, asmjit::Environment::kArchHost, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -115,7 +86,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 
 	SECTION("Floating argument") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("void", {"float"}, asmjit::ArchInfo::kIdHost, &myCallback);
+		uint64_t JIT = callback.getJitFunc("void", {"float"}, asmjit::Environment::kArchHost, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -130,7 +101,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 
 	SECTION("Int, float, double arguments, string parsing types") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::ArchInfo::kIdHost, &myCallback);
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::Environment::kArchHost, &myCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -241,7 +212,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 
 	SECTION("Int, float, double arguments host") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &mySecondCallback);
+		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double", "int" }, asmjit::Environment::kArchHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -256,7 +227,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 
 	SECTION("Int, float, double arguments, float ret, host") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &mySecondCallback);
+		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, asmjit::Environment::kArchHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
@@ -272,7 +243,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 
 	SECTION("Int, float, double arguments, double ret, host") {
 		PLH::StackCanary canary;
-		uint64_t JIT = callback.getJitFunc("double", { "int", "float", "double", "int" }, asmjit::ArchInfo::kIdHost, &mySecondCallback);
+		uint64_t JIT = callback.getJitFunc("double", { "int", "float", "double", "int" }, asmjit::Environment::kArchHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
 		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
