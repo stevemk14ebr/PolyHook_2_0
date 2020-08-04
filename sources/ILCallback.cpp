@@ -56,8 +56,6 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 	return asmjit::Type::kIdVoid;
 }
 
-// TODO: remove this
-#pragma warning( disable : 4996)
 uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asmjit::ArchInfo::Id arch, const PLH::ILCallback::tUserCallback callback) {;
 	/*AsmJit is smart enough to track register allocations and will forward
 	  the proper registers the right values and fixup any it dirtied earlier.
@@ -75,8 +73,10 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	  be spoiled and must be manually marked dirty. After endFunc ONLY concrete
 	  physical registers may be inserted as nodes.
 	*/
-	asmjit::CodeHolder code;                      
-	code.init(asmjit::CodeInfo(arch));
+	asmjit::CodeHolder code;        
+	auto env = asmjit::hostEnvironment();
+	env.setArch(arch);
+	code.init(env);
 	
 	// initialize function
 	asmjit::x86::Compiler cc(&code);            
@@ -159,11 +159,16 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	asmjit::x86::Gp retStruct = cc.newUIntPtr("retStruct");
 	cc.lea(retStruct, retStack);
 
+	asmjit::InvokeNode* invokeNode;
+	cc.invoke(&invokeNode,
+		(uint64_t)callback,
+		asmjit::FuncSignatureT<void, Parameters*, uint8_t, ReturnValue*>()
+	);
+
 	// call to user provided function (use ABI of host compiler)
-	auto call = cc.call(asmjit::Imm(static_cast<int64_t>((intptr_t)callback)), asmjit::FuncSignatureT<void, Parameters*, uint8_t, ReturnValue*>(asmjit::CallConv::kIdHost));
-	call->setArg(0, argStruct);
-	call->setArg(1, argCountParam);
-	call->setArg(2, retStruct);
+	invokeNode->setArg(0, argStruct);
+	invokeNode->setArg(1, argCountParam);
+	invokeNode->setArg(2, retStruct);
 
 	// mov from arguments stack structure into regs
 	cc.mov(i, 0); // reset idx
@@ -188,9 +193,10 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	cc.mov(origPtr, (uintptr_t)getTrampolineHolder());
 	cc.mov(origPtr, asmjit::x86::ptr(origPtr));
 
-	auto origCall = cc.call(origPtr, sig);
+	asmjit::InvokeNode* origInvokeNode;
+	cc.invoke(&origInvokeNode, origPtr, sig);
 	for (uint8_t argIdx = 0; argIdx < sig.argCount(); argIdx++) {
-		origCall->setArg(argIdx, argRegisters.at(argIdx));
+		origInvokeNode->setArg(argIdx, argRegisters.at(argIdx));
 	}
 	
 	if (sig.hasRet()) {
