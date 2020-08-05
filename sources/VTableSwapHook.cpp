@@ -19,11 +19,21 @@ PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redire
 {}
 
 bool PLH::VTableSwapHook::hook() {
+	assert(!m_Hooked);
+	if (m_Hooked) {
+		Log::log("vtable hook failed: hook already present", ErrorLevel::SEV);
+		return false;
+	}
+
 	MemoryProtector prot(m_class, sizeof(void*), ProtFlag::R | ProtFlag::W, *this);
 	m_origVtable = *(uintptr_t**)m_class;
 	m_vFuncCount = countVFuncs();
+	assert(m_vFuncCount > 0);
 	if (m_vFuncCount <= 0)
+	{
+		Log::log("vtable hook failed: class has no virtual functions", ErrorLevel::SEV);
 		return false;
+	}
 
 	m_newVtable.reset(new uintptr_t[m_vFuncCount]);
 
@@ -32,8 +42,12 @@ bool PLH::VTableSwapHook::hook() {
 
 	for (const auto& p : m_redirectMap) {
 		assert(p.first < m_vFuncCount);
-		if (p.first >= m_vFuncCount)
+		if (p.first >= m_vFuncCount) {
+			Log::log("vtable hook failed: index exceeds virtual function count", ErrorLevel::SEV);
+			m_newVtable = nullptr;
+			m_origVFuncs.clear();
 			return false;
+		}
 
 		// redirect ptr at VTable[i]
 		m_origVFuncs[p.first] = (uint64_t)m_newVtable[p.first];
@@ -42,13 +56,16 @@ bool PLH::VTableSwapHook::hook() {
 
 	*(uint64_t**)m_class = (uint64_t*)m_newVtable.get();
 	m_Hooked = true;
+	Log::log("vtable hooked", ErrorLevel::INFO);
 	return true;
 }
 
 bool PLH::VTableSwapHook::unHook() {
 	assert(m_Hooked);
-	if (!m_Hooked)
+	if (!m_Hooked) {
+		Log::log("vtable unhook failed: no hook present", ErrorLevel::SEV);
 		return false;
+	}
 
 	MemoryProtector prot(m_class, sizeof(void*), ProtFlag::R | ProtFlag::W, *this);
 	*(uint64_t**)m_class = (uint64_t*)m_origVtable;
@@ -57,6 +74,7 @@ bool PLH::VTableSwapHook::unHook() {
 
 	m_Hooked = false;
 	m_origVtable = nullptr;
+	Log::log("vtable unhooked", ErrorLevel::INFO);
 	return true;
 }
 
