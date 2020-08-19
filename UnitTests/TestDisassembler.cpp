@@ -413,22 +413,14 @@ TEMPLATE_TEST_CASE("Test Disassemblers NOPS", "[ADisassembler],[CapstoneDisassem
 	SECTION("Verify multi-byte nops decodings x64") {
 		for (auto& ins : Instructions) {
 			REQUIRE(ins.getMnemonic() == "nop");
-			if (ins.size() != 2) {
-				REQUIRE(TestType::isPadBytes(ins));
-			} else {
-				REQUIRE(TestType::isPadBytes(ins) == false);
-			}
+			REQUIRE(TestType::isPadBytes(ins));
 		}
 	}
 
 	SECTION("Verify multi-byte nops decodings x86") {
 		for (auto& ins : Instructionsx86) {
 			REQUIRE(ins.getMnemonic() == "nop");
-			if (ins.size() != 2) {
-				REQUIRE(TestType::isPadBytes(ins));
-			} else {
-				REQUIRE(TestType::isPadBytes(ins) == false);
-			}
+			REQUIRE(TestType::isPadBytes(ins));			
 		}
 	}
 }

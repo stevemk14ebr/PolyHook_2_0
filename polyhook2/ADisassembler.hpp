@@ -94,10 +94,7 @@ public:
 	}
 
 	static bool isPadBytes(const PLH::Instruction& instruction) {
-		// ignore 6690 nop. Helps with detour logic, see implemention there
-		if (instruction.size() == 2)
-			return false;
-
+		// supports multi-byte nops
 		return instruction.getMnemonic() == "nop";
 	}
 
