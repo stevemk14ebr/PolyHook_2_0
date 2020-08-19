@@ -94,7 +94,11 @@ public:
 	}
 
 	static bool isPadBytes(const PLH::Instruction& instruction) {
-		return instruction.size() == 1 && (instruction.getBytes()[0] == 0xCC || instruction.getBytes()[0] == 0x90);
+		// ignore 6690 nop. Helps with detour logic, see implemention there
+		if (instruction.size() == 2)
+			return false;
+
+		return instruction.getMnemonic() == "nop";
 	}
 
 	branch_map_t getBranchMap() {

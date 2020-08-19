@@ -12,27 +12,27 @@ class VirtualTest2 {
 public:
 	virtual ~VirtualTest2() {}
 
-	virtual int NoParamVirt() {
+	virtual int __stdcall NoParamVirt() {
 		return 4;
 	}
 
-	virtual int NoParamVirt2() {
+	virtual int __stdcall NoParamVirt2() {
 		return 7;
 	}
 };
 
 #pragma warning(disable: 4100)
 
-typedef int(__thiscall* tVirtNoParams)(uintptr_t pThis);
+typedef int(__stdcall* tVirtNoParams)(uintptr_t pThis);
 PLH::VFuncMap origVFuncs2;
 
-NOINLINE int __fastcall hkVirtNoParams2(uintptr_t pThis) {
+NOINLINE int __stdcall hkVirtNoParams2(uintptr_t pThis) {
 	PLH::StackCanary canary;
 	vFuncSwapEffects.PeakEffect().trigger();
 	return ((tVirtNoParams)origVFuncs2.at(1))(pThis);
 }
 
-NOINLINE int __fastcall hkVirt2NoParams2(uintptr_t pThis) {
+NOINLINE int __stdcall hkVirt2NoParams2(uintptr_t pThis) {
 	PLH::StackCanary canary;
 	vFuncSwapEffects.PeakEffect().trigger();
 	return ((tVirtNoParams)origVFuncs2.at(2))(pThis);

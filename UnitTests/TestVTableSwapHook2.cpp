@@ -15,19 +15,19 @@ class MyClass {
 public:
 	virtual ~MyClass() {}
 
-	virtual int method1(int x) {
+	virtual int __stdcall method1(int x) {
 		return 2 * x;
 	}
 
-	virtual int method2(int x, int y) {
+	virtual int __stdcall method2(int x, int y) {
 		return x + y;
 	}
 };
 
 // virtual function hooks
 
-int myclass_method1(MyClass* pThis, int x);
-int myclass_method2(MyClass* pThis, int x, int y);
+int __stdcall myclass_method1(MyClass* pThis, int x);
+int __stdcall myclass_method2(MyClass* pThis, int x, int y);
 
 // helper typedefs, and unique_ptr for storing the hook
 
@@ -37,12 +37,12 @@ std::unique_ptr<PLH::VTableSwapHook> hook = nullptr;
 
 // hook implementations
 
-NOINLINE int myclass_method1(MyClass* pThis, int x) {
+NOINLINE int __stdcall myclass_method1(MyClass* pThis, int x) {
 	vTblSwapEffects2.PeakEffect().trigger();
 	return hook->origFunc<VMethod1>(pThis, x) + 1;
 }
 
-NOINLINE int myclass_method2(MyClass* pThis, int x, int y) {
+NOINLINE int __stdcall myclass_method2(MyClass* pThis, int x, int y) {
 	vTblSwapEffects2.PeakEffect().trigger();
 	return hook->origFunc<VMethod2>(pThis, x, y) + 2;
 }

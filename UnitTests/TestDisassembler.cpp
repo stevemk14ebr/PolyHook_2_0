@@ -50,6 +50,49 @@ std::vector<uint8_t> x86ASM_FF25 = {
 	0xAB, 0x00, 0x00, 0xAA
 };
 
+std::vector<uint8_t> x86x64Nops = {
+	0x90,
+	0x66, 0x90,
+	0x0f, 0x1f, 0x00,
+	0x0f, 0x1f, 0x40, 0x00,
+	0x0f, 0x1f, 0x44, 0x00, 0x00,
+	0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00,
+	0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00,
+	0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x66, 0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 
+
+	/*
+	* 
+	x64/x86 capstone
+    [1]: 90                            nop
+    [2]: 66 90                         nop
+    [3]: 0f 1f 00                      nop dword ptr [rax]
+    [4]: 0f 1f 40 00                   nop dword ptr [rax]
+    [5]: 0f 1f 44 00 00                nop dword ptr [rax + rax]
+    [6]: 66 0f 1f 44 00 00             nop word ptr [rax + rax]
+    [7]: 0f 1f 80 00 00 00 00          nop dword ptr [rax]
+    [8]: 0f 1f 84 00 00 00 00 00       nop dword ptr [rax + rax]
+    [9]: 66 0f 1f 84 00 00 00 00 00    nop word ptr [rax + rax]
+    [a]: 66 66 0f 1f 84 00 00 00 00 00 nop word ptr [rax + rax]
+    [b]: 66 66 66 0f 1f 84 00 00 00 00 00 nop word ptr [rax + rax]
+
+	x64/x86 zydis
+    [1]: 90                            nop nop
+    [2]: 66 90                         nop nop
+    [3]: 0f 1f 00                      nop dword ptr ds:[rax], eax
+    [4]: 0f 1f 40 00                   nop dword ptr ds:[rax], eax
+    [5]: 0f 1f 44 00 00                nop dword ptr ds:[rax+rax*1], eax
+    [6]: 66 0f 1f 44 00 00             nop word ptr ds:[rax+rax*1], ax
+    [7]: 0f 1f 80 00 00 00 00          nop dword ptr ds:[rax], eax
+    [8]: 0f 1f 84 00 00 00 00 00       nop dword ptr ds:[rax+rax*1], eax
+    [9]: 66 0f 1f 84 00 00 00 00 00    nop word ptr ds:[rax+rax*1], ax
+    [a]: 66 66 0f 1f 84 00 00 00 00 00 nop word ptr ds:[rax+rax*1], ax
+    [b]: 66 66 66 0f 1f 84 00 00 00 00 00 nop word ptr ds:[rax+rax*1], ax
+	*/
+};
+
 std::string filterJXX(const std::string& lhs) {
 	if(lhs == "jnz")
 		return "jne";
@@ -357,6 +400,38 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64 Two", "[ADisassembler],[CapstoneDisas
 	}
 }
 
+TEMPLATE_TEST_CASE("Test Disassemblers NOPS", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+	PLH::StackCanary canaryg;
+	TestType disasm(PLH::Mode::x64);
+	PLH::insts_t Instructions = disasm.disassemble((uint64_t)&x86x64Nops.front(), (uint64_t)&x86x64Nops.front(),
+		(uint64_t)&x86x64Nops.front() + x86x64Nops.size(), PLH::MemAccessor());
+
+	TestType disasmx86(PLH::Mode::x86);
+	PLH::insts_t Instructionsx86 = disasmx86.disassemble((uint64_t)&x86x64Nops.front(), (uint64_t)&x86x64Nops.front(),
+		(uint64_t)&x86x64Nops.front() + x86x64Nops.size(), PLH::MemAccessor());
+
+	SECTION("Verify multi-byte nops decodings x64") {
+		for (auto& ins : Instructions) {
+			REQUIRE(ins.getMnemonic() == "nop");
+			if (ins.size() != 2) {
+				REQUIRE(TestType::isPadBytes(ins));
+			} else {
+				REQUIRE(TestType::isPadBytes(ins) == false);
+			}
+		}
+	}
+
+	SECTION("Verify multi-byte nops decodings x86") {
+		for (auto& ins : Instructionsx86) {
+			REQUIRE(ins.getMnemonic() == "nop");
+			if (ins.size() != 2) {
+				REQUIRE(TestType::isPadBytes(ins));
+			} else {
+				REQUIRE(TestType::isPadBytes(ins) == false);
+			}
+		}
+	}
+}
 
 // unreachable code
 #pragma warning(disable: 4702)
