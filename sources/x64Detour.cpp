@@ -1,7 +1,13 @@
 //
 // Created by steve on 7/5/17.
 //
+#include <sstream>
+#include <algorithm>
+#include <functional>
+
 #include "polyhook2/Detour/x64Detour.hpp"
+#include "polyhook2/Misc.hpp"
+#include "polyhook2/MemProtector.hpp"
 
 PLH::x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
 
@@ -23,7 +29,8 @@ uint8_t PLH::x64Detour::getPrefJmpSize() const {
 	return 16;
 }
 
-std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8_t minSz) {
+template<uint16_t SIZE>
+std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	const uint64_t chunkSize = 64000;
 	unsigned char* data = new unsigned char[chunkSize];
 
@@ -38,68 +45,54 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr, uint8
 		return (address < (uint64_t)0xffffffff80000000) ? address + 0x7ff80000 : (uint64_t)0xfffffffffff80000;
 	};
 	
+	unsigned char CC_PATTERN[SIZE] = { 0xCC };
+	memset(CC_PATTERN, 0xCC, SIZE);
+	unsigned char NOP1_PATTERN[SIZE] = { 0x90 };
+	std::memset(NOP1_PATTERN, 0x90, SIZE);
+
 	// Search 2GB below
 	for (uint64_t search = addr - chunkSize; (search + chunkSize) >= calc_2gb_below(addr); search -= chunkSize) {
-		memset(data, 0, chunkSize);
-
 		size_t read = 0;
 		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
-			uint32_t contiguousInt3 = 0;
-			uint32_t contiguousNop = 0;
 			assert(read <= chunkSize);
-			if (read == 0)
+			if (read == 0 || read < SIZE)
 				continue;
 
-			// read from highest address first (closest to prologue)
-			for (size_t i = read - 1; i > 0; i--) {
-				assert(i >= 0);
-				if (data[i] == 0xCC) {
-					contiguousInt3++;
-				} else {
-					contiguousInt3 = 0;
-				}
+			auto found = (uint64_t)my_memmem_rev((const char*)data, read, (const char*)CC_PATTERN, SIZE);
+			if (found) {
+				delete[] data;
+				return search + (found - (uint64_t)data);
+			}
 
-				if (data[i] == 0x90) {
-					contiguousNop++;
-				} else {
-					contiguousNop = 0;
-				}
-
-				if (contiguousInt3 >= minSz || contiguousNop >= minSz) {
-					delete[] data;
-					return search + i;
-				}
+			found = (uint64_t)my_memmem_rev((const char*)data, read, (const char*)NOP1_PATTERN, SIZE);
+			if (found) {
+				delete[] data;
+				return search + (found - (uint64_t)data);
 			}
 		}
 	}
 
 	// Search 2GB above
 	for (uint64_t search = addr; (search + chunkSize) < calc2gb_above(addr); search += chunkSize) {
-		memset(data, 0, chunkSize);
-
 		size_t read = 0;
 		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
 			uint32_t contiguousInt3 = 0;
 			uint32_t contiguousNop = 0;
 
 			assert(read <= chunkSize);
-			for (size_t i = 0; i < read; i++) {
-				if (data[i] == 0xCC) {
-					contiguousInt3++;
-				} else {
-					contiguousInt3 = 0;
-				}
+			if (read == 0 || read < SIZE)
+				continue;
 
-				if (data[i] == 0x90) {
-					contiguousNop++;
-				} else {
-					contiguousNop = 0;
-				}
+			auto found = (uint64_t)my_memmem((const char*)data, read, (const char*)CC_PATTERN, SIZE);
+			if (found) {
+				delete[] data;
+				return search + (found - (uint64_t)data);
+			}
 
-				if (contiguousInt3 >= minSz || contiguousNop >= minSz) {
-					delete[] data;
-					return search + i - contiguousInt3 + 1;
-				}
+			found = (uint64_t)my_memmem((const char*)data, read, (const char*)NOP1_PATTERN, SIZE);
+			if (found) {
+				delete[] data;
+				return search + (found - (uint64_t)data);
 			}
 		}
 	}
@@ -181,7 +174,7 @@ bool PLH::x64Detour::hook() {
 
 	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
 	// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
-	auto cave = findNearestCodeCave(m_fnAddress, 8);
+	auto cave = findNearestCodeCave<8>(m_fnAddress);
 	if (!cave) {
 		Log::log("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
 		return false;

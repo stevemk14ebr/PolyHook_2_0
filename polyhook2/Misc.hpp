@@ -133,6 +133,79 @@ struct ci_wchar_traits : public std::char_traits<wchar_t> {
     }
 };
 
+inline char* my_memrchr(const char* buf, int c, size_t num)
+{
+	unsigned char* pMem;
+	if (num == 0)
+	{
+		return NULL;
+	}
+
+	for (pMem = (unsigned char*)buf + num - 1; pMem >= (unsigned char*)buf; pMem--)
+	{
+		if (*pMem == (unsigned char)c) break;
+	}
+
+	if (pMem >= (unsigned char*)buf)
+	{
+		return (char*)pMem;
+	}
+	return NULL;
+}
+
+#pragma warning(disable: 4706)
+inline char* my_memmem(const char* haystack, size_t hlen, const char* needle, size_t nlen)
+{
+	int needle_first;
+	const char* p = haystack;
+	size_t plen = hlen;
+
+	if (!nlen)
+		return NULL;
+
+	needle_first = *(unsigned char*)needle;
+
+	while (plen >= nlen && (p = (const char*)memchr(p, needle_first, plen - nlen + 1)))
+	{
+		if (!memcmp(p, needle, nlen))
+			return (char*)p;
+
+		p++;
+		plen = hlen - (p - haystack);
+	}
+
+	return NULL;
+}
+
+inline char* my_memmem_rev(const char* haystack, size_t hlen, const char* needle, size_t nlen)
+{
+	int needle_first;
+	const char* p = haystack;
+	const char* pend = (p + hlen);
+
+	if (!nlen)
+		return NULL;
+
+	needle_first = *(unsigned char*)needle;
+
+	const char* found_ptr = 0;
+	size_t backward_idx = 0;
+	while (hlen >= nlen && (found_ptr = (const char*)my_memrchr(p, needle_first, hlen - backward_idx)))
+	{
+		if (((uint64_t)(pend - found_ptr)) < nlen) {
+			backward_idx++;
+			continue;
+		}
+
+		if (!memcmp(found_ptr, needle, nlen))
+			return (char*)found_ptr;
+
+		backward_idx = pend - found_ptr;
+	}
+
+	return NULL;
+}
+
 using ci_wstring = std::basic_string<wchar_t, ci_wchar_traits>;
 using ci_wstring_view = std::basic_string_view<wchar_t, ci_wchar_traits>;
 

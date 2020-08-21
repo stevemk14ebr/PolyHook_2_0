@@ -5,9 +5,6 @@
 #ifndef POLYHOOK_2_X64DETOUR_HPP
 #define POLYHOOK_2_X64DETOUR_HPP
 
-#include <sstream>
-#include <algorithm>
-#include <functional>
 #include <optional>
 using namespace std::placeholders;
 
@@ -16,7 +13,6 @@ using namespace std::placeholders;
 #include "polyhook2/Instruction.hpp"
 #include "polyhook2/ADisassembler.hpp"
 #include "polyhook2/ErrorLog.hpp"
-#include "polyhook2/MemProtector.hpp"
 
 namespace PLH {
 
@@ -37,7 +33,8 @@ private:
 	bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
 
 	// assumes we are looking within a +-2GB window
-	std::optional<uint64_t> findNearestCodeCave(uint64_t addr, uint8_t minSize);
+	template<uint16_t SIZE>
+	std::optional<uint64_t> findNearestCodeCave(uint64_t addr);
 };
 }
 #endif //POLYHOOK_2_X64DETOUR_HPP

@@ -31,7 +31,7 @@ namespace PLH {
 		reads from NO_ACCESS or otherwise innaccessible memory pages. Defaults to readprocessmemory.
 		Must fail gracefully
 		**/
-		virtual bool safe_mem_read(uint64_t dest, uint64_t src, uint64_t size, size_t& read) const noexcept;
+		virtual bool safe_mem_read(uint64_t src, uint64_t dest, uint64_t size, size_t& read) const noexcept;
 	
 		virtual PLH::ProtFlag mem_protect(uint64_t dest, uint64_t size, PLH::ProtFlag newProtection, bool& status) const;
 	};
