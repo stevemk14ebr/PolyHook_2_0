@@ -47,32 +47,52 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	
 	unsigned char CC_PATTERN[SIZE] = { 0xCC };
 	memset(CC_PATTERN, 0xCC, SIZE);
+
 	unsigned char NOP1_PATTERN[SIZE] = { 0x90 };
 	std::memset(NOP1_PATTERN, 0x90, SIZE);
 
-	// Search 2GB below
-	for (uint64_t search = addr - chunkSize; (search + chunkSize) >= calc_2gb_below(addr); search -= chunkSize) {
-		size_t read = 0;
-		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
-			assert(read <= chunkSize);
-			if (read == 0 || read < SIZE)
-				continue;
+	// TODO: 0xC2 ?? ?? matches
+	unsigned char NOP2_RET[] = { 0xc3, 0x0f,0x1f,0x44,0x00,0x00 };
+	unsigned char NOP3_RET[] = { 0xc3, 0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00 };
+	unsigned char NOP4_RET[] = { 0xc3, 0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00 };
+	unsigned char NOP5_RET[] = { 0xc3, 0x66,0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00 };
+	unsigned char NOP6_RET[] = { 0xc3, 0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0x66,0x0f,0x1f,0x44,0x00,0x00 };
+	unsigned char NOP7_RET[] = { 0xc3, 0x66,0x66,0x66,0x66,0x66,0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00 };
 
-			auto found = (uint64_t)my_memmem_rev((const char*)data, read, (const char*)CC_PATTERN, SIZE);
-			if (found) {
-				delete[] data;
-				return search + (found - (uint64_t)data);
-			}
+	// dont check for 0xC3 RET before as multiple 0xCC's is enough to be sure we're good
+	unsigned char NOP8[] = { 0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00 };
+	unsigned char NOP9[] = { 0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0x66,0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00 };
+	unsigned char NOP10[] = { 0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0x66,0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00 };
+	unsigned char NOP11[] = { 0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0x66,0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00 };
+	
+	// Most common:
+	// https://gist.github.com/stevemk14ebr/d117e8d0fd1432fb2a92354a034ce5b9
+	// [0xc3 | 0xC2 ? ? ? ? ] & 6666666666660f1f840000000000
+	// [0xc3 | 0xC2 ? ? ? ? ] & 0f1f440000
+	// [0xc3 | 0xC2 ? ? ? ? ] & 0f1f840000000000
+	// [0xc3 | 0xC2 ? ? ? ? ] & cccccccccccc660f1f440000
+	// [0xc3 | 0xC2 ? ? ? ? ] & cccccccccccc660f1f840000000000
+	// [0xc3 | 0xC2 ? ? ? ? ] & cccccccccccccc66660f1f840000000000
+	// [0xc3 | 0xC2 ? ? ? ? ] & cccccccccccccccccccccccccccc66660f1f840000000000
+	// [0xc3 | 0xC2 ? ? ? ? ] & cccccccccccc66660f1f840000000000
+	// [0xc3 | 0xC2 ? ? ? ? ] & 66660f1f840000000000
+	// [0xc3 | 0xC2 ? ? ? ? ] & 660f1f840000000000
 
-			found = (uint64_t)my_memmem_rev((const char*)data, read, (const char*)NOP1_PATTERN, SIZE);
-			if (found) {
-				delete[] data;
-				return search + (found - (uint64_t)data);
-			}
-		}
-	}
+#define MEMMEM_PAT(pattern, offset, sz) if constexpr (sz >= SIZE) { \
+	if (auto found = (uint64_t)my_memmem((const char*)data, read, (const char*)pattern, sz)) { \
+		delete[] data; \
+		return search + (found + offset - (uint64_t)data); \
+	} \
+}
 
-	// Search 2GB above
+#define MEMMEM_REV_PAT(pattern, offset, sz) if constexpr (sz >= SIZE) { \
+	if (auto found = (uint64_t)my_memmem_rev((const char*)data, read, (const char*)pattern, sz)) { \
+		delete[] data; \
+		return search + (found + offset - (uint64_t)data); \
+	} \
+}
+
+	// Search 2GB above (this direction is probably faster to search, do it first)
 	for (uint64_t search = addr; (search + chunkSize) < calc2gb_above(addr); search += chunkSize) {
 		size_t read = 0;
 		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
@@ -83,17 +103,43 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 			if (read == 0 || read < SIZE)
 				continue;
 
-			auto found = (uint64_t)my_memmem((const char*)data, read, (const char*)CC_PATTERN, SIZE);
-			if (found) {
-				delete[] data;
-				return search + (found - (uint64_t)data);
-			}
+			MEMMEM_PAT(CC_PATTERN, 0, sizeof(CC_PATTERN));
+			MEMMEM_PAT(NOP1_PATTERN, 0, sizeof(NOP1_PATTERN));
 
-			found = (uint64_t)my_memmem((const char*)data, read, (const char*)NOP1_PATTERN, SIZE);
-			if (found) {
-				delete[] data;
-				return search + (found - (uint64_t)data);
-			}
+			MEMMEM_PAT(NOP2_RET, 1, sizeof(NOP2_RET));
+			MEMMEM_PAT(NOP3_RET, 1, sizeof(NOP3_RET));
+			MEMMEM_PAT(NOP4_RET, 1, sizeof(NOP4_RET));
+			MEMMEM_PAT(NOP5_RET, 1, sizeof(NOP5_RET));
+			MEMMEM_PAT(NOP6_RET, 1, sizeof(NOP6_RET));
+			MEMMEM_PAT(NOP7_RET, 1, sizeof(NOP7_RET));
+			MEMMEM_PAT(NOP8, 0, sizeof(NOP8));
+			MEMMEM_PAT(NOP9, 0, sizeof(NOP9));
+			MEMMEM_PAT(NOP10, 0, sizeof(NOP10));
+			MEMMEM_PAT(NOP11, 0, sizeof(NOP11));
+		}
+	}
+
+	// Search 2GB below
+	for (uint64_t search = addr - chunkSize; (search + chunkSize) >= calc_2gb_below(addr); search -= chunkSize) {
+		size_t read = 0;
+		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
+			assert(read <= chunkSize);
+			if (read == 0 || read < SIZE)
+				continue;
+
+			MEMMEM_REV_PAT(CC_PATTERN, 0, sizeof(CC_PATTERN));
+			MEMMEM_REV_PAT(NOP1_PATTERN, 0, sizeof(NOP1_PATTERN));
+
+			MEMMEM_REV_PAT(NOP2_RET, 1, sizeof(NOP2_RET));
+			MEMMEM_REV_PAT(NOP3_RET, 1, sizeof(NOP3_RET));
+			MEMMEM_REV_PAT(NOP4_RET, 1, sizeof(NOP4_RET));
+			MEMMEM_REV_PAT(NOP5_RET, 1, sizeof(NOP5_RET));
+			MEMMEM_REV_PAT(NOP6_RET, 1, sizeof(NOP6_RET));
+			MEMMEM_REV_PAT(NOP7_RET, 1, sizeof(NOP7_RET));
+			MEMMEM_REV_PAT(NOP8, 0, sizeof(NOP8));
+			MEMMEM_REV_PAT(NOP9, 0, sizeof(NOP9));
+			MEMMEM_REV_PAT(NOP10, 0, sizeof(NOP10));
+			MEMMEM_REV_PAT(NOP11, 0, sizeof(NOP11));
 		}
 	}
 
