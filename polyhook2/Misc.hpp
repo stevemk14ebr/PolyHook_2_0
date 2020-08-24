@@ -10,6 +10,7 @@
 #include <cctype>
 #include <iomanip>
 #include <sstream>
+#include <string>
 
 namespace PLH {
 
@@ -133,77 +134,112 @@ struct ci_wchar_traits : public std::char_traits<wchar_t> {
     }
 };
 
-inline char* my_memrchr(const char* buf, int c, size_t num)
+inline bool isMatch(const uint8_t* addr, const uint8_t* pat, const uint8_t* msk)
 {
-	unsigned char* pMem;
-	if (num == 0)
-	{
-		return NULL;
-	}
-
-	for (pMem = (unsigned char*)buf + num - 1; pMem >= (unsigned char*)buf; pMem--)
-	{
-		if (*pMem == (unsigned char)c) break;
-	}
-
-	if (pMem >= (unsigned char*)buf)
-	{
-		return (char*)pMem;
-	}
-	return NULL;
-}
-
-#pragma warning(disable: 4706)
-inline char* my_memmem(const char* haystack, size_t hlen, const char* needle, size_t nlen)
-{
-	int needle_first;
-	const char* p = haystack;
-	size_t plen = hlen;
-
-	if (!nlen)
-		return NULL;
-
-	needle_first = *(unsigned char*)needle;
-
-	while (plen >= nlen && (p = (const char*)memchr(p, needle_first, plen - nlen + 1)))
-	{
-		if (!memcmp(p, needle, nlen))
-			return (char*)p;
-
-		p++;
-		plen = hlen - (p - haystack);
-	}
-
-	return NULL;
-}
-
-inline char* my_memmem_rev(const char* haystack, size_t hlen, const char* needle, size_t nlen)
-{
-	int needle_first;
-	const char* p = haystack;
-	const char* pend = (p + hlen);
-
-	if (!nlen)
-		return NULL;
-
-	needle_first = *(unsigned char*)needle;
-
-	const char* found_ptr = 0;
-	size_t backward_idx = 0;
-	while (hlen >= nlen && (found_ptr = (const char*)my_memrchr(p, needle_first, hlen - backward_idx)))
-	{
-		if (((uint64_t)(pend - found_ptr)) < nlen) {
-			backward_idx++;
-			continue;
+	size_t n = 0;
+	while (addr[n] == pat[n] || msk[n] == (uint8_t)'?') {
+		if (!msk[++n]) {
+			return true;
 		}
+	}
+	return false;
+}
 
-		if (!memcmp(found_ptr, needle, nlen))
-			return (char*)found_ptr;
+#define INRANGE(x,a,b)		(x >= a && x <= b) 
+#define getBits( x )		(INRANGE(x,'0','9') ? (x - '0') : ((x&(~0x20)) - 'A' + 0xa))
+#define getByte( x )		(getBits(x[0]) << 4 | getBits(x[1]))
 
-		backward_idx = pend - found_ptr;
+// https://github.com/learn-more/findpattern-bench/blob/master/patterns/learn_more.h
+// must use space between bytes and ?? for wildcards. Do not add 0x prefix
+inline uint64_t findPattern(const uint64_t rangeStart, size_t len, const char* pattern)
+{
+	size_t l = strlen(pattern);
+
+	// l = 2 * b + (b - 1) . 2 chars per byte + b - 1 spaces between
+	size_t patSize = (l + 1) / 3;
+	uint8_t* patt_base = (uint8_t*)_alloca(patSize + 1);
+	uint8_t* msk_base = (uint8_t*)_alloca(patSize + 1);
+	uint8_t* pat = patt_base;
+	uint8_t* msk = msk_base;
+
+	l = 0;
+	while (patSize) {
+		if (*(uint8_t*)pattern == (uint8_t)'\?') {
+			*pat++ = 0;
+			*msk++ = '?';
+		} else {
+			*pat++ = getByte(pattern);
+			*msk++ = 'x';
+		}
+		pattern += 3;
+		l++;
+		patSize--;
 	}
 
+	if (l > len)
+		return NULL;
+
+	*msk = 0;
+	pat = patt_base;
+	msk = msk_base;
+	for (size_t n = 0; n < (len - l); ++n)
+	{
+		if (isMatch((uint8_t*)(rangeStart + n), patt_base, msk_base)) {
+			return rangeStart + n;
+		}
+	}
 	return NULL;
+}
+
+inline uint64_t findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern)
+{
+	size_t l = strlen(pattern);
+
+	// c = 2 * b + (b - 1) . 2 chars per byte + b - 1 spaces between
+	size_t patSize = (l + 1) / 3;
+	uint8_t* patt_base = (uint8_t*)_alloca(patSize + 1);
+	uint8_t* msk_base = (uint8_t*)_alloca(patSize + 1);
+	uint8_t* pat = patt_base;
+	uint8_t* msk = msk_base;
+
+	l = 0;
+	while (patSize) {
+		if (*(uint8_t*)pattern == (uint8_t)'\?') {
+			*pat++ = 0;
+			*msk++ = '?';
+		} else {
+			*pat++ = getByte(pattern);
+			*msk++ = 'x';
+		}
+		pattern += 3;
+		l++;
+		patSize--;
+	}
+
+	if (l > len)
+		return NULL;
+
+	*msk = 0;
+	pat = patt_base;
+	msk = msk_base;
+	for (size_t n = len - l; n > 0; n--)
+	{
+		if (isMatch((uint8_t*)(rangeStart + n), patt_base, msk_base)) {
+			return rangeStart + n;
+		}
+	}
+	return NULL;
+}
+
+inline std::string repeat_n(std::string s, size_t n, std::string delim = "") {
+	std::string out = "";
+	for (size_t i = 0; i < n; i++) {
+		out += s;
+		if (i != n - 1) {
+			out += delim;
+		}
+	}
+	return out;
 }
 
 using ci_wstring = std::basic_string<wchar_t, ci_wchar_traits>;
