@@ -134,7 +134,7 @@ struct ci_wchar_traits : public std::char_traits<wchar_t> {
     }
 };
 
-inline bool isMatch(const uint8_t* addr, const uint8_t* pat, const uint8_t* msk)
+inline bool isMatch(const char* addr, const char* pat, const char* msk)
 {
 	size_t n = 0;
 	while (addr[n] == pat[n] || msk[n] == (uint8_t)'?') {
@@ -151,85 +151,8 @@ inline bool isMatch(const uint8_t* addr, const uint8_t* pat, const uint8_t* msk)
 
 // https://github.com/learn-more/findpattern-bench/blob/master/patterns/learn_more.h
 // must use space between bytes and ?? for wildcards. Do not add 0x prefix
-inline uint64_t findPattern(const uint64_t rangeStart, size_t len, const char* pattern)
-{
-	size_t l = strlen(pattern);
-
-	// l = 2 * b + (b - 1) . 2 chars per byte + b - 1 spaces between
-	size_t patSize = (l + 1) / 3;
-	uint8_t* patt_base = (uint8_t*)_alloca(patSize + 1);
-	uint8_t* msk_base = (uint8_t*)_alloca(patSize + 1);
-	uint8_t* pat = patt_base;
-	uint8_t* msk = msk_base;
-
-	l = 0;
-	while (patSize) {
-		if (*(uint8_t*)pattern == (uint8_t)'\?') {
-			*pat++ = 0;
-			*msk++ = '?';
-		} else {
-			*pat++ = getByte(pattern);
-			*msk++ = 'x';
-		}
-		pattern += 3;
-		l++;
-		patSize--;
-	}
-
-	if (l > len)
-		return NULL;
-
-	*msk = 0;
-	pat = patt_base;
-	msk = msk_base;
-	for (size_t n = 0; n < (len - l); ++n)
-	{
-		if (isMatch((uint8_t*)(rangeStart + n), patt_base, msk_base)) {
-			return rangeStart + n;
-		}
-	}
-	return NULL;
-}
-
-inline uint64_t findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern)
-{
-	size_t l = strlen(pattern);
-
-	// c = 2 * b + (b - 1) . 2 chars per byte + b - 1 spaces between
-	size_t patSize = (l + 1) / 3;
-	uint8_t* patt_base = (uint8_t*)_alloca(patSize + 1);
-	uint8_t* msk_base = (uint8_t*)_alloca(patSize + 1);
-	uint8_t* pat = patt_base;
-	uint8_t* msk = msk_base;
-
-	l = 0;
-	while (patSize) {
-		if (*(uint8_t*)pattern == (uint8_t)'\?') {
-			*pat++ = 0;
-			*msk++ = '?';
-		} else {
-			*pat++ = getByte(pattern);
-			*msk++ = 'x';
-		}
-		pattern += 3;
-		l++;
-		patSize--;
-	}
-
-	if (l > len)
-		return NULL;
-
-	*msk = 0;
-	pat = patt_base;
-	msk = msk_base;
-	for (size_t n = len - l; n > 0; n--)
-	{
-		if (isMatch((uint8_t*)(rangeStart + n), patt_base, msk_base)) {
-			return rangeStart + n;
-		}
-	}
-	return NULL;
-}
+uint64_t findPattern(const uint64_t rangeStart, size_t len, const char* pattern);
+uint64_t findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern);
 
 inline std::string repeat_n(std::string s, size_t n, std::string delim = "") {
 	std::string out = "";

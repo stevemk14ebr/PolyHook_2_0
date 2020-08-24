@@ -9,7 +9,7 @@ include(CMakePackageConfigHelpers)
 #
 # Options
 #
-option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" ON)
+option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" OFF)
 
 option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook as shared libary" OFF)
 option(POLYHOOK_BUILD_SHARED_ASMJIT "Build polyhook as shared libary" OFF)
@@ -201,7 +201,9 @@ target_sources(${PROJECT_NAME} PRIVATE
 	${PROJECT_SOURCE_DIR}/sources/StackCanary.cpp
 	${PROJECT_SOURCE_DIR}/sources/PageAllocator.cpp
 	${PROJECT_SOURCE_DIR}/sources/ErrorLog.cpp
-	${PROJECT_SOURCE_DIR}/sources/UID.cpp)
+	${PROJECT_SOURCE_DIR}/sources/UID.cpp
+	${PROJECT_SOURCE_DIR}/sources/Misc.cpp
+	)
 
 #DisAsm/Capstone
 if(POLYHOOK_DISASM_CAPSTONE)

@@ -306,6 +306,8 @@ bool PLH::x64Detour::hook() {
 
 bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	assert(!prologue.empty());
+	assert(m_trampoline == NULL);
+
 	const uint64_t prolStart = prologue.front().getAddress();
 	const uint16_t prolSz = calcInstsSz(prologue);
 	const uint8_t destHldrSz = 8;
@@ -316,32 +318,37 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	
 	The relocation could also because of data operations too. But that's specific to the function and can't
 	work again on a retry (same function, duh). Return immediately in that case.**/
-	uint8_t neededEntryCount = 5;
+	uint8_t neededEntryCount = 0;
 	PLH::insts_t instsNeedingEntry;
 	PLH::insts_t instsNeedingReloc;
-
 	uint8_t retries = 0;
+
+	bool good = false;
 	do {
-		if (retries++ > 4) {
-			Log::log("Failed to calculate trampoline information", ErrorLevel::SEV);
-			return false;
-		}
-
-		if (m_trampoline != NULL) {
-			delete[](unsigned char*)m_trampoline;
-			neededEntryCount = (uint8_t)instsNeedingEntry.size();
-		}
-
+		neededEntryCount = std::max((uint8_t)instsNeedingEntry.size(), (uint8_t)5);
+		
 		// prol + jmp back to prol + N * jmpEntries
 		m_trampolineSz = (uint16_t)(prolSz + (getMinJmpSize() + destHldrSz) +
 			(getMinJmpSize() + destHldrSz)* neededEntryCount);
-		m_trampoline = (uint64_t) new unsigned char[m_trampolineSz];
 
+		// allocate new trampoline before deleting old to increase odds of new mem address
+		uint64_t tmpTrampoline = (uint64_t)new unsigned char[m_trampolineSz];
+		if (m_trampoline != NULL) {
+			delete[](unsigned char*)m_trampoline;
+		}
+
+		m_trampoline = tmpTrampoline;
 		const int64_t delta = m_trampoline - prolStart;
 
 		if (!buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc))
-			return false;
-	} while (instsNeedingEntry.size() > neededEntryCount);
+			continue;
+
+		good = true;
+	} while (retries++ < 5 && !good);
+
+	if (!good) {
+		return false;
+	}
 
 	const int64_t delta = m_trampoline - prolStart;
 	MemoryProtector prot(m_trampoline, m_trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
