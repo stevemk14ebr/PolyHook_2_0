@@ -244,7 +244,6 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 	}
 }
 
-
 TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
 	// re-write ff 25 displacement to point to data (absolute)
 #ifndef _WIN64

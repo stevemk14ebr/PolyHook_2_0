@@ -37,6 +37,7 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 	uint64_t bufAddr = (uint64_t)buf;
 	accessor.mem_copy((uint64_t)buf, firstInstruction, size);
 
+	bool endHit = false;
 	while (cs_disasm_iter(m_capHandle, (const uint8_t**)&bufAddr, (size_t*)&size, &start, insInfo)) {
 		// Set later by 'SetDisplacementFields'
 		Instruction::Displacement displacement = {};
@@ -54,13 +55,16 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
 						 m_mode);
 
 		setDisplacementFields(inst, insInfo);
+		if (endHit && !isPadBytes(inst))
+			break;
+
 		insVec.push_back(inst);
 
 		// searches instruction vector and updates references
 		addToBranchMap(insVec, inst);
 
 		if (isFuncEnd(inst))
-			break;
+			endHit = true;
 	}
 	delete[] buf;
 	cs_free(insInfo, 1);

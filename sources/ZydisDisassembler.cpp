@@ -43,6 +43,7 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 
 	ZydisDecodedInstruction insInfo;
 	uint64_t offset = 0;
+	bool endHit = false;
 	while(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*)(buf + offset), (ZyanUSize)(size - offset), &insInfo)))
 	{
 		Instruction::Displacement displacement = {};
@@ -66,12 +67,15 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 						 m_mode);
 
 		setDisplacementFields(inst, &insInfo);
+		if (endHit && !isPadBytes(inst))
+			break;
+
 		insVec.push_back(inst);
 
 		// searches instruction vector and updates references
 		addToBranchMap(insVec, inst);
 		if (isFuncEnd(inst))
-			break;
+			endHit = true;
 
 		offset += insInfo.length;
 	}
