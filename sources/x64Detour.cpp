@@ -48,10 +48,14 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 		return (address < (uint64_t)0xffffffff80000000) ? address + 0x7ff80000 : (uint64_t)0xfffffffffff80000;
 	};
 	
+	// these patterns are listed in order of most accurate to least accurate with size taken into account
+	// simple c3 ret is more accurate than c2 ?? ?? and series of CC or 90 is more accurate than complex multi-byte nop
 	std::string CC_PATTERN_RET = "c3 " + repeat_n("cc", SIZE, " ");
 	std::string NOP1_PATTERN_RET = "c3 " + repeat_n("90", SIZE, " ");
 
-	// TODO: 0xC2 ?? ?? matches
+	std::string CC_PATTERN_RETN = "c2 ?? ?? " + repeat_n("cc", SIZE, " ");
+	std::string NOP1_PATTERN_RETN = "c2 ?? ?? " + repeat_n("90", SIZE, " ");
+
 	const char* NOP2_RET = "c3 0f 1f 44 00 00";
 	const char* NOP3_RET = "c3 0f 1f 84 00 00 00 00 00";
 	const char* NOP4_RET = "c3 66 0f 1f 84 00 00 00 00 00";
@@ -63,6 +67,30 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	const char* NOP10_RET = "c3 cc cc cc cc cc cc cc 66 66 0f 1f 84 00 00 00 00 00";
 	const char* NOP11_RET = "c3 cc cc cc cc cc cc cc 66 66 0f 1f 84 00 00 00 00 00";
 	
+	const char* NOP2_RETN = "c2 ?? ?? 0f 1f 44 00 00";
+	const char* NOP3_RETN = "c2 ?? ?? 0f 1f 84 00 00 00 00 00";
+	const char* NOP4_RETN = "c2 ?? ?? 66 0f 1f 84 00 00 00 00 00";
+	const char* NOP5_RETN = "c2 ?? ?? 66 66 0f 1f 84 00 00 00 00 00";
+	const char* NOP6_RETN = "c2 ?? ?? cc cc cc cc cc cc 66 0f 1f 44 00 00";
+	const char* NOP7_RETN = "c2 ?? ?? 66 66 66 66 66 66 0f 1f 84 00 00 00 00 00";
+	const char* NOP8_RETN = "c2 ?? ?? cc cc cc cc cc cc 66 0f 1f 84 00 00 00 00 00";
+	const char* NOP9_RETN = "c2 ?? ?? cc cc cc cc cc cc 66 66 0f 1f 84 00 00 00 00 00";
+	const char* NOP10_RETN = "c2 ?? ?? cc cc cc cc cc cc cc 66 66 0f 1f 84 00 00 00 00 00";
+	const char* NOP11_RETN = "c2 ?? ?? cc cc cc cc cc cc cc 66 66 0f 1f 84 00 00 00 00 00";
+
+	// Scan in same order as listing above
+	const char* PATTERNS_OFF1[] = {
+		CC_PATTERN_RET.c_str(), NOP1_PATTERN_RET.c_str(),
+		NOP2_RET, NOP3_RET, NOP4_RET, NOP5_RET,NOP6_RET,
+		NOP7_RET, NOP8_RET, NOP9_RET, NOP10_RET, NOP11_RET
+	};
+
+	const char* PATTERNS_OFF3[] = {
+		CC_PATTERN_RETN.c_str(), NOP1_PATTERN_RETN.c_str(),
+		NOP2_RETN, NOP3_RETN, NOP4_RETN, NOP5_RETN,NOP6_RETN,
+		NOP7_RETN, NOP8_RETN, NOP9_RETN, NOP10_RETN, NOP11_RETN,
+	};
+
 	// Most common:
 	// https://gist.github.com/stevemk14ebr/d117e8d0fd1432fb2a92354a034ce5b9
 	// We check for rets to verify it's not like like a mid function or jmp table pad
@@ -92,52 +120,16 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 				return {};
 			};
 
-			if (auto found = finder(CC_PATTERN_RET.c_str(), 1)) {
-				return found;
+			for (const char* pat : PATTERNS_OFF1) {
+				if (auto found = finder(pat, 1)) {
+					return found;
+				}
 			}
 
-			if (auto found = finder(NOP1_PATTERN_RET.c_str(), 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP2_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP3_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP4_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP5_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP6_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP7_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP8_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP9_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP10_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP11_RET, 1)) {
-				return found;
+			for (const char* pat : PATTERNS_OFF3) {
+				if (auto found = finder(pat, 3)) {
+					return found;
+				}
 			}
 		}
 	}
@@ -160,52 +152,16 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 				return {};
 			};
 
-			if (auto found = finder(CC_PATTERN_RET.c_str(), 1)) {
-				return found;
-			} 
-
-			if (auto found = finder(NOP1_PATTERN_RET.c_str(), 1)) {
-				return found;
+			for (const char* pat : PATTERNS_OFF1) {
+				if (auto found = finder(pat, 1)) {
+					return found;
+				}
 			}
 
-			if (auto found = finder(NOP2_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP3_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP4_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP5_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP6_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP7_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP8_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP9_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP10_RET, 1)) {
-				return found;
-			}
-
-			if (auto found = finder(NOP11_RET, 1)) {
-				return found;
+			for (const char* pat : PATTERNS_OFF3) {
+				if (auto found = finder(pat, 3)) {
+					return found;
+				}
 			}
 		}
 	}
