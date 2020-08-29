@@ -24,30 +24,26 @@ public:
 	}
 };
 
-// virtual function hooks
-
-int __stdcall myclass_method1(MyClass* pThis, int x);
-int __stdcall myclass_method2(MyClass* pThis, int x, int y);
-
 // helper typedefs, and unique_ptr for storing the hook
 
-typedef PLH::VFunc<1, decltype(&myclass_method1)> VMethod1;
-typedef PLH::VFunc<2, decltype(&myclass_method2)> VMethod2;
+template<typename T>
+using VMethod1 = PLH::VFunc<1, T>;
+
+template<typename T>
+using VMethod2 = PLH::VFunc<2, T>;
+
 std::unique_ptr<PLH::VTableSwapHook> hook = nullptr;
 
 // hook implementations
-
-NOINLINE int __stdcall myclass_method1(MyClass* pThis, int x) {
+HOOK_CALLBACK(&MyClass::method1, myclass_method1, {
 	vTblSwapEffects2.PeakEffect().trigger();
-	return hook->origFunc<VMethod1>(pThis, x) + 1;
-}
+	return hook->origFunc<VMethod1<myclass_method1_t>>(_args...) + 1;
+});
 
-NOINLINE int __stdcall myclass_method2(MyClass* pThis, int x, int y) {
+HOOK_CALLBACK(&MyClass::method2, myclass_method2, {
 	vTblSwapEffects2.PeakEffect().trigger();
-	return hook->origFunc<VMethod2>(pThis, x, y) + 2;
-}
-
-// test case
+	return hook->origFunc<VMethod2<myclass_method2_t>>(_args...) + 2;
+});
 
 TEST_CASE("VTableSwap2 tests", "[VTableSwap2]") {
 	auto ClassToHook = std::make_shared<MyClass>();
@@ -58,8 +54,8 @@ TEST_CASE("VTableSwap2 tests", "[VTableSwap2]") {
 		REQUIRE(ClassToHook->method2(13, 9) == 22);
 		hook = std::make_unique<PLH::VTableSwapHook>(
 			reinterpret_cast<uint64_t>(ClassToHook.get()),
-			VMethod1(&myclass_method1),
-			VMethod2(&myclass_method2));
+			VMethod1<decltype(myclass_method1)>(myclass_method1),
+			VMethod2<decltype(myclass_method2)>(myclass_method2));
 		REQUIRE(hook->hook());
 
 		vTblSwapEffects2.PushEffect();

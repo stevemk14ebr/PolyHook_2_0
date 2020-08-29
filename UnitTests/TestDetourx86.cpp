@@ -28,12 +28,12 @@ NOINLINE int __cdecl hookMe1() {
 }
 
 uint64_t hookMe1Tramp = NULL;
-NOINLINE int __cdecl h_hookMe1() {
+HOOK_CALLBACK(&hookMe1, h_hookMe1, {
 	std::cout << "Hook 1 Called!" << std::endl;
 
 	effects.PeakEffect().trigger();
 	return PLH::FnCast(hookMe1Tramp, &hookMe1)();
-}
+});
 
 /*  55                      push   ebp
 1:  8b ec                   mov    ebp,esp
@@ -90,12 +90,12 @@ NOINLINE void PH_ATTR_NAKED hookMeLoop() {
 }
 
 uint64_t hookMeLoopTramp = NULL;
-NOINLINE void __stdcall h_hookMeLoop() {
+HOOK_CALLBACK(&hookMeLoop, h_hookMeLoop, {
 	std::cout << "Hook loop Called!" << std::endl;
 
 	effects.PeakEffect().trigger();
 	PLH::FnCast(hookMeLoopTramp, &hookMeLoop)();
-}
+});
 
 #include <cstdarg>
 uint64_t hookPrintfTramp = NULL;
@@ -115,24 +115,23 @@ NOINLINE int __cdecl h_hookPrintf(const char* format, ...) {
 double(*pFnPowDouble)(double, double) = &std::pow;
 
 uint64_t hookPowTramp = NULL;
-NOINLINE double __cdecl h_hookPow(double X, double Y) {
+HOOK_CALLBACK(pFnPowDouble, h_hookPow, {
 	effects.PeakEffect().trigger();
-
-	return PLH::FnCast(hookPowTramp, pFnPowDouble)(X, Y);
-}
+	return PLH::FnCast(hookPowTramp, pFnPowDouble)(_args...);
+});
 
 #include <stdlib.h>
 uint64_t hookMallocTramp = NULL;
-NOINLINE void* h_hookMalloc(size_t size) {
+HOOK_CALLBACK(&malloc, h_hookMalloc, {
 	effects.PeakEffect().trigger();
-	return PLH::FnCast(hookMallocTramp, &malloc)(size);
-}
+	return PLH::FnCast(hookMallocTramp, &malloc)(_args...);
+});
 
 TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x86);
 
 	SECTION("Normal function") {
-		PLH::x86Detour detour((char*)&hookMe1, (char*)&h_hookMe1, &hookMe1Tramp, dis);
+		PLH::x86Detour detour((char*)&hookMe1, (char*)h_hookMe1, &hookMe1Tramp, dis);
 		REQUIRE(detour.hook() == true);
 
 		effects.PushEffect();
@@ -157,7 +156,7 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::Capstone
 	}
 
 	SECTION("Loop") {
-		PLH::x86Detour detour((char*)&hookMeLoop, (char*)&h_hookMeLoop, &hookMeLoopTramp, dis);
+		PLH::x86Detour detour((char*)&hookMeLoop, (char*)h_hookMeLoop, &hookMeLoopTramp, dis);
 		REQUIRE(detour.hook() == true);
 
 		effects.PushEffect();
@@ -167,7 +166,7 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::Capstone
 	}
 
 	SECTION("hook printf") {
-		PLH::x86Detour detour((char*)&printf, (char*)&h_hookPrintf, &hookPrintfTramp, dis);
+		PLH::x86Detour detour((char*)&printf, (char*)h_hookPrintf, &hookPrintfTramp, dis);
 		REQUIRE(detour.hook() == true);
 
 		effects.PushEffect();
@@ -178,7 +177,7 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::Capstone
 
 	// it's a pun...
 	SECTION("hook pow") {
-		PLH::x86Detour detour((char*)pFnPowDouble, (char*)&h_hookPow, &hookPowTramp, dis);
+		PLH::x86Detour detour((char*)pFnPowDouble, (char*)h_hookPow, &hookPowTramp, dis);
 		REQUIRE(detour.hook() == true);
 
 		effects.PushEffect();
@@ -189,7 +188,7 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::Capstone
 	}
 
 	SECTION("hook malloc") {
-		PLH::x86Detour detour((char*)&malloc, (char*)&h_hookMalloc, &hookMallocTramp, dis);
+		PLH::x86Detour detour((char*)&malloc, (char*)h_hookMalloc, &hookMallocTramp, dis);
 		effects.PushEffect(); // catch does some allocations, push effect first so peak works
 		REQUIRE(detour.hook() == true);
 

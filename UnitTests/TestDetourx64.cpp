@@ -30,13 +30,12 @@ NOINLINE void hookMe1() {
 	REQUIRE(var2 == 40);
 }
 uint64_t hookMe1Tramp = NULL;
-
-NOINLINE void h_hookMe1() {
+HOOK_CALLBACK(&hookMe1, h_hookMe1, {
 	PLH::StackCanary canary;
 	std::cout << "Hook 1 Called!" << std::endl;
 	effects.PeakEffect().trigger();
 	return PLH::FnCast(hookMe1Tramp, &hookMe1)();
-}
+});
 
 NOINLINE void hookMe2() {
 	PLH::StackCanary canary;
@@ -45,13 +44,12 @@ NOINLINE void hookMe2() {
 	}
 }
 uint64_t hookMe2Tramp = NULL;
-
-NOINLINE void h_hookMe2() {
+HOOK_CALLBACK(&hookMe2, h_hookMe2, {
 	PLH::StackCanary canary;
 	std::cout << "Hook 2 Called!" << std::endl;
 	effects.PeakEffect().trigger();
 	return PLH::FnCast(hookMe2Tramp, &hookMe2)();
-}
+});
 
 unsigned char hookMe3[] = {
 0x57, // push rdi 
@@ -82,35 +80,29 @@ NOINLINE void h_nullstub() {
 
 #include <stdlib.h>
 uint64_t hookMallocTramp = NULL;
-NOINLINE void* h_hookMalloc(size_t size) {
+HOOK_CALLBACK(&malloc, h_hookMalloc, {
 	PLH::StackCanary canary;
 	volatile int i = 0;
 	PH_UNUSED(i);
 	effects.PeakEffect().trigger();
 
-	return PLH::FnCast(hookMallocTramp, &malloc)(size);
-}
+	return PLH::FnCast(hookMallocTramp, &malloc)(_args...);
+});
 
 uint64_t oCreateMutexExA = 0;
-HANDLE
-WINAPI
-hCreateMutexExA(
-	_In_opt_ LPSECURITY_ATTRIBUTES lpMutexAttributes,
-	_In_opt_ LPCSTR lpName,
-	_In_ DWORD dwFlags,
-	_In_ DWORD dwDesiredAccess
-) {
+HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, {
 	PLH::StackCanary canary;
+	LPCSTR lpName = GET_ARG(1);
 	printf("kernel32!CreateMutexExA  Name:%s",  lpName);
-	return PLH::FnCast(oCreateMutexExA, &CreateMutexExA)(lpMutexAttributes, lpName, dwFlags, dwDesiredAccess);
-}
+	return PLH::FnCast(oCreateMutexExA, &CreateMutexExA)(_args...);
+});
 
 TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x64);
 
 	SECTION("Normal function") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((char*)&hookMe1, (char*)&h_hookMe1, &hookMe1Tramp, dis);
+		PLH::x64Detour detour((char*)&hookMe1, (char*)h_hookMe1, &hookMe1Tramp, dis);
 		REQUIRE(detour.hook() == true);
 
 		effects.PushEffect();
@@ -132,14 +124,14 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 	*/
 	SECTION("WinApi Indirection") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((char*)&CreateMutexExA, (char*)&hCreateMutexExA, &oCreateMutexExA, dis);
+		PLH::x64Detour detour((char*)&CreateMutexExA, (char*)hCreateMutexExA, &oCreateMutexExA, dis);
 		REQUIRE(detour.hook() == true);
 		REQUIRE(detour.unHook() == true);
 	}
 
 	SECTION("Loop function") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((char*)&hookMe2, (char*)&h_hookMe2, &hookMe2Tramp, dis);
+		PLH::x64Detour detour((char*)&hookMe2, (char*)h_hookMe2, &hookMe2Tramp, dis);
 		REQUIRE(detour.hook() == true);
 
 		effects.PushEffect();
@@ -165,7 +157,7 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 
 	SECTION("hook malloc") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((char*)&malloc, (char*)&h_hookMalloc, &hookMallocTramp, dis);
+		PLH::x64Detour detour((char*)&malloc, (char*)h_hookMalloc, &hookMallocTramp, dis);
 		effects.PushEffect(); // catch does some allocations, push effect first so peak works
 		bool result = detour.hook();
 
