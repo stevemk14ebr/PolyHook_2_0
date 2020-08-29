@@ -90,7 +90,7 @@ public:
 		auto byts = instruction.getBytes();
 		return (instruction.size() == 1 && byts[0] == 0xCC) || 
 			(instruction.size() >= 2 && byts[0] == 0xf3 && byts[1] == 0xc3) ||
-			mnemonic == "ret" || mnemonic == "jmp" || mnemonic.find("iret") != std::string::npos;
+			mnemonic == "ret" || mnemonic == "jmp" || mnemonic.find("iret") == 0;
 	}
 
 	static bool isPadBytes(const PLH::Instruction& instruction) {
