@@ -141,6 +141,18 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::Capstone
 		REQUIRE(detour.unHook() == true);
 	}
 
+	SECTION("Normal function rehook") {
+		PLH::x86Detour detour((char*)&hookMe1, (char*)h_hookMe1, &hookMe1Tramp, dis);
+		REQUIRE(detour.hook() == true);
+
+		effects.PushEffect();
+		REQUIRE(detour.reHook() == true); // can only really test this doesn't cause memory corruption easily
+		volatile auto result = hookMe1();
+		PH_UNUSED(result);
+		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
+	}
+
 	SECTION("Jmp into prologue w/ src in range") {
 		PLH::x86Detour detour((char*)&hookMe2, (char*)&h_nullstub, &nullTramp, dis);
 

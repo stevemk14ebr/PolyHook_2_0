@@ -111,6 +111,19 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 		REQUIRE(detour.unHook() == true);
 	}
 
+	SECTION("Normal function rehook")
+	{
+		PLH::StackCanary canary;
+		PLH::x64Detour detour((char*)&hookMe1, (char*)h_hookMe1, &hookMe1Tramp, dis);
+		REQUIRE(detour.hook() == true);
+		
+		effects.PushEffect();
+		REQUIRE(detour.reHook() == true); // can only really test this doesn't cause memory corruption easily
+		hookMe1();
+		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
+	}
+
 	// In release mode win apis usually go through two levels of jmps 
 	/*
 	0xe9 ... jmp iat_thunk

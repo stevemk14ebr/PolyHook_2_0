@@ -75,6 +75,13 @@ public:
 
 	virtual bool unHook() override;
 
+	/**
+	This is for restoring hook bytes if a 3rd party uninstalled them.
+	DO NOT call this after unHook(). This may only be called after hook() 
+	but before unHook()
+	**/
+	virtual bool reHook();
+
 	virtual HookType getType() const override {
 		return HookType::Detour;
 	}
@@ -89,6 +96,14 @@ protected:
 	ADisassembler&			m_disasm;
 
 	PLH::insts_t			m_originalInsts;
+
+	/*Save the instructions used for the hook so that we can re-write in rehook()
+	Note: There's a nop range we store too so that it doesn't need to be re-calculated
+	*/
+	PLH::insts_t            m_hookInsts;
+	uint16_t                m_nopProlOffset;
+	uint16_t                m_nopSize;
+	uint32_t                m_hookSize;
 
 	/**Walks the given vector of instructions and sets roundedSz to the lowest size possible that doesn't split any instructions and is greater than minSz.
 	If end of function is encountered before this condition an empty optional is returned. Returns instructions in the range start to adjusted end**/

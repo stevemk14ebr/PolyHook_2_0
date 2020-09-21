@@ -192,3 +192,14 @@ bool PLH::Detour::unHook() {
 	m_hooked = false;
 	return true;
 }
+
+bool PLH::Detour::reHook()
+{
+	MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
+	m_disasm.writeEncoding(m_hookInsts, *this);
+
+	// Nop the space between jmp and end of prologue
+	assert(m_hookSize >= m_nopProlOffset);
+	writeNop(m_fnAddress + m_nopProlOffset, m_nopSize);
+	return true;
+}

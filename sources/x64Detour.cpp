@@ -238,8 +238,10 @@ bool PLH::x64Detour::hook() {
 	}
 
 	*m_userTrampVar = m_trampoline;
+	m_hookSize = (uint32_t)roundProlSz;
+	m_nopProlOffset = (uint16_t)minProlSz;
 
-	MemoryProtector prot(m_fnAddress, roundProlSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
+	MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
 	// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
 	auto cave = findNearestCodeCave<8>(m_fnAddress);
 	if (!cave) {
@@ -248,13 +250,13 @@ bool PLH::x64Detour::hook() {
 	}
 
 	MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
-	const auto prolJmp = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
-	m_disasm.writeEncoding(prolJmp, *this);
+	m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+	m_disasm.writeEncoding(m_hookInsts, *this);
 
 	// Nop the space between jmp and end of prologue
-	assert(roundProlSz >= minProlSz);
-	const uint8_t nopSz = (uint8_t)(roundProlSz - minProlSz);
-	writeNop(m_fnAddress + minProlSz, nopSz);
+	assert(m_hookSize >= m_nopProlOffset);
+	m_nopSize = (uint16_t)(m_hookSize - m_nopProlOffset);
+	writeNop(m_fnAddress + m_nopProlOffset, m_nopSize);
 
 	m_hooked = true;
 	return true;
