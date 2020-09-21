@@ -50,6 +50,11 @@ public:
 
 	virtual bool unHook() = 0;
 
+	// this is allowed to be nothing by default
+	virtual bool reHook() {
+		return true;
+	}
+
 	virtual HookType getType() const = 0;
 
 	virtual void setDebug(const bool state) {

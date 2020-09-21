@@ -80,7 +80,7 @@ public:
 	DO NOT call this after unHook(). This may only be called after hook() 
 	but before unHook()
 	**/
-	virtual bool reHook();
+	virtual bool reHook() override;
 
 	virtual HookType getType() const override {
 		return HookType::Detour;
