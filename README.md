@@ -59,6 +59,7 @@ I've setup an example project to show how to use this as a static library. You s
     - x64 trampoline is not restricted to +- 2GB, can be anywhere, avoids shadow space + no registers spoiled.
     - If inline hook fails at an intermediate step the original function will not be malformed. All writes are batched until after we know later steps succeed.
     - Cross-Architecture hooking is _fully_ supported. Including the overriding of memory acccess routines to allow read/write of 64bit memory from 32bit process. You can hook 64bit from 32bit process if you're clever enough to write the shellcode required for the callbacks.
+    - Effecient reHook-ing logic is implemented. This can be used to combat third parties overwriting prologues back to original bytes. This is optimized into a few simple memcpy's rather than re-executing the entire logic in hook().
     
  2) Runtime Inline Hook
     - All the goodness of normal inline hooks, but JIT's a translation stub compatible with the given typedef and ABI. The translation stub will move arguments into a small struct, which is passed as pointer to a callback and allow the spoofing of return value. This allows tools to generate hook translation stubs at runtime, allowing for the full inline hooking of functions where the typedef is not known until runtime.
