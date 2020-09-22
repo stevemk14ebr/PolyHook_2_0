@@ -45,7 +45,7 @@ https://stevemk14ebr.github.io/PolyHook_2_0/ & Read the Tests!
 I've setup an example project to show how to use this as a static library. You should clear your cmake cache between changing these options. The dll is built with the cmake option to export all symbols. This is different from the typical windows DLL where things are manually exported via declspec(dllexport), instead it behaves how linux dlls do with all symbols exported by default. This style should make it easier to maintain the code, the downside is there are many exports but i don't care.
 
 # Features
-0) Both capstone and zydis are supported as disassembly backends and are fully abstracted
+0) Both capstone and zydis are supported as disassembly backends and are fully abstracted.
 1) Inline hook (x86/x64 Detour)
     - Places a jmp to a callback at the prologue, and then allocates a trampoline to continue execution of the original function
     - Operates entirely on an intermediate instruction object, disassembler engine is swappable, capstone included by default
@@ -56,8 +56,9 @@ I've setup an example project to show how to use this as a static library. You s
       - Branches into overwritten section are resolved to the new moved location
       - Jmps from moved prologue back to original section are resolved through a jmp table
       - Relocations inside the moved section are resolved (not using relocation table, disassembles using engine)
-    - x64 trampoline is not restricted to +- 2GB, can be anywhere, avoids shadow space + no registers spoiled
+    - x64 trampoline is not restricted to +- 2GB, can be anywhere, avoids shadow space + no registers spoiled.
     - If inline hook fails at an intermediate step the original function will not be malformed. All writes are batched until after we know later steps succeed.
+    - Cross-Architecture hooking is _fully_ supported. Including the overriding of memory acccess routines to allow read/write of 64bit memory from 32bit process. You can hook 64bit from 32bit process if you're clever enough to write the shellcode required for the callbacks.
     
  2) Runtime Inline Hook
     - All the goodness of normal inline hooks, but JIT's a translation stub compatible with the given typedef and ABI. The translation stub will move arguments into a small struct, which is passed as pointer to a callback and allow the spoofing of return value. This allows tools to generate hook translation stubs at runtime, allowing for the full inline hooking of functions where the typedef is not known until runtime.
