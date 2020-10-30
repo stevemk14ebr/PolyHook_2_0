@@ -19,7 +19,14 @@ class EatHook : public IHook {
 public:
 	EatHook(const std::string& apiName, const std::wstring& moduleName, const char* fnCallback, uint64_t* userOrigVar);
 	EatHook(const std::string& apiName, const std::wstring& moduleName, const uint64_t fnCallback, uint64_t* userOrigVar);
-	virtual ~EatHook();
+	virtual ~EatHook() {
+		// trampoline freed by pageallocator dtor
+		if (m_allocator != nullptr) {
+			delete m_allocator;
+			m_allocator = nullptr;
+		}
+	}
+
 	virtual bool hook() override;
 	virtual bool unHook() override;
 	
@@ -42,7 +49,6 @@ private:
 	PageAllocator* m_allocator;
 	uint64_t m_trampoline;
 
-	bool m_hooked;
 	uint64_t m_moduleBase;
 };
 }

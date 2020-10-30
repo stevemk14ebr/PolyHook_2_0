@@ -13,14 +13,6 @@ PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName
 	, m_trampoline(0)
 {}
 
-PLH::EatHook::~EatHook() {
-	// trampoline freed by pageallocator dtor
-	if (m_allocator != nullptr) {
-		delete m_allocator;
-		m_allocator = nullptr;
-	}
-}
-
 bool PLH::EatHook::hook() {
 	assert(m_userOrigVar != nullptr);
 	uint32_t* pExport = FindEatFunction(m_apiName, m_moduleName);
@@ -59,8 +51,10 @@ bool PLH::EatHook::hook() {
 bool PLH::EatHook::unHook() {
 	assert(m_userOrigVar != nullptr);
 	assert(m_hooked);
-	if (!m_hooked)
+	if (!m_hooked) {
+		Log::log("EatHook unhook failed: no hook present", ErrorLevel::SEV);
 		return false;
+	}
 
 	uint32_t* pExport = FindEatFunction(m_apiName, m_moduleName);
 	if (pExport == nullptr)

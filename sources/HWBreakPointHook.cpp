@@ -22,10 +22,6 @@ PLH::HWBreakPointHook::HWBreakPointHook(const char* fnAddress, const char* fnCal
 	m_hThread = hThread;
 }
 
-PLH::HWBreakPointHook::~HWBreakPointHook() {
-	m_impls.erase(AVehHookImpEntry(m_fnAddress, this));
-}
-
 bool PLH::HWBreakPointHook::hook()
 {
 	CONTEXT ctx;
@@ -75,10 +71,17 @@ bool PLH::HWBreakPointHook::hook()
 		Log::log("Failed to set thread context", ErrorLevel::SEV);
 	}
 
+	m_hooked = true;
 	return true;
 }
 
 bool PLH::HWBreakPointHook::unHook() {
+	assert(m_hooked);
+	if (!m_hooked) {
+		Log::log("HWBPHook unhook failed: no hook present", ErrorLevel::SEV);
+		return false;
+	}
+
 	CONTEXT ctx;
 	ZeroMemory(&ctx, sizeof(ctx));
 	ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
@@ -94,6 +97,7 @@ bool PLH::HWBreakPointHook::unHook() {
 		Log::log("Failed to set thread context", ErrorLevel::SEV);
 		return false;
 	}
+	m_hooked = false;
 	return true;
 }
 

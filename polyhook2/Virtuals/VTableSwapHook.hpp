@@ -40,7 +40,11 @@ public:
 		m_redirectMap[I] = reinterpret_cast<uint64_t>(vfunc.func);
 	};
 
-	virtual ~VTableSwapHook() = default;
+	virtual ~VTableSwapHook() {
+		if (m_hooked) {
+			unHook();
+		}
+	}
 
 	const VFuncMap& getOriginals() const;
 
@@ -70,7 +74,6 @@ private:
 	// index -> ptr val 
 	VFuncMap m_redirectMap;
 	VFuncMap m_origVFuncs;
-	bool m_Hooked;
 };
 
 }

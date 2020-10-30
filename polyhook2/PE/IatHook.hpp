@@ -17,7 +17,12 @@ class IatHook : public IHook {
 public:
 	IatHook(const std::string& dllName, const std::string& apiName, const char* fnCallback, uint64_t* userOrigVar, const std::wstring& moduleName);
 	IatHook(const std::string& dllName, const std::string& apiName, const uint64_t fnCallback, uint64_t* userOrigVar, const std::wstring& moduleName);
-	virtual ~IatHook() = default;
+	virtual ~IatHook() {
+		if (m_hooked) {
+			unHook();
+		}
+	}
+
 	virtual bool hook() override;
 	virtual bool unHook() override;
 	virtual HookType getType() const override {
@@ -34,7 +39,5 @@ private:
 	uint64_t m_fnCallback;
 	uint64_t m_origFunc;
 	uint64_t* m_userOrigVar;
-
-	bool m_hooked;
 };
 }

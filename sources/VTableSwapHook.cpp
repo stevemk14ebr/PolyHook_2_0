@@ -15,12 +15,11 @@ PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redire
 	, m_vFuncCount(0)
 	, m_redirectMap(redirectMap)
 	, m_origVFuncs()
-	, m_Hooked(false)
 {}
 
 bool PLH::VTableSwapHook::hook() {
-	assert(!m_Hooked);
-	if (m_Hooked) {
+	assert(!m_hooked);
+	if (m_hooked) {
 		Log::log("vtable hook failed: hook already present", ErrorLevel::SEV);
 		return false;
 	}
@@ -55,14 +54,14 @@ bool PLH::VTableSwapHook::hook() {
 	}
 
 	*(uint64_t**)m_class = (uint64_t*)m_newVtable.get();
-	m_Hooked = true;
+	m_hooked = true;
 	Log::log("vtable hooked", ErrorLevel::INFO);
 	return true;
 }
 
 bool PLH::VTableSwapHook::unHook() {
-	assert(m_Hooked);
-	if (!m_Hooked) {
+	assert(m_hooked);
+	if (!m_hooked) {
 		Log::log("vtable unhook failed: no hook present", ErrorLevel::SEV);
 		return false;
 	}
@@ -72,7 +71,7 @@ bool PLH::VTableSwapHook::unHook() {
 	
 	m_newVtable.reset();
 
-	m_Hooked = false;
+	m_hooked = false;
 	m_origVtable = nullptr;
 	Log::log("vtable unhooked", ErrorLevel::INFO);
 	return true;

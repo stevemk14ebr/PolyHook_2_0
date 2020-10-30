@@ -11,7 +11,6 @@ PLH::VFuncSwapHook::VFuncSwapHook(const uint64_t Class, const VFuncMap& redirect
 	, m_redirectMap(redirectMap)
 	, m_origVFuncs()
 	, m_userOrigMap(userOrigMap)
-	, m_Hooked(false)
 {}
 
 bool PLH::VFuncSwapHook::hook() {
@@ -34,15 +33,17 @@ bool PLH::VFuncSwapHook::hook() {
 		m_vtable[p.first] = (uintptr_t)p.second;
 	}
 
-	m_Hooked = true;
+	m_hooked = true;
 	return true;
 }
 
 bool PLH::VFuncSwapHook::unHook() {
 	assert(m_userOrigMap != nullptr);
-	assert(m_Hooked);
-	if (!m_Hooked)
+	assert(m_hooked);
+	if (!m_hooked) {
+		Log::log("vfuncswap unhook failed: no hook present", ErrorLevel::SEV);
 		return false;
+	}
 
 	MemoryProtector prot2((uint64_t)&m_vtable[0], sizeof(uintptr_t) * m_vFuncCount, ProtFlag::R | ProtFlag::W, *this);
 	for (const auto& p : m_origVFuncs) {
@@ -54,6 +55,7 @@ bool PLH::VFuncSwapHook::unHook() {
 	}
 
 	m_userOrigMap = nullptr;
+	m_hooked = false;
 	return true;
 }
 

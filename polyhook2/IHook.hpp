@@ -38,6 +38,7 @@ class IHook : public MemAccessor {
 public:
 	IHook() {
 		m_debugSet = false;
+		m_hooked = false;
 	}
 
 	IHook(IHook&& other) = default; //move
@@ -63,6 +64,7 @@ public:
 
 protected:
 	bool m_debugSet;
+	bool m_hooked;
 };
 
 //Thanks @_can1357 for help with this.

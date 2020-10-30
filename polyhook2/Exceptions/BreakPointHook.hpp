@@ -12,12 +12,17 @@ class BreakPointHook : public AVehHook {
 public:
 	BreakPointHook(const uint64_t fnAddress, const uint64_t fnCallback);
 	BreakPointHook(const char* fnAddress, const char* fnCallback);
-	~BreakPointHook();
+	~BreakPointHook() {
+		m_impls.erase(AVehHookImpEntry(m_fnAddress, this));
+		if (m_hooked) {
+			unHook();
+		}
+	}
 
 	virtual bool hook() override;
 	virtual bool unHook() override;
 	auto getProtectionObject() {
-		return finally([=] () {
+		return finally([&] () {
 			hook();
 		});
 	}

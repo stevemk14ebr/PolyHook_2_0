@@ -61,6 +61,19 @@ namespace PLH {
 }
 
 inline uint64_t PLH::AllocateWithinRange(const uint64_t pStart, const int64_t Delta) {
+	/**
+	If WIN >= 2004 this can be simplified by using:
+	MEM_ADDRESS_REQUIREMENTS addressReqs = { 0 };
+	MEM_EXTENDED_PARAMETER extendedParams = { 0 };
+	extendedParams.Type = MemExtendedParameterAddressRequirements;
+	extendedParams.Pointer = &addressReqs;
+
+	addressReqs.LowestStartingAddress =
+	addressReqs.HighestEndingAddress =
+
+	VirtualAlloc2(GetCurrentProcess(), NULL, m_trampolineSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE, &extendedParams, 1);
+	**/
+
 	/*These lambda's let us use a single for loop for both the forward and backward loop conditions.
 	I passed delta variable as a parameter instead of capturing it because it is faster, it allows
 	the compiler to optimize the lambda into a function pointer rather than constructing

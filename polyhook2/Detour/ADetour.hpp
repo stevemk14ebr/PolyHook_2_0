@@ -71,7 +71,11 @@ public:
 		m_userTrampVar = userTrampVar;
 	}
 
-	virtual ~Detour() = default;
+	virtual ~Detour() {
+		if (m_hooked) {
+			unHook();
+		}
+	}
 
 	virtual bool unHook() override;
 
@@ -134,8 +138,6 @@ protected:
 	confused our code cave finder for x64
 	**/
 	void writeNop(uint64_t base, uint32_t size);
-
-	bool                    m_hooked;
 };
 
 template<typename MakeJmpFn>
