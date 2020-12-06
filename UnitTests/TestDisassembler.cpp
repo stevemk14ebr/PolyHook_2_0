@@ -427,12 +427,6 @@ TEMPLATE_TEST_CASE("Test Disassemblers NOPS", "[ADisassembler],[CapstoneDisassem
 // unreachable code
 #pragma warning(disable: 4702)
 TEST_CASE("Compare x86 Decompilers", "[ADisassembler],[ZydisDisassembler][CapstoneDisassembler]") {
-#ifndef _WIN64
-	*(uint32_t*)(x86ASM.data() + 36) = (uint32_t)(x86ASM.data() + 40);
-#else
-	// this test is not suitable for x64 due to ff 25 not being re-written
-	return;
-#endif
 	PLH::StackCanary canaryg;
 	// Use capstone as reference
 	PLH::CapstoneDisassembler disasmRef(PLH::Mode::x86);
@@ -442,10 +436,6 @@ TEST_CASE("Compare x86 Decompilers", "[ADisassembler],[ZydisDisassembler][Capsto
 	PLH::ZydisDisassembler disasm(PLH::Mode::x86);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 		(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
-
-	// TODO: full buffer not disassembled
-	//Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
-	//Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
 
 	SECTION("Check Integrity") {
 		PLH::StackCanary canary;

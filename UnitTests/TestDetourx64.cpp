@@ -100,6 +100,7 @@ HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, {
 TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x64);
 
+
 	SECTION("Normal function") {
 		PLH::StackCanary canary;
 		PLH::x64Detour detour((char*)&hookMe1, (char*)h_hookMe1, &hookMe1Tramp, dis);

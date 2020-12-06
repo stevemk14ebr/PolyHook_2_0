@@ -127,6 +127,13 @@ HOOK_CALLBACK(&malloc, h_hookMalloc, {
 	return PLH::FnCast(hookMallocTramp, &malloc)(_args...);
 });
 
+#include <WinSock2.h>
+uint64_t g_hook_recv_tramp = NULL;
+void hkRecv(SOCKET s, char* buf, int len, int flags)
+{
+	PLH::FnCast(g_hook_recv_tramp, &hkRecv)(s, buf, len, flags);
+}
+
 TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x86);
 
@@ -208,5 +215,12 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::Capstone
 		free(pMem);
 		detour.unHook(); // unhook so we can popeffect safely w/o catch allocation happening again
 		REQUIRE(effects.PopEffect().didExecute());
+	}
+
+	SECTION("hook recv") {
+		auto recv_addr = reinterpret_cast<uint64_t>(GetProcAddress(GetModuleHandleA("ws2_32.dll"), "recv"));
+		PLH::x86Detour detour((char*)&malloc, (char*)h_hookMalloc, &recv_addr, dis);
+		effects.PushEffect(); // catch does some allocations, push effect first so peak works
+		REQUIRE(detour.hook() == true);
 	}
 }
