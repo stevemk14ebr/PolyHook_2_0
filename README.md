@@ -5,10 +5,11 @@ Article 1: https://www.codeproject.com/articles/1100579/polyhook-the-cplusplus-x
 
 Article 2: https://www.codeproject.com/Articles/1252212/PolyHook-2-Cplusplus17-x86-x64-Hooking-Library
 
+# Please consider sponsoring my work by clicking sponsor up in the top right
+
 # Community
 Ask for help, chat with others, talk to me here
 * [Official Gitter Chat](https://gitter.im/PolyHook/Lobby)
-* Please consider sponsoring my work by clicking sponsor up in the top right
 
 # Packaging
 PolyHook2 is available on vcpkg. Consider trying that installation method if you prefer. Just install vcpkg from microsofts directions: 
