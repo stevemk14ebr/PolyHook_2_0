@@ -5,6 +5,7 @@
 #ifndef POLYHOOK_2_X64DETOUR_HPP
 #define POLYHOOK_2_X64DETOUR_HPP
 
+#include <functional>
 #include <optional>
 using namespace std::placeholders;
 
