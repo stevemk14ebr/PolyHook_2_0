@@ -84,24 +84,24 @@ This section will highlight some of the features you can expect from this implem
 Finally, polyhook takes exceptional care to both handle the long tail of weird cases and for uncovered cases to fail gracefully. All hooking operations operate on a copied representation of the assembly, and then changes are only committed if all intermediate operations succeed. There is no transactional API, as internally polyhook itself is transaction. The ```hook``` methods will either work and return true, or fail and return false.
 
 
-# Runtime x86/x64 Detours (inline hooks when typedef is not known statically)
+### Runtime x86/x64 Detours (inline hooks when typedef is not known statically)
 Documentation TODO 
 
-# INT3 + Vectored Exception Handling
+### INT3 + Vectored Exception Handling
 Documentation TODO 
 
-# HWBP + Vectored Exception Handling
+### HWBP + Vectored Exception Handling
 Documentation TODO 
 
-# Virtual Function Swap
+### Virtual Function Swap
 Documentation TODO 
 
-# Virtual Table Swap
+### Virtual Table Swap
 Documentation TODO 
 
-# Import Address Table Hook
+### Import Address Table Hook
 Documentation TODO 
 
-# Export Address Table Hook
+### Export Address Table Hook
 Documentation TODO 
 
