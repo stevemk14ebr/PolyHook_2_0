@@ -46,7 +46,7 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 
 	// invoke callback (let users filter)
 	DWORD code = EXCEPTION_CONTINUE_SEARCH;
-	if (m_onException.Invoke(ExceptionInfo, &code))
+	if (m_onException && m_onException.Invoke(ExceptionInfo, &code))
 		return code;
 
 	switch (ExceptionCode) {
@@ -76,7 +76,7 @@ LONG CALLBACK PLH::AVehHook::Handler(EXCEPTION_POINTERS* ExceptionInfo) {
 		break;
 	default:
 		// let users extend manually
-		if (m_onUnhandledException.Invoke(ExceptionInfo, &code))
+		if (m_onUnhandledException && m_onUnhandledException.Invoke(ExceptionInfo, &code))
 			return code;
 	}
 	return EXCEPTION_CONTINUE_SEARCH;

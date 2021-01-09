@@ -13,7 +13,13 @@ public:
 	template<typename... Args>
 	typename Event::result_type Invoke(Args&& ...Params)
 	{
+		assert(m_Event);
 		return m_Event(std::forward<Args>(Params)...);
+	}
+
+	operator bool() const
+	{
+		return m_Event != nullptr;
 	}
 private:
 	Event m_Event;
