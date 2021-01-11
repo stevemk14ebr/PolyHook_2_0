@@ -5,6 +5,8 @@ Article 1: https://www.codeproject.com/articles/1100579/polyhook-the-cplusplus-x
 
 Article 2: https://www.codeproject.com/Articles/1252212/PolyHook-2-Cplusplus17-x86-x64-Hooking-Library
 
+Article 3: https://www.fireeye.com/blog/threat-research/2020/11/wow64-subsystem-internals-and-hooking-techniques.html
+
 # Please consider sponsoring my work by clicking sponsor up in the top right
 
 # Community
