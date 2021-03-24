@@ -144,7 +144,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 	uint64_t PrevInstAddress = (uint64_t)&x64ASM.front();
 	size_t   PrevInstSize = 0;
 
-	std::vector<char*> CorrectMnemonic = {"mov", "mov", "push", "sub", "mov", "mov", "mov", "cmp", "jne", "call", "jmp"};
+	std::vector<const char*> CorrectMnemonic = {"mov", "mov", "push", "sub", "mov", "mov", "mov", "cmp", "jne", "call", "jmp"};
 	std::vector<uint8_t> CorrectSizes = {5, 5, 1, 4, 3, 2, 3, 3, 2, 5, 6};
 
 	SECTION("Check disassembler integrity") {
@@ -286,7 +286,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 	// TODO: full buffer isn't disassembled
 	//Instructions.erase(Instructions.begin() + 0x9, Instructions.end());
 	std::vector<uint8_t> CorrectSizes = {2, 6, 5, 6, 2, 6, 2};
-	std::vector<char*> CorrectMnemonic = {"add", "add", "add", "jne", "je", "lea", "jmp"};
+	std::vector<const char*> CorrectMnemonic = {"add", "add", "add", "jne", "je", "lea", "jmp"};
 
 	uint64_t PrevInstAddress = (uint64_t)&x86ASM.front();
 	size_t   PrevInstSize = 0;

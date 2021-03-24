@@ -67,23 +67,28 @@ int __stdcall hkEatMessageBox(HWND    hWnd,
 	UNREFERENCED_PARAMETER(hWnd);
 	PLH::StackCanary canary;
 	tEatMessageBox MsgBox = (tEatMessageBox)oEatMessageBox;
-	MsgBox(0, "My Hook", "text", 0);
+	MsgBox(0, TEXT("My Hook"), TEXT("text"), 0);
 	eatEffectTracker.PeakEffect().trigger();
 	return 1;
 }
 
 TEST_CASE("Eat winapi tests", "[EatHook]") {
 	PLH::StackCanary canary;
-	LoadLibrary("User32.dll");
+	LoadLibrary(TEXT("User32.dll"));
 
-	PLH::EatHook hook("MessageBoxA", L"User32.dll", (char*)&hkEatMessageBox, (uint64_t*)&oEatMessageBox);
+#ifdef UNICODE
+	std::string apiName = "MessageBoxW";
+#else
+	std::string apiName = "MessageBoxA";
+#endif
+	PLH::EatHook hook(apiName, L"User32.dll", (char*)&hkEatMessageBox, (uint64_t*)&oEatMessageBox);
 	REQUIRE(hook.hook());
 
 	eatEffectTracker.PushEffect();
 
 	// force walk of EAT
-	tEatMessageBox MsgBox = (tEatMessageBox)GetProcAddress(GetModuleHandleA("User32.dll"), "MessageBoxA");
-	MsgBox(0, "test", "test", 0);
+	tEatMessageBox MsgBox = (tEatMessageBox)GetProcAddress(GetModuleHandleA("User32.dll"), apiName.c_str());
+	MsgBox(0, TEXT("test"), TEXT("test"), 0);
 	REQUIRE(eatEffectTracker.PopEffect().didExecute());
 	hook.unHook();
 }
