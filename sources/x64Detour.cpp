@@ -368,10 +368,17 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	}
 
 	// each jmp tbl entries holder is one slot down from the previous (lambda holds state)
-	const auto makeJmpFn = [=, captureAddress = jmpHolderCurAddr](uint64_t a, uint64_t b) mutable {
+	const auto makeJmpFn = [=, captureAddress = jmpHolderCurAddr](uint64_t a, PLH::Instruction& inst) mutable {
 		captureAddress -= destHldrSz;
 		assert(captureAddress > (uint64_t)m_trampoline && (captureAddress + destHldrSz) < (m_trampoline + m_trampolineSz));
-		return makex64MinimumJump(a, b, captureAddress);
+
+		// move inst to trampoline and point instruction to entry
+		auto oldDest = inst.getDestination();
+		inst.setAddress(inst.getAddress() + delta);
+		inst.setDestination(inst.isCalling() ? captureAddress : a);
+
+		printf("makeJmpFn: oldDest [%I64X] isCalling [%d] isIndirect [%d]\n", oldDest, inst.isCalling(), inst.m_isIndirect);
+		return inst.isCalling() ? makex64DestHolder(oldDest, captureAddress) : makex64MinimumJump(a, oldDest, captureAddress);
 	};
 
 	const uint64_t jmpTblStart = jmpToProlAddr + getMinJmpSize();

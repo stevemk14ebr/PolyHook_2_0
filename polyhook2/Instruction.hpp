@@ -418,7 +418,7 @@ inline PLH::insts_t makex64DestHolder(const uint64_t destination, const uint64_t
 	std::vector<uint8_t> destBytes;
 	destBytes.resize(8);
 	memcpy(destBytes.data(), &destination, 8);
-	return PLH::insts_t{ PLH::Instruction (destHolder, PLH::Instruction::Displacement{}, 0, false, false, destBytes, "dest holder", "", Mode::x64) };
+	return PLH::insts_t{ PLH::Instruction (destHolder, PLH::Instruction::Displacement{0}, 0, false, false, destBytes, "dest holder", "", Mode::x64) };
 }
 
 }

@@ -95,7 +95,7 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
 
 				// skip rex prefix
 			    (hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) && inst.size() >= 3 && inst.getBytes().at(1) == 0xff && inst.getBytes().at(2) == 0x25) ||
-				(hasGroup(capInst, x86_insn_group::X86_GRP_CALL) && inst.size() >= 3 && inst.getBytes().at(1) == 0xff && inst.getBytes().at(2) == 0x25)
+				(hasGroup(capInst, x86_insn_group::X86_GRP_CALL) && inst.size() >= 3 && inst.getBytes().at(1) == 0xff && inst.getBytes().at(2) == 0x15)
 				)
 			{
 				// far jmp 0xff, 0x25, holder jmp [0xdeadbeef]

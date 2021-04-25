@@ -141,13 +141,19 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 			(inst.getDestination() < prolStart ||
 			inst.getDestination() > prolStart + roundProlSz)) {
 
-			// can inst just be re-encoded or do we need a tbl entry
-			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
-			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); // 2^bitSz give max val, /2 and -1 because signed ex (int8_t [-128, 127] = [2^8 / 2, 2^8 / 2 - 1]
-			if ((uint64_t)std::llabs(delta) > maxInstDisp) {
+            //indirect-call always needs an entry (only a dest-holder)
+			//its destination cannot be used for relocating since it is already deferenced.(ref: inst.getDestination)
+            if(inst.isCalling() && inst.m_isIndirect){
 				instsNeedingEntry.push_back(inst);
-			} else {
-				instsNeedingReloc.push_back(inst);
+			}else{
+				// can inst just be re-encoded or do we need a tbl entry
+				const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
+				const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); // 2^bitSz give max val, /2 and -1 because signed ex (int8_t [-128, 127] = [2^8 / 2, 2^8 / 2 - 1]
+				if ((uint64_t)std::llabs(delta) > maxInstDisp) {
+					instsNeedingEntry.push_back(inst);
+				} else {
+					instsNeedingReloc.push_back(inst);
+				}
 			}
 		}
 
