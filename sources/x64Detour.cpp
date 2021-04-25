@@ -29,6 +29,14 @@ uint8_t PLH::x64Detour::getPrefJmpSize() const {
 	return 16;
 }
 
+PLH::x64Detour::detour_scheme_t PLH::x64Detour::getDetourScheme() const{
+	return _detourScheme;
+}
+
+void PLH::x64Detour::setDetourScheme(detour_scheme_t scheme){
+	_detourScheme = scheme;
+}
+
 template<uint16_t SIZE>
 std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	const uint64_t chunkSize = 64000;
@@ -168,6 +176,37 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	return {};
 }
 
+namespace {
+
+#pragma pack(push, 1)
+
+struct InplaceDetour {
+	uint16_t mov_r10 { 0xba49 };
+	uint64_t target;
+	uint16_t push_r10 { 0x5241 };
+	uint8_t ret {0xc3};
+};
+
+#pragma pack(pop)
+
+constexpr auto INPLACE_DETOUR_SIZE = sizeof(InplaceDetour);
+
+PLH::insts_t makeInplaceDetour(const uint64_t address, const uint64_t destination){
+	PLH::Instruction::Displacement disp { 0 };
+
+	InplaceDetour dt;
+	dt.target = destination;
+
+	std::vector<uint8_t> destBytes;
+	destBytes.resize(INPLACE_DETOUR_SIZE);
+	memcpy(destBytes.data(), &dt, INPLACE_DETOUR_SIZE);
+	return { PLH::Instruction(address, disp, 0, false, false, destBytes, "inplace-detour", "", PLH::Mode::x64) };
+}
+
+}
+
+
+
 bool PLH::x64Detour::hook() {
 	// ------- Must resolve callback first, so that m_disasm branchmap is filled for prologue stuff
 	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100, *this);
@@ -201,7 +240,8 @@ bool PLH::x64Detour::hook() {
 	// --------------- END RECURSIVE JMP RESOLUTION ---------------------
 	Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
-	uint64_t minProlSz = getMinJmpSize(); // min size of patches that may split instructions
+	
+	uint64_t minProlSz = _detourScheme == detour_scheme_t::CODE_CAVE ? getMinJmpSize() : INPLACE_DETOUR_SIZE; // min size of patches that may split instructions
 	uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
 
 	std::optional<PLH::insts_t> prologueOpt;
@@ -242,15 +282,21 @@ bool PLH::x64Detour::hook() {
 	m_nopProlOffset = (uint16_t)minProlSz;
 
 	MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
-	// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
-	auto cave = findNearestCodeCave<8>(m_fnAddress);
-	if (!cave) {
-		Log::log("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
-		return false;
-	}
 
-	MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
-	m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+	if(_detourScheme == detour_scheme_t::CODE_CAVE){
+		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
+		auto cave = findNearestCodeCave<8>(m_fnAddress);
+		if (!cave) {
+			Log::log("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
+			return false;
+		}
+
+		MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
+		m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+	} else {
+		//inplace scheme
+		m_hookInsts = makeInplaceDetour(m_fnAddress, m_fnCallback);
+	}
 	m_disasm.writeEncoding(m_hookInsts, *this);
 
 	// Nop the space between jmp and end of prologue
