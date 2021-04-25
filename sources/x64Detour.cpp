@@ -333,7 +333,8 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 		
 		// prol + jmp back to prol + N * jmpEntries
 		m_trampolineSz = (uint16_t)(prolSz + (getMinJmpSize() + destHldrSz) +
-			(getMinJmpSize() + destHldrSz)* neededEntryCount);
+			(getMinJmpSize() + destHldrSz)* neededEntryCount +
+			7); //extra bytes for dest-holders 8 bytes alignment 
 
 		// allocate new trampoline before deleting old to increase odds of new mem address
 		uint64_t tmpTrampoline = (uint64_t)new unsigned char[m_trampolineSz];
@@ -359,7 +360,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 
 	// Insert jmp from trampoline -> prologue after overwritten section
 	const uint64_t jmpToProlAddr = m_trampoline + prolSz;
-	const uint64_t jmpHolderCurAddr = m_trampoline + m_trampolineSz - destHldrSz;
+	const uint64_t jmpHolderCurAddr = (m_trampoline + m_trampolineSz - destHldrSz) & ~0x7; //8 bytes align for performance.
 	{
 		const auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prologue.front().getAddress() + prolSz, jmpHolderCurAddr);
 
@@ -377,7 +378,6 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 		inst.setAddress(inst.getAddress() + delta);
 		inst.setDestination(inst.isCalling() ? captureAddress : a);
 
-		printf("makeJmpFn: oldDest [%I64X] isCalling [%d] isIndirect [%d]\n", oldDest, inst.isCalling(), inst.m_isIndirect);
 		return inst.isCalling() ? makex64DestHolder(oldDest, captureAddress) : makex64MinimumJump(a, oldDest, captureAddress);
 	};
 
