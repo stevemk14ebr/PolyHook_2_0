@@ -99,6 +99,8 @@ bool PLH::ZydisDisassembler::getOpStr(ZydisDecodedInstruction* pInstruction, uin
 void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const
 {
 	inst.setBranching(zydisInst->meta.branch_type != ZYDIS_BRANCH_TYPE_NONE);
+	inst.setCalling(zydisInst->mnemonic == ZydisMnemonic::ZYDIS_MNEMONIC_CALL);
+
 	for(int i = 0; i < zydisInst->operand_count; i++)
 	{
 		const ZydisDecodedOperand* const operand = &zydisInst->operands[i];
