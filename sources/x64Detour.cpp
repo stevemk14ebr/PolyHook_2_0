@@ -64,7 +64,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	std::string CC_PATTERN_RETN = "c2 ?? ?? " + repeat_n("cc", SIZE, " ");
 	std::string NOP1_PATTERN_RETN = "c2 ?? ?? " + repeat_n("90", SIZE, " ");
 
-	const char* NOP2_RET = "c3 0f 1f 44 00 00";
+	//const char* NOP2_RET = "c3 0f 1f 44 00 00"; (cave too small, code will be corrupted!)
 	const char* NOP3_RET = "c3 0f 1f 84 00 00 00 00 00";
 	const char* NOP4_RET = "c3 66 0f 1f 84 00 00 00 00 00";
 	const char* NOP5_RET = "c3 66 66 0f 1f 84 00 00 00 00 00";
@@ -89,7 +89,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	// Scan in same order as listing above
 	const char* PATTERNS_OFF1[] = {
 		CC_PATTERN_RET.c_str(), NOP1_PATTERN_RET.c_str(),
-		NOP2_RET, NOP3_RET, NOP4_RET, NOP5_RET,NOP6_RET,
+		/*NOP2_RET, */ NOP3_RET, NOP4_RET, NOP5_RET,NOP6_RET,
 		NOP7_RET, NOP8_RET, NOP9_RET, NOP10_RET, NOP11_RET
 	};
 

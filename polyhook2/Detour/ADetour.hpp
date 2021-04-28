@@ -151,7 +151,7 @@ PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblS
 			// make an entry pointing to where inst did point to
 			auto entry = makeJmp(jmpTblCurAddr, inst);
 			
-			if(sizeof(void*) == 4 || !inst.isCalling()) //x64-call instruction does not need a JMP (only needs a dest-holder)
+			if(m_disasm.getMode() == Mode::x86 || !inst.isCalling()) //x64-call instruction does not need a JMP (only needs a dest-holder)
 				jmpTblCurAddr += jmpSz;
 
 			m_disasm.writeEncoding(entry, *this);

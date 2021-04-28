@@ -101,7 +101,7 @@ bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
 	
 	uint64_t maxAddr = 0;
 	const uint64_t prolStart = prol.front().getAddress();
-	branch_map_t branchMap = m_disasm.getBranchMap();
+	const branch_map_t& branchMap = m_disasm.getBranchMap();
 	for (size_t i = 0; i < prol.size(); i++) {
 		auto inst = prol.at(i);
 

@@ -98,7 +98,7 @@ public:
 		return instruction.getMnemonic() == "nop";
 	}
 
-	branch_map_t getBranchMap() {
+	const branch_map_t& getBranchMap() const {
 		return m_branchMap;
 	}
 
@@ -121,6 +121,10 @@ public:
 				updateBranchMap(inst.getAddress(), oldInst);
 			}
 		}
+	}
+
+	inline Mode getMode() const {
+		return m_mode;
 	}
 protected:
 	typename branch_map_t::mapped_type& updateBranchMap(uint64_t key, const Instruction& new_val) {
