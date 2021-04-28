@@ -78,8 +78,10 @@ PLH::CapstoneDisassembler::disassemble(uint64_t firstInstruction, uint64_t start
  * the instruction pointer, or directly to an absolute address**/
 void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, const cs_insn* capInst) const {
 	cs_x86 x86 = capInst->detail->x86;
-	const bool branches = hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) || hasGroup(capInst, x86_insn_group::X86_GRP_CALL);
+	const bool isCalling = hasGroup(capInst, x86_insn_group::X86_GRP_CALL);
+	const bool branches = isCalling || hasGroup(capInst, x86_insn_group::X86_GRP_JUMP);
 	inst.setBranching(branches);
+	inst.setCalling(isCalling);
 
 	for (uint_fast32_t j = 0; j < x86.op_count; j++) {
 		cs_x86_op op = x86.operands[j];
@@ -93,7 +95,7 @@ void PLH::CapstoneDisassembler::setDisplacementFields(PLH::Instruction& inst, co
 
 				// skip rex prefix
 			    (hasGroup(capInst, x86_insn_group::X86_GRP_JUMP) && inst.size() >= 3 && inst.getBytes().at(1) == 0xff && inst.getBytes().at(2) == 0x25) ||
-				(hasGroup(capInst, x86_insn_group::X86_GRP_CALL) && inst.size() >= 3 && inst.getBytes().at(1) == 0xff && inst.getBytes().at(2) == 0x25)
+				(hasGroup(capInst, x86_insn_group::X86_GRP_CALL) && inst.size() >= 3 && inst.getBytes().at(1) == 0xff && inst.getBytes().at(2) == 0x15)
 				)
 			{
 				// far jmp 0xff, 0x25, holder jmp [0xdeadbeef]

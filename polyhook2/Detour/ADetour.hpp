@@ -149,12 +149,10 @@ PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblS
 		if (std::find(instsNeedingEntry.begin(), instsNeedingEntry.end(), inst) != instsNeedingEntry.end()) {
 			assert(inst.hasDisplacement());
 			// make an entry pointing to where inst did point to
-			auto entry = makeJmp(jmpTblCurAddr, inst.getDestination());
+			auto entry = makeJmp(jmpTblCurAddr, inst);
 			
-			// move inst to trampoline and point instruction to entry
-			inst.setAddress(inst.getAddress() + delta);
-			inst.setDestination(jmpTblCurAddr);
-			jmpTblCurAddr += jmpSz;
+			if(m_disasm.getMode() == Mode::x86 || !inst.isCalling()) //x64-call instruction does not need a JMP (only needs a dest-holder)
+				jmpTblCurAddr += jmpSz;
 
 			m_disasm.writeEncoding(entry, *this);
 			jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());

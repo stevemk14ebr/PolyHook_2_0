@@ -152,7 +152,16 @@ bool PLH::x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 		m_disasm.writeEncoding(jmpToProl, *this);
 	}
 
+	const auto makeJmpFn = [=](uint64_t a, PLH::Instruction& inst) mutable {
+		// move inst to trampoline and point instruction to entry
+		auto oldDest = inst.getDestination();
+		inst.setAddress(inst.getAddress() + delta);
+		inst.setDestination(a);
+		
+		return makex86Jmp(a, oldDest);
+	};
+
 	const uint64_t jmpTblStart = jmpToProlAddr + getJmpSize();
-	trampolineOut = relocateTrampoline(prologue, jmpTblStart, delta, getJmpSize(), makex86Jmp, instsNeedingReloc, instsNeedingEntry);
+	trampolineOut = relocateTrampoline(prologue, jmpTblStart, delta, getJmpSize(), makeJmpFn, instsNeedingReloc, instsNeedingEntry);
 	return true;
 }

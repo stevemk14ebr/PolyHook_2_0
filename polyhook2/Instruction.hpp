@@ -121,6 +121,10 @@ public:
 		m_isBranching = status;
 	}
 
+	void setCalling(const bool isCalling) {
+		m_isCalling = isCalling;
+	}
+
 	/**Get the offset into the instruction bytes where displacement is encoded**/
 	uint8_t getDisplacementOffset() const {
 		return m_dispOffset;
@@ -144,6 +148,10 @@ public:
 			}
 		}
 		return m_isBranching;
+	}
+
+	bool isCalling() const {
+		return m_isCalling;
 	}
 
 	const std::vector<uint8_t>& getBytes() const {
@@ -224,6 +232,7 @@ public:
 	bool         m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
 	bool		 m_isBranching;     // Does this instrunction jmp/call or otherwise change control flow
 	bool         m_isIndirect;      // Does this instruction get it's destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
+	bool         m_isCalling;       // Does this instruction is of a CALL type.
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
@@ -403,6 +412,13 @@ inline PLH::insts_t makeAgnosticJmp(const uint64_t address, const uint64_t desti
 		return makex86Jmp(address, destination);
 	else
 		return makex64PreferredJump(address, destination);
+}
+
+inline PLH::insts_t makex64DestHolder(const uint64_t destination, const uint64_t destHolder) {
+	std::vector<uint8_t> destBytes;
+	destBytes.resize(8);
+	memcpy(destBytes.data(), &destination, 8);
+	return PLH::insts_t{ PLH::Instruction (destHolder, PLH::Instruction::Displacement{0}, 0, false, false, destBytes, "dest holder", "", Mode::x64) };
 }
 
 }

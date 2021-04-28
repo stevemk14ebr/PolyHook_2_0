@@ -29,6 +29,14 @@ uint8_t PLH::x64Detour::getPrefJmpSize() const {
 	return 16;
 }
 
+PLH::x64Detour::detour_scheme_t PLH::x64Detour::getDetourScheme() const{
+	return _detourScheme;
+}
+
+void PLH::x64Detour::setDetourScheme(detour_scheme_t scheme){
+	_detourScheme = scheme;
+}
+
 template<uint16_t SIZE>
 std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	const uint64_t chunkSize = 64000;
@@ -56,7 +64,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	std::string CC_PATTERN_RETN = "c2 ?? ?? " + repeat_n("cc", SIZE, " ");
 	std::string NOP1_PATTERN_RETN = "c2 ?? ?? " + repeat_n("90", SIZE, " ");
 
-	const char* NOP2_RET = "c3 0f 1f 44 00 00";
+	//const char* NOP2_RET = "c3 0f 1f 44 00 00"; (cave too small, code will be corrupted!)
 	const char* NOP3_RET = "c3 0f 1f 84 00 00 00 00 00";
 	const char* NOP4_RET = "c3 66 0f 1f 84 00 00 00 00 00";
 	const char* NOP5_RET = "c3 66 66 0f 1f 84 00 00 00 00 00";
@@ -81,7 +89,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	// Scan in same order as listing above
 	const char* PATTERNS_OFF1[] = {
 		CC_PATTERN_RET.c_str(), NOP1_PATTERN_RET.c_str(),
-		NOP2_RET, NOP3_RET, NOP4_RET, NOP5_RET,NOP6_RET,
+		/*NOP2_RET, */ NOP3_RET, NOP4_RET, NOP5_RET,NOP6_RET,
 		NOP7_RET, NOP8_RET, NOP9_RET, NOP10_RET, NOP11_RET
 	};
 
@@ -168,6 +176,37 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	return {};
 }
 
+namespace {
+
+#pragma pack(push, 1)
+
+struct InplaceDetour {
+	uint16_t mov_r10 { 0xba49 };
+	uint64_t target;
+	uint16_t push_r10 { 0x5241 };
+	uint8_t ret {0xc3};
+};
+
+#pragma pack(pop)
+
+constexpr auto INPLACE_DETOUR_SIZE = sizeof(InplaceDetour);
+
+PLH::insts_t makeInplaceDetour(const uint64_t address, const uint64_t destination){
+	PLH::Instruction::Displacement disp { 0 };
+
+	InplaceDetour dt;
+	dt.target = destination;
+
+	std::vector<uint8_t> destBytes;
+	destBytes.resize(INPLACE_DETOUR_SIZE);
+	memcpy(destBytes.data(), &dt, INPLACE_DETOUR_SIZE);
+	return { PLH::Instruction(address, disp, 0, false, false, destBytes, "inplace-detour", "", PLH::Mode::x64) };
+}
+
+}
+
+
+
 bool PLH::x64Detour::hook() {
 	// ------- Must resolve callback first, so that m_disasm branchmap is filled for prologue stuff
 	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100, *this);
@@ -201,7 +240,8 @@ bool PLH::x64Detour::hook() {
 	// --------------- END RECURSIVE JMP RESOLUTION ---------------------
 	Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
-	uint64_t minProlSz = getMinJmpSize(); // min size of patches that may split instructions
+	
+	uint64_t minProlSz = _detourScheme == detour_scheme_t::CODE_CAVE ? getMinJmpSize() : INPLACE_DETOUR_SIZE; // min size of patches that may split instructions
 	uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
 
 	std::optional<PLH::insts_t> prologueOpt;
@@ -242,15 +282,21 @@ bool PLH::x64Detour::hook() {
 	m_nopProlOffset = (uint16_t)minProlSz;
 
 	MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
-	// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
-	auto cave = findNearestCodeCave<8>(m_fnAddress);
-	if (!cave) {
-		Log::log("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
-		return false;
-	}
 
-	MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
-	m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+	if(_detourScheme == detour_scheme_t::CODE_CAVE){
+		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
+		auto cave = findNearestCodeCave<8>(m_fnAddress);
+		if (!cave) {
+			Log::log("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
+			return false;
+		}
+
+		MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
+		m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+	} else {
+		//inplace scheme
+		m_hookInsts = makeInplaceDetour(m_fnAddress, m_fnCallback);
+	}
 	m_disasm.writeEncoding(m_hookInsts, *this);
 
 	// Nop the space between jmp and end of prologue
@@ -287,7 +333,8 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 		
 		// prol + jmp back to prol + N * jmpEntries
 		m_trampolineSz = (uint16_t)(prolSz + (getMinJmpSize() + destHldrSz) +
-			(getMinJmpSize() + destHldrSz)* neededEntryCount);
+			(getMinJmpSize() + destHldrSz)* neededEntryCount +
+			7); //extra bytes for dest-holders 8 bytes alignment 
 
 		// allocate new trampoline before deleting old to increase odds of new mem address
 		uint64_t tmpTrampoline = (uint64_t)new unsigned char[m_trampolineSz];
@@ -313,7 +360,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 
 	// Insert jmp from trampoline -> prologue after overwritten section
 	const uint64_t jmpToProlAddr = m_trampoline + prolSz;
-	const uint64_t jmpHolderCurAddr = m_trampoline + m_trampolineSz - destHldrSz;
+	const uint64_t jmpHolderCurAddr = (m_trampoline + m_trampolineSz - destHldrSz) & ~0x7; //8 bytes align for performance.
 	{
 		const auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prologue.front().getAddress() + prolSz, jmpHolderCurAddr);
 
@@ -322,10 +369,16 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	}
 
 	// each jmp tbl entries holder is one slot down from the previous (lambda holds state)
-	const auto makeJmpFn = [=, captureAddress = jmpHolderCurAddr](uint64_t a, uint64_t b) mutable {
+	const auto makeJmpFn = [=, captureAddress = jmpHolderCurAddr](uint64_t a, PLH::Instruction& inst) mutable {
 		captureAddress -= destHldrSz;
 		assert(captureAddress > (uint64_t)m_trampoline && (captureAddress + destHldrSz) < (m_trampoline + m_trampolineSz));
-		return makex64MinimumJump(a, b, captureAddress);
+
+		// move inst to trampoline and point instruction to entry
+		auto oldDest = inst.getDestination();
+		inst.setAddress(inst.getAddress() + delta);
+		inst.setDestination(inst.isCalling() ? captureAddress : a);
+
+		return inst.isCalling() ? makex64DestHolder(oldDest, captureAddress) : makex64MinimumJump(a, oldDest, captureAddress);
 	};
 
 	const uint64_t jmpTblStart = jmpToProlAddr + getMinJmpSize();
