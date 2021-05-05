@@ -155,6 +155,13 @@ uint64_t findPattern(const uint64_t rangeStart, size_t len, const char* pattern)
 uint64_t findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern);
 uint64_t getPatternSize(const char* pattern);
 
+const uint64_t boundedAllocSize = 0x10000;
+bool boundedAllocSupported();
+uint64_t boundAlloc(uint64_t min, uint64_t max);
+
+uint64_t calc_2gb_below(uint64_t address);
+uint64_t calc_2gb_above(uint64_t address);
+
 inline std::string repeat_n(std::string s, size_t n, std::string delim = "") {
 	std::string out = "";
 	for (size_t i = 0; i < n; i++) {

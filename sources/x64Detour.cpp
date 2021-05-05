@@ -17,6 +17,13 @@ PLH::x64Detour::x64Detour(const char* fnAddress, const char* fnCallback, uint64_
 
 }
 
+PLH::x64Detour::~x64Detour()
+{
+	if (m_valloc2_region) {
+		VirtualFree((PVOID)*m_valloc2_region, boundedAllocSize, MEM_RELEASE);
+	}
+}
+
 PLH::Mode PLH::x64Detour::getArchType() const {
 	return PLH::Mode::x64;
 }
@@ -46,15 +53,6 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	});
 
 	// RPM so we don't pagefault, careful to check for partial reads
-	auto calc_2gb_below = [](uint64_t address) -> uint64_t
-	{
-		return (address > (uint64_t)0x7ff80000) ? address - 0x7ff80000 : 0x80000;
-	};
-
-	auto calc2gb_above = [](uint64_t address) -> uint64_t
-	{
-		return (address < (uint64_t)0xffffffff80000000) ? address + 0x7ff80000 : (uint64_t)0xfffffffffff80000;
-	};
 	
 	// these patterns are listed in order of most accurate to least accurate with size taken into account
 	// simple c3 ret is more accurate than c2 ?? ?? and series of CC or 90 is more accurate than complex multi-byte nop
@@ -149,7 +147,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	}
 
 	// Search 2GB above
-	for (uint64_t search = addr; (search + chunkSize) < calc2gb_above(addr); search += chunkSize) {
+	for (uint64_t search = addr; (search + chunkSize) < calc_2gb_above(addr); search += chunkSize) {
 		size_t read = 0;
 		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
 			uint32_t contiguousInt3 = 0;
@@ -294,12 +292,25 @@ bool PLH::x64Detour::hook() {
 	m_nopProlOffset = (uint16_t)minProlSz;
 
 	MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
+	if (_detourScheme == detour_scheme_t::VALLOC2 || (_detourScheme == detour_scheme_t::VALLOC2_FALLBACK_CODE_CAVE && boundedAllocSupported())) {
+		// TODO: We wast a whole page, put this in the PageAllocator instead
+		uint64_t max = (uint64_t)AlignDownwards((char*)calc_2gb_above(m_fnAddress), 0x10000);
+		uint64_t min = (uint64_t)AlignDownwards((char*)calc_2gb_below(m_fnAddress), 0x10000);
+		uint64_t region = boundAlloc(min, max);
+		if (!region) {
+			Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
+			return false;
+		}
 
-	if(_detourScheme == detour_scheme_t::CODE_CAVE){
+		m_valloc2_region = region;
+
+		MemoryProtector holderProt(region, boundedAllocSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
+		m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, region);
+	} else if(_detourScheme == detour_scheme_t::CODE_CAVE || _detourScheme == detour_scheme_t::VALLOC2_FALLBACK_CODE_CAVE){
 		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
 		auto cave = findNearestCodeCave<8>(m_fnAddress);
 		if (!cave) {
-			Log::log("Function too small to hook safely, no code caves found near function", ErrorLevel::SEV);
+			Log::log("No code caves found near function", ErrorLevel::SEV);
 			return false;
 		}
 
