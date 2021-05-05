@@ -64,7 +64,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	std::string CC_PATTERN_RETN = "c2 ?? ?? " + repeat_n("cc", SIZE, " ");
 	std::string NOP1_PATTERN_RETN = "c2 ?? ?? " + repeat_n("90", SIZE, " ");
 
-	//const char* NOP2_RET = "c3 0f 1f 44 00 00"; (cave too small, code will be corrupted!)
+	const char* NOP2_RET = "c3 0f 1f 44 00 00";
 	const char* NOP3_RET = "c3 0f 1f 84 00 00 00 00 00";
 	const char* NOP4_RET = "c3 66 0f 1f 84 00 00 00 00 00";
 	const char* NOP5_RET = "c3 66 66 0f 1f 84 00 00 00 00 00";
@@ -89,7 +89,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	// Scan in same order as listing above
 	const char* PATTERNS_OFF1[] = {
 		CC_PATTERN_RET.c_str(), NOP1_PATTERN_RET.c_str(),
-		/*NOP2_RET, */ NOP3_RET, NOP4_RET, NOP5_RET,NOP6_RET,
+		NOP2_RET, NOP3_RET, NOP4_RET, NOP5_RET,NOP6_RET,
 		NOP7_RET, NOP8_RET, NOP9_RET, NOP10_RET, NOP11_RET
 	};
 
@@ -129,12 +129,18 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 			};
 
 			for (const char* pat : PATTERNS_OFF1) {
+				if(getPatternSize(pat) - 1 < SIZE) 
+					continue;
+
 				if (auto found = finder(pat, 1)) {
 					return found;
 				}
 			}
 
 			for (const char* pat : PATTERNS_OFF3) {
+				if(getPatternSize(pat) - 3 < SIZE) 
+					continue;
+
 				if (auto found = finder(pat, 3)) {
 					return found;
 				}
@@ -161,12 +167,18 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 			};
 
 			for (const char* pat : PATTERNS_OFF1) {
+				if(getPatternSize(pat) - 1 < SIZE) 
+					continue;
+
 				if (auto found = finder(pat, 1)) {
 					return found;
 				}
 			}
 
 			for (const char* pat : PATTERNS_OFF3) {
+				if(getPatternSize(pat) - 3 < SIZE) 
+					continue;
+
 				if (auto found = finder(pat, 3)) {
 					return found;
 				}
@@ -294,7 +306,8 @@ bool PLH::x64Detour::hook() {
 		MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 		m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
 	} else {
-		//inplace scheme
+		//inplace scheme. This is more stable than the cave finder since that may potentially find a region of unstable memory. 
+		// However, this INPLACE scheme may only be done for functions with a large enough prologue, otherwise this will overwrite adjacent bytes
 		m_hookInsts = makeInplaceDetour(m_fnAddress, m_fnCallback);
 	}
 	m_disasm.writeEncoding(m_hookInsts, *this);

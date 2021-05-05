@@ -2,10 +2,7 @@
 
 uint64_t PLH::findPattern(const uint64_t rangeStart, size_t len, const char* pattern)
 {
-	const size_t l = strlen(pattern);
-
-	// l = 2 * b + (b - 1) . 2 chars per byte + b - 1 spaces between
-	const size_t patSize = (l + 1) / 3;
+	const size_t patSize = getPatternSize(pattern);
 	auto patt_base = (char*)_alloca(patSize + 1);
 	auto msk_base = (char*)_alloca(patSize + 1);
 	char* pat = patt_base;
@@ -37,12 +34,17 @@ uint64_t PLH::findPattern(const uint64_t rangeStart, size_t len, const char* pat
 	return NULL;
 }
 
-uint64_t PLH::findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern)
+uint64_t PLH::getPatternSize(const char* pattern)
 {
 	const size_t l = strlen(pattern);
 
 	// c = 2 * b + (b - 1) . 2 chars per byte + b - 1 spaces between
-	const size_t patSize = (l + 1) / 3;
+	return (l + 1) / 3;
+}
+
+uint64_t PLH::findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern)
+{
+	const size_t patSize = getPatternSize(pattern);
 	auto patt_base = (char*)_alloca(patSize + 1);
 	auto msk_base = (char*)_alloca(patSize + 1);
 	char* pat = patt_base;

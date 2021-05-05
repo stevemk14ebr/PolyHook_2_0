@@ -153,6 +153,7 @@ inline bool isMatch(const char* addr, const char* pat, const char* msk)
 // must use space between bytes and ?? for wildcards. Do not add 0x prefix
 uint64_t findPattern(const uint64_t rangeStart, size_t len, const char* pattern);
 uint64_t findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern);
+uint64_t getPatternSize(const char* pattern);
 
 inline std::string repeat_n(std::string s, size_t n, std::string delim = "") {
 	std::string out = "";
