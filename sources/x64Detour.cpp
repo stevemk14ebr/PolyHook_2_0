@@ -251,7 +251,7 @@ bool PLH::x64Detour::hook() {
 	Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
 	
-	uint64_t minProlSz = _detourScheme == detour_scheme_t::CODE_CAVE ? getMinJmpSize() : INPLACE_DETOUR_SIZE; // min size of patches that may split instructions
+	uint64_t minProlSz = _detourScheme != detour_scheme_t::INPLACE ? getMinJmpSize() : INPLACE_DETOUR_SIZE; // min size of patches that may split instructions
 	uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
 
 	std::optional<PLH::insts_t> prologueOpt;
