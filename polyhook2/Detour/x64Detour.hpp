@@ -21,13 +21,15 @@ class x64Detour : public Detour {
 public:
     enum class detour_scheme_t {
         CODE_CAVE = 1, //searching for code-cave to keep fnCallback.
-        INPLACE = 2    //use push-ret for fnCallback in-place storage.
+        INPLACE = 2,    //use push-ret for fnCallback in-place storage.
+		VALLOC2 = 3, // use virtualalloc2 to allocate in range. Only on win10 > 1803
+		VALLOC2_FALLBACK_CODE_CAVE = 4, // first try to allocate, then fallback to code cave if not supported (will not fallback on failure of allocation)
     };
 
 	x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
 
 	x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
-	virtual ~x64Detour() = default;
+	virtual ~x64Detour() override;
 	virtual bool hook() override;
 
 	Mode getArchType() const override;
@@ -46,7 +48,8 @@ private:
 	template<uint16_t SIZE>
 	std::optional<uint64_t> findNearestCodeCave(uint64_t addr);
 
-	detour_scheme_t _detourScheme { detour_scheme_t::CODE_CAVE }; //default CODE_CAVE for backward compatiblity
+	detour_scheme_t _detourScheme { detour_scheme_t::VALLOC2_FALLBACK_CODE_CAVE }; // this is the most stable configuration.
+	std::optional<uint64_t> m_valloc2_region;
 };
 }
 #endif //POLYHOOK_2_X64DETOUR_HPP
