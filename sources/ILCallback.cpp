@@ -1,4 +1,5 @@
 #include "polyhook2/Detour/ILCallback.hpp"
+#include "polyhook2/MemProtector.hpp"
 
 asmjit::CallConv::Id PLH::ILCallback::getCallConv(const std::string& conv) {
 	if (conv == "cdecl") {
@@ -225,11 +226,13 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	size_t size = code.codeSize();
 
 	// Allocate a virtual memory (executable).
-	m_callbackBuf = (uint64_t)m_mem.getBlock(size);
+	m_callbackBuf = (uint64_t)new char[size];
 	if (!m_callbackBuf) {
 		__debugbreak();
 		return 0;
 	}
+
+	MemoryProtector protector(m_callbackBuf, size, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 
 	// if multiple sections, resolve linkage (1 atm)
 	if (code.hasUnresolvedLinks()) {
@@ -286,7 +289,7 @@ bool PLH::ILCallback::isXmmReg(const uint8_t typeId) const {
 	}
 }
 
-PLH::ILCallback::ILCallback() : m_mem(0, 0) {
+PLH::ILCallback::ILCallback() {
 	m_callbackBuf = 0;
 	m_trampolinePtr = 0;
 }

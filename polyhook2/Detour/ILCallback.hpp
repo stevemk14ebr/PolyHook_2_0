@@ -8,13 +8,12 @@
 #pragma warning( disable : 4200)
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/Enums.hpp"
-
-#include "polyhook2/PageAllocator.hpp"
+#include "polyhook2/MemAccessor.hpp"
 
 #include <iostream>
 #include <vector>
 namespace PLH {
-	class ILCallback {
+	class ILCallback : public MemAccessor {
 	public:
 		struct Parameters {
 			template<typename T>
@@ -68,7 +67,6 @@ namespace PLH {
 		asmjit::CallConv::Id getCallConv(const std::string& conv);
 		uint8_t getTypeId(const std::string& type);
 
-		PageAllocator m_mem;
 		uint64_t m_callbackBuf;
 		asmjit::x86::Mem argsStack;
 

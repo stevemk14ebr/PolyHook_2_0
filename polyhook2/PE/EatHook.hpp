@@ -10,7 +10,7 @@
 #include "polyhook2/Misc.hpp"
 #include "polyhook2/PE/PEB.hpp"
 #include "polyhook2/ADisassembler.hpp"
-#include "polyhook2/PageAllocator.hpp"
+#include "polyhook2/RangeAllocator.hpp"
 
 #define RVA2VA(type, base, rva) (type)((ULONG_PTR) base + rva)
 
@@ -19,11 +19,11 @@ class EatHook : public IHook {
 public:
 	EatHook(const std::string& apiName, const std::wstring& moduleName, const char* fnCallback, uint64_t* userOrigVar);
 	EatHook(const std::string& apiName, const std::wstring& moduleName, const uint64_t fnCallback, uint64_t* userOrigVar);
-	virtual ~EatHook() {
-		// trampoline freed by pageallocator dtor
-		if (m_allocator != nullptr) {
-			delete m_allocator;
-			m_allocator = nullptr;
+	virtual ~EatHook()
+	{
+		if (m_trampoline) {
+			m_allocator.deallocate(m_trampoline);
+			m_trampoline = 0;
 		}
 	}
 
@@ -46,7 +46,7 @@ private:
 	uint64_t* m_userOrigVar;
 
 	// only used if EAT offset points >= 2GB
-	PageAllocator* m_allocator;
+	RangeAllocator m_allocator;
 	uint64_t m_trampoline;
 
 	uint64_t m_moduleBase;

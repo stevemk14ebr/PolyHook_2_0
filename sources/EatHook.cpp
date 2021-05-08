@@ -9,8 +9,10 @@ PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName
 	, m_apiName(apiName)
     , m_fnCallback(fnCallback)
     , m_userOrigVar(userOrigVar)
-	, m_allocator(nullptr)
+	, m_allocator(64, 64) // arbitrary, size is big enough but an overshoot
 	, m_trampoline(0)
+	, m_moduleBase(0)
+	, m_origFunc(0)
 {}
 
 bool PLH::EatHook::hook() {
@@ -25,12 +27,13 @@ bool PLH::EatHook::hook() {
 	instead allocate a small trampoline within +- 2GB which will do the full
 	width jump to the final destination, and point the EAT to the stub.*/
 	if (offset > std::numeric_limits<uint32_t>::max()) {
-		m_allocator = new PageAllocator(m_moduleBase, 0x80000000);
-		m_trampoline = m_allocator->getBlock(m_trampolineSize);
+		m_trampoline = (uint64_t)m_allocator.allocate(m_moduleBase, PLH::calc_2gb_above(m_moduleBase));
 		if (m_trampoline == 0) {
 			Log::log("EAT hook offset is > 32bit's. Allocation of trampoline necessary and failed to find free page within range", ErrorLevel::INFO);
 			return false;
 		}
+
+		MemoryProtector protector(m_trampoline, 64, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 
 		PLH::ADisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback), *this);
 		offset = m_trampoline - m_moduleBase;
@@ -64,6 +67,12 @@ bool PLH::EatHook::unHook() {
 	*pExport = (uint32_t)m_origFunc;
 	m_hooked = false;
 	*m_userOrigVar = NULL;
+
+	// TODO: change hook to re-use existing trampoline rather than free-ing here to avoid overwrite later and dangling pointer
+	if (m_trampoline) {
+		m_allocator.deallocate(m_trampoline);
+		m_trampoline = 0;
+	}
 	return true;
 }
 

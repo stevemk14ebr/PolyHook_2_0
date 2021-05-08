@@ -14,6 +14,7 @@ using namespace std::placeholders;
 #include "polyhook2/Instruction.hpp"
 #include "polyhook2/ADisassembler.hpp"
 #include "polyhook2/ErrorLog.hpp"
+#include "polyhook2/RangeAllocator.hpp"
 
 namespace PLH {
 
@@ -31,6 +32,7 @@ public:
 	x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
 	virtual ~x64Detour() override;
 	virtual bool hook() override;
+	virtual bool unHook() override;
 
 	Mode getArchType() const override;
 
@@ -50,6 +52,7 @@ private:
 
 	detour_scheme_t _detourScheme { detour_scheme_t::VALLOC2_FALLBACK_CODE_CAVE }; // this is the most stable configuration.
 	std::optional<uint64_t> m_valloc2_region;
+	RangeAllocator m_allocator;
 };
 }
 #endif //POLYHOOK_2_X64DETOUR_HPP

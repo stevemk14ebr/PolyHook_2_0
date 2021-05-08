@@ -9,18 +9,19 @@
 #include "polyhook2/Misc.hpp"
 #include "polyhook2/MemProtector.hpp"
 
-PLH::x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
+PLH::x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis), m_allocator(8, 100) {
 
 }
 
-PLH::x64Detour::x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
+PLH::x64Detour::x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis), m_allocator(8, 100) {
 
 }
 
 PLH::x64Detour::~x64Detour()
 {
 	if (m_valloc2_region) {
-		VirtualFree((PVOID)*m_valloc2_region, boundedAllocSize, MEM_RELEASE);
+		m_allocator.deallocate(*m_valloc2_region);
+		m_valloc2_region = {};
 	}
 }
 
@@ -296,7 +297,7 @@ bool PLH::x64Detour::hook() {
 		// TODO: We wast a whole page, put this in the PageAllocator instead
 		uint64_t max = (uint64_t)AlignDownwards((char*)calc_2gb_above(m_fnAddress), 0x10000);
 		uint64_t min = (uint64_t)AlignDownwards((char*)calc_2gb_below(m_fnAddress), 0x10000);
-		uint64_t region = boundAlloc(min, max);
+		uint64_t region = (uint64_t)m_allocator.allocate(min, max);
 		if (!region) {
 			Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
 			return false;
@@ -304,7 +305,7 @@ bool PLH::x64Detour::hook() {
 
 		m_valloc2_region = region;
 
-		MemoryProtector holderProt(region, boundedAllocSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
+		MemoryProtector holderProt(region, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 		m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, region);
 	} else if(_detourScheme == detour_scheme_t::CODE_CAVE || _detourScheme == detour_scheme_t::VALLOC2_FALLBACK_CODE_CAVE){
 		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
@@ -330,6 +331,16 @@ bool PLH::x64Detour::hook() {
 
 	m_hooked = true;
 	return true;
+}
+
+bool PLH::x64Detour::unHook()
+{
+	bool status = PLH::Detour::unHook();
+	if (m_valloc2_region) {
+		m_allocator.deallocate(*m_valloc2_region);
+		m_valloc2_region = {};
+	}
+	return status;
 }
 
 bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
