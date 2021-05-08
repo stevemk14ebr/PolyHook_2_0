@@ -14,8 +14,6 @@ void* ALLOC_NewBlock(ALLOC_Allocator* self)
 {
     ALLOC_Block* pBlock = NULL;
 
-    const std::lock_guard<std::mutex> lock(self->mutex);
-
     // If we have not exceeded the pool maximum
     if (self->poolIndex < self->maxBlocks)
     {
@@ -37,8 +35,6 @@ void ALLOC_Push(ALLOC_Allocator* self, void* pBlock)
     // Get a pointer to the client's location within the block
     ALLOC_Block* pClient = (ALLOC_Block*)pBlock;
 
-    const std::lock_guard<std::mutex> lock(self->mutex);
-
     // Point client block's next pointer to head
     pClient->pNext = self->pHead;
 
@@ -52,8 +48,6 @@ void ALLOC_Push(ALLOC_Allocator* self, void* pBlock)
 void* ALLOC_Pop(ALLOC_Allocator* self)
 {
     ALLOC_Block* pBlock = NULL;
-
-    const std::lock_guard<std::mutex> lock(self->mutex);
 
     // Is the free-list empty?
     if (self->pHead)

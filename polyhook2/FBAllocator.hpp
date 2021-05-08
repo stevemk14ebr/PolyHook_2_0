@@ -10,7 +10,6 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <mutex>
 
 typedef void* ALLOC_HANDLE;
 
@@ -32,7 +31,6 @@ typedef struct
     uint16_t maxBlocksInUse;
     uint16_t allocations;
     uint16_t deallocations;
-    std::mutex mutex;
 } ALLOC_Allocator;
 
 // Align fixed blocks on X-byte boundary based on CPU architecture.

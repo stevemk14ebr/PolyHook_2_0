@@ -45,7 +45,7 @@ bool PLH::FBAllocator::initialize()
 	}
 	
     m_allocator = new ALLOC_Allocator{ "PLH", (char*)m_dataPool, 
-		m_blockSize, ALLOC_BLOCK_SIZE(m_blockSize), m_maxBlocks, NULL, 0, 0, 0, 0, 0, {} };
+		m_blockSize, ALLOC_BLOCK_SIZE(m_blockSize), m_maxBlocks, NULL, 0, 0, 0, 0, 0};
 	if (!m_allocator) {
 		return false;
 	}
@@ -125,6 +125,7 @@ std::shared_ptr<PLH::FBAllocator> PLH::RangeAllocator::findOrInsertAllocator(uin
 
 char* PLH::RangeAllocator::allocate(uint64_t min, uint64_t max)
 {
+	std::lock_guard<std::mutex> m_lock(m_mutex);
 	auto allocator = findOrInsertAllocator(min, max);
 	if (!allocator) {
 		return nullptr;
@@ -137,6 +138,7 @@ char* PLH::RangeAllocator::allocate(uint64_t min, uint64_t max)
 
 void PLH::RangeAllocator::deallocate(uint64_t addr)
 {
+	std::lock_guard<std::mutex> m_lock(m_mutex);
 	if (auto it{ m_allocMap.find(addr) }; it != std::end(m_allocMap)) {
 		auto allocator = it->second;
 		allocator->deallocate((char*)addr);

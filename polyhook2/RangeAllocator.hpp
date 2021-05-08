@@ -59,6 +59,7 @@ private:
 
     uint8_t m_maxBlocks;
     uint8_t m_blockSize;
+    std::mutex m_mutex;
     std::vector<std::shared_ptr<FBAllocator>> m_allocators;
     std::unordered_map<uint64_t, std::shared_ptr<FBAllocator>> m_allocMap;
 };
