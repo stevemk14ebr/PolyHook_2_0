@@ -57,6 +57,9 @@ public:
 		m_trampolineSz = NULL;
 		m_hooked = false;
 		m_userTrampVar = userTrampVar;
+		m_nopSize = 0;
+		m_nopProlOffset = 0;
+		m_hookSize = 0;
 	}
 
 	Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : m_disasm(dis) {
@@ -69,6 +72,9 @@ public:
 		m_trampolineSz = NULL;
 		m_hooked = false;
 		m_userTrampVar = userTrampVar;
+		m_nopSize = 0;
+		m_nopProlOffset = 0;
+		m_hookSize = 0;
 	}
 
 	virtual ~Detour() {
