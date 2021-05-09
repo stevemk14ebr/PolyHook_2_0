@@ -3,7 +3,7 @@
 
 uint64_t PLH::findPattern(const uint64_t rangeStart, size_t len, const char* pattern)
 {
-	const size_t patSize = getPatternSize(pattern);
+	const size_t patSize = (size_t)getPatternSize(pattern);
 	auto patt_base = (char*)_alloca(patSize + 1);
 	auto msk_base = (char*)_alloca(patSize + 1);
 	char* pat = patt_base;
@@ -45,7 +45,7 @@ uint64_t PLH::getPatternSize(const char* pattern)
 
 uint64_t PLH::findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern)
 {
-	const size_t patSize = getPatternSize(pattern);
+	const size_t patSize = (size_t)getPatternSize(pattern);
 	auto patt_base = (char*)_alloca(patSize + 1);
 	auto msk_base = (char*)_alloca(patSize + 1);
 	char* pat = patt_base;
@@ -105,7 +105,7 @@ uint64_t PLH::boundAlloc(uint64_t min, uint64_t max, uint64_t size)
 	auto pVirtualAlloc2 = (decltype(&::VirtualAlloc2))GetProcAddress(hMod, "VirtualAlloc2");
 	return (uint64_t)pVirtualAlloc2(
 		GetCurrentProcess(), (PVOID)0,
-		size,
+		(SIZE_T)size,
 		MEM_RESERVE | MEM_COMMIT,
 		PAGE_READWRITE,
 		&param, 1);
@@ -127,9 +127,9 @@ uint64_t PLH::boundAllocLegacy(uint64_t start, uint64_t end, uint64_t size)
 		if (mbi.State != MEM_FREE || mbi.RegionSize < size)
 			continue;
 
-		uint64_t nextPage = (uint64_t)AlignUpwards((char*)mbi.BaseAddress, si.dwAllocationGranularity);
+		uint64_t nextPage = (uint64_t)AlignUpwards((uint64_t)mbi.BaseAddress, si.dwAllocationGranularity);
 		
-		if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)nextPage, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE)) {
+		if (uint64_t Allocated = (uint64_t)VirtualAlloc((char*)nextPage, (SIZE_T)size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE)) {
 			return Allocated;
 		} else if (GetLastError() == ERROR_DYNAMIC_CODE_BLOCKED) {
 			Addr += size;

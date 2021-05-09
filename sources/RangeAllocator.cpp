@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-PLH::FBAllocator::FBAllocator(uint64_t min, uint64_t max, uint8_t blockSize, uint8_t blockCount) {
+PLH::FBAllocator::FBAllocator(uint64_t min, uint64_t max, uint8_t blockSize, uint8_t blockCount) : m_allocator(nullptr), m_hAllocator(0) {
 	m_min = min;
 	m_max = max;
 	m_dataPool = 0;
@@ -35,16 +35,17 @@ PLH::FBAllocator::~FBAllocator()
 bool PLH::FBAllocator::initialize()
 {
 	uint64_t alignment = getAllocationAlignment();
-	uint64_t start = (uint64_t)AlignUpwards((char*)m_min, alignment);
-	uint64_t end = (uint64_t)AlignDownwards((char*)m_max, alignment);
+	uint64_t start = (uint64_t)AlignUpwards(m_min, (size_t)alignment);
+	uint64_t end = (uint64_t)AlignDownwards(m_max, (size_t)alignment);
+	
 	if (m_alloc2Supported) {
 		// alignment shrinks area by aligning both towards middle so we don't allocate beyond the given bounds
-		m_dataPool = boundAlloc(start, end, ALLOC_BLOCK_SIZE(m_blockSize) * m_maxBlocks);
+		m_dataPool = boundAlloc(start, end, ALLOC_BLOCK_SIZE(m_blockSize) * (uint64_t)m_maxBlocks);
 		if (!m_dataPool) {
 			return false;
 		}
 	} else {
-		m_dataPool = boundAllocLegacy(start, end, ALLOC_BLOCK_SIZE(m_blockSize) * m_maxBlocks);
+		m_dataPool = boundAllocLegacy(start, end, ALLOC_BLOCK_SIZE(m_blockSize) * (uint64_t)m_maxBlocks);
 		if (!m_dataPool) {
 			return false;
 		}
@@ -131,6 +132,11 @@ std::shared_ptr<PLH::FBAllocator> PLH::RangeAllocator::findOrInsertAllocator(uin
 
 char* PLH::RangeAllocator::allocate(uint64_t min, uint64_t max)
 {
+	static bool is32 = sizeof(void*) == 4;
+	if (is32 && max > 0x7FFFFFFF) {
+		max = 0x7FFFFFFF; // allocator apis fail in 32bit above this range
+	}
+
 	std::lock_guard<std::mutex> m_lock(m_mutex);
 	auto allocator = findOrInsertAllocator(min, max);
 	if (!allocator) {
