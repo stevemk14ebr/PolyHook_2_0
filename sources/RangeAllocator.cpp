@@ -1,5 +1,11 @@
 #include "polyhook2/RangeAllocator.hpp"
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include <Windows.h>
+
 #include <algorithm>
 
 PLH::FBAllocator::FBAllocator(uint64_t min, uint64_t max, uint8_t blockSize, uint8_t blockCount) {
@@ -85,8 +91,8 @@ bool PLH::FBAllocator::inRange(uint64_t addr)
 
 bool PLH::FBAllocator::intersectsRange(uint64_t min, uint64_t max)
 {
-	uint64_t _min = max(m_min, min);
-	uint64_t _max = min(m_max, max);
+	uint64_t _min = std::max(m_min, min);
+	uint64_t _max = std::min(m_max, max);
 	if (_min <= _max)
 		return true;
 	return false;
@@ -95,8 +101,8 @@ bool PLH::FBAllocator::intersectsRange(uint64_t min, uint64_t max)
 uint8_t PLH::FBAllocator::intersectionLoadFactor(uint64_t min, uint64_t max)
 {
 	assert(intersectsRange(min, max));
-	uint64_t _min = max(m_min, min);
-	uint64_t _max = min(m_max, max);
+	uint64_t _min = std::max(m_min, min);
+	uint64_t _max = std::min(m_max, max);
 	double intersectLength = (double)(_max - _min);
 	return (uint8_t)((intersectLength / (max - min)) * 100.0);
 }
