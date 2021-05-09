@@ -219,21 +219,6 @@ PLH::insts_t makeInplaceDetour(const uint64_t address, const uint64_t destinatio
 
 
 bool PLH::x64Detour::hook() {
-	// ------- Must resolve callback first, so that m_disasm branchmap is filled for prologue stuff
-	insts_t callbackInsts = m_disasm.disassemble(m_fnCallback, m_fnCallback, m_fnCallback + 100, *this);
-	if (callbackInsts.empty()) {
-		Log::log("Disassembler unable to decode any valid callback instructions", ErrorLevel::SEV);
-		return false;
-	}
-
-	if (!followJmp(callbackInsts)) {
-		Log::log("Callback jmp resolution failed", ErrorLevel::SEV);
-		return false;
-	}
-
-	// update given fn callback address to resolved one
-	m_fnCallback = callbackInsts.front().getAddress();
-
 	insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
 	if (insts.empty()) {
 		Log::log("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
