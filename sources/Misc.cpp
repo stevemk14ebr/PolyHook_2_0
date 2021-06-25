@@ -1,5 +1,5 @@
 #include "polyhook2/Misc.hpp"
-#include <Windows.h>
+#include "polyhook2/PolyHookOsIncludes.hpp"
 
 uint64_t PLH::findPattern(const uint64_t rangeStart, size_t len, const char* pattern)
 {
@@ -77,6 +77,18 @@ uint64_t PLH::findPattern_rev(const uint64_t rangeStart, size_t len, const char*
 	return NULL;
 }
 
+uint64_t PLH::calc_2gb_below(uint64_t address)
+{
+	return (address > (uint64_t)0x7ff80000) ? address - 0x7ff80000 : 0x80000;
+}
+
+uint64_t PLH::calc_2gb_above(uint64_t address)
+{
+	return (address < (uint64_t)0xffffffff80000000) ? address + 0x7ff80000 : (uint64_t)0xfffffffffff80000;
+}
+
+#if defined(POLYHOOK2_OS_WINDOWS)
+
 bool PLH::boundedAllocSupported()
 {
 	auto hMod = LoadLibraryA("kernelbase.dll");
@@ -140,14 +152,10 @@ uint64_t PLH::boundAllocLegacy(uint64_t start, uint64_t end, uint64_t size)
 	return 0;
 }
 
-uint64_t PLH::calc_2gb_below(uint64_t address)
+void PLH::boundAllocFree(uint64_t address, uint64_t size)
 {
-	return (address > (uint64_t)0x7ff80000) ? address - 0x7ff80000 : 0x80000;
-}
-
-uint64_t PLH::calc_2gb_above(uint64_t address)
-{
-	return (address < (uint64_t)0xffffffff80000000) ? address + 0x7ff80000 : (uint64_t)0xfffffffffff80000;
+	(void)size;
+	VirtualFree((LPVOID)address, (SIZE_T)0, MEM_RELEASE);
 }
 
 uint64_t PLH::getAllocationAlignment()
@@ -157,3 +165,89 @@ uint64_t PLH::getAllocationAlignment()
 	GetSystemInfo(&si);
 	return si.dwAllocationGranularity;
 }
+
+#elif defined(POLYHOOK2_OS_LINUX)
+
+bool PLH::boundedAllocSupported()
+{
+	return false;
+}
+
+uint64_t PLH::boundAlloc(uint64_t min, uint64_t max, uint64_t size)
+{
+	return boundAllocLegacy(min, max, size);
+}
+
+uint64_t PLH::boundAllocLegacy(uint64_t start, uint64_t end, uint64_t size)
+{
+	void* hint = reinterpret_cast<void*>((max - 1) / 2 + min / 2);
+	uint64_t res = static_cast<uint64_t>(mmap(address_hint, (size_t)size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+
+	if (res == (uint64_t)MAP_FAILED)
+		return 0;
+
+	if (res < min || res >= max)
+	{
+		boundAllocFree(res, size);
+		return 0;
+	}
+
+	return res;
+}
+
+void PLH::boundAllocFree(uint64_t address, uint64_t size)
+{
+	munmap((void*)address, (size_t)size);
+}
+
+uint64_t PLH::getAllocationAlignment()
+{
+	return PLH::MemAccessor::page_size();
+}
+
+#elif defined(POLYHOOK2_OS_APPLE)
+
+bool PLH::boundedAllocSupported()
+{
+	return false;
+}
+
+uint64_t PLH::boundAlloc(uint64_t min, uint64_t max, uint64_t size)
+{
+	return boundAllocLegacy(min, max, size);
+}
+
+uint64_t PLH::boundAllocLegacy(uint64_t start, uint64_t end, uint64_t size)
+{
+	// VM_FLAGS_ANYWHERE allows for better compatibility as the Kernel will find a place for us.
+	//int flags = (address_hint == nullptr ? VM_FLAGS_ANYWHERE : VM_FLAGS_FIXED);
+	int flags = VM_FLAGS_FIXED;
+
+	uint64_t increment = getAllocationAlignment();
+	for (uint64_t address = start; address < (end - 1); address += increment)
+	{
+		void* res = (void*)address;
+		if (mach_vm_allocate(task, &res, (mach_vm_size_t)size, flags) == KERN_SUCCESS)
+		{
+			address = (uint64_t)res;
+			if (address >= start && address < end)
+				return address;
+
+			boundAllocFree(address, size);
+		}
+	}
+	
+	return 0;
+}
+
+void PLH::boundAllocFree(uint64_t address, uint64_t size)
+{
+	mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)address, size);
+}
+
+uint64_t PLH::getAllocationAlignment()
+{
+	return PLH::MemAccessor::page_size();
+}
+
+#endif
