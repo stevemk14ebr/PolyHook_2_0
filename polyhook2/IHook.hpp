@@ -99,7 +99,7 @@ struct callback_type<Ret(CCFROM Class::*)(Args...), void> \
     using type = Ret(CCTO*)(Class*, ## __VA_ARGS__, Args...); \
 };
 
-#ifndef _WIN64 
+#ifndef POLYHOOK2_ARCH_X64
 MAKE_CALLBACK_IMPL(__stdcall, __stdcall)
 MAKE_CALLBACK_CLASS_IMPL(__stdcall, __stdcall)
 
@@ -124,7 +124,7 @@ Creates a hook callback function pointer that matches the type of a given functi
 will be a pointer to the function, and the variables _args... and name_t will be created to represent the original
 arguments of the function and the type of the callback respectively.
 **/
-#define HOOK_CALLBACK(pType, name, body) typedef PLH::callback_type_t<decltype(pType)> ##name##_t; \
+#define HOOK_CALLBACK(pType, name, body) typedef PLH::callback_type_t<decltype(pType)> name##_t; \
 PLH::callback_type_t<decltype(pType)> name = PLH::make_callback(pType, [](auto... _args) body )
 
 /**
