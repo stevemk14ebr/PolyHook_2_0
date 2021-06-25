@@ -1,6 +1,9 @@
 #ifndef POLYHOOK_2_OS_INCLUDES_HPP
 #define POLYHOOK_2_OS_INCLUDES_HPP
 
+// This file is used to not include os specific functions that might break other projects
+// You should use it in sources
+
 #if defined(POLYHOOK2_OS_WINDOWS)
 
 #ifndef WIN32_LEAN_AND_MEAN
