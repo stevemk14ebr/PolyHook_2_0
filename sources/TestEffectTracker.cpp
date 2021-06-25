@@ -1,5 +1,6 @@
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 
+#if defined(POLYHOOK2_OS_WINDOWS)
 
 Effect::Effect() : m_uid(PLH::UID::singleton()) {
 	m_executed = false;
@@ -38,3 +39,4 @@ Effect& EffectTracker::PeakEffect() {
 	return m_effectQ.back();
 }
 
+#endif

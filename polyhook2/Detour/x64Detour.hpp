@@ -5,16 +5,15 @@
 #ifndef POLYHOOK_2_X64DETOUR_HPP
 #define POLYHOOK_2_X64DETOUR_HPP
 
-#include <functional>
-#include <optional>
-using namespace std::placeholders;
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/Detour/ADetour.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/Instruction.hpp"
 #include "polyhook2/ADisassembler.hpp"
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/RangeAllocator.hpp"
+
+using namespace std::placeholders;
 
 namespace PLH {
 

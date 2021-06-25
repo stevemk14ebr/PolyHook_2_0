@@ -5,14 +5,10 @@
 #ifndef POLYHOOK_2_0_IHOOK_HPP
 #define POLYHOOK_2_0_IHOOK_HPP
 
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/ADisassembler.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/MemAccessor.hpp"
-
-#include <type_traits>
-#include <tuple>
-#include <utility>
 
 
 #if defined(__clang__)

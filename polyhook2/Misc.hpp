@@ -5,12 +5,7 @@
 #ifndef POLYHOOK_2_0_MISC_HPP
 #define POLYHOOK_2_0_MISC_HPP
 
-#include <stdexcept>
-#include <cassert>
-#include <cctype>
-#include <iomanip>
-#include <sstream>
-#include <string>
+#include "polyhook2/PolyHookOs.hpp"
 
 namespace PLH {
 

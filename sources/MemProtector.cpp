@@ -1,17 +1,19 @@
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/Enums.hpp"
+#include "polyhook2/PolyHookOsIncludes.hpp"
 
-#include <windows.h>
-
-PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
-	return static_cast<PLH::ProtFlag>(
-		static_cast<std::uint8_t>(lhs) |
-		static_cast<std::uint8_t>(rhs));
+inline PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
+	using underlying = typename std::underlying_type<PLH::ProtFlag>::type;
+	return static_cast<PLH::ProtFlag> (
+		static_cast<underlying>(lhs) |
+		static_cast<underlying>(rhs)
+		);
 }
 
-bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
-	return static_cast<std::uint8_t>(lhs) &
-		static_cast<std::uint8_t>(rhs);
+inline bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
+	using underlying = typename std::underlying_type<PLH::ProtFlag>::type;
+	return static_cast<underlying>(lhs) &
+		static_cast<underlying>(rhs);
 }
 
 std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag flags) {
@@ -47,6 +49,8 @@ std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag flags) {
 	return os;
 }
 
+#if defined(POLYHOOK2_OS_WINDOWS)
+
 int PLH::TranslateProtection(const PLH::ProtFlag flags) {
 	int NativeFlag = 0;
 	if (flags == PLH::ProtFlag::X)
@@ -62,9 +66,6 @@ int PLH::TranslateProtection(const PLH::ProtFlag flags) {
 		NativeFlag = PAGE_EXECUTE_READ;
 
 	if ((flags & PLH::ProtFlag::X) && (flags & PLH::ProtFlag::W))
-		NativeFlag = PAGE_EXECUTE_READWRITE;
-
-	if ((flags & PLH::ProtFlag::X) && (flags & PLH::ProtFlag::R) && (flags & PLH::ProtFlag::W))
 		NativeFlag = PAGE_EXECUTE_READWRITE;
 
 	if (flags & PLH::ProtFlag::NONE)
@@ -100,3 +101,79 @@ PLH::ProtFlag PLH::TranslateProtection(const int prot) {
 	}
 	return flags;
 }
+
+#elif defined(POLYHOOK2_OS_LINUX)
+
+int PLH::TranslateProtection(const PLH::ProtFlag flags) {
+	int NativeFlag = PROT_NONE;
+	if (flags & PLH::ProtFlag::X)
+		NativeFlag |= PROT_EXEC;
+
+	if (flags & PLH::ProtFlag::R)
+		NativeFlag |= PROT_READ;
+
+	if (flags & PLH::ProtFlag::W)
+		NativeFlag |= PROT_WRITE;
+
+	if (flags & PLH::ProtFlag::NONE)
+		NativeFlag = PROT_NONE;
+
+	return NativeFlag;
+}
+
+PLH::ProtFlag PLH::TranslateProtection(const int prot) {
+	PLH::ProtFlag flags = PLH::ProtFlag::UNSET;
+
+	if(prot & PROT_EXEC)
+		flags = flags | PLH::ProtFlag::X;
+
+	if (prot & PROT_READ)
+		flags = flags | PLH::ProtFlag::R;
+
+	if (prot & PROT_WRITE)
+		flags = flags | PLH::ProtFlag::W;
+
+	if (prot == PROT_NONE)
+		flags = flags | PLH::ProtFlag::NONE;
+
+	return flags;
+}
+
+#elif defined(POLYHOOK2_OS_APPLE)
+
+int PLH::TranslateProtection(const PLH::ProtFlag flags) {
+	int NativeFlag = VM_PROT_NONE;
+	if (flags & PLH::ProtFlag::X)
+		NativeFlag |= PROT_EXEC;
+
+	if (flags & PLH::ProtFlag::R)
+		NativeFlag |= PROT_READ;
+
+	if (flags & PLH::ProtFlag::W)
+		NativeFlag |= PROT_WRITE;
+
+	if (flags & PLH::ProtFlag::NONE)
+		NativeFlag = PROT_NONE;
+
+	return NativeFlag;
+}
+
+PLH::ProtFlag PLH::TranslateProtection(const int prot) {
+	PLH::ProtFlag flags = PLH::ProtFlag::UNSET;
+
+	if (prot & VM_PROT_EXECUTE)
+		flags = flags | PLH::ProtFlag::X;
+
+	if (prot & VM_PROT_READ)
+		flags = flags | PLH::ProtFlag::R;
+
+	if (prot & VM_PROT_WRITE)
+		flags = flags | PLH::ProtFlag::W;
+
+	if (prot == VM_PROT_NONE)
+		flags = flags | PLH::ProtFlag::NONE;
+
+	return flags;
+}
+
+#endif

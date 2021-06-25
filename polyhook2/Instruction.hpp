@@ -5,15 +5,7 @@
 #ifndef POLYHOOK_2_0_INSTRUCTION_HPP
 #define POLYHOOK_2_0_INSTRUCTION_HPP
 
-#include <cassert>
-#include <cstring>
-#include <string>
-#include <vector>
-#include <sstream>
-#include <iostream> //ostream operator
-#include <iomanip> //setw
-#include <type_traits>
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/UID.hpp"
 #include "polyhook2/Enums.hpp"
 namespace PLH {

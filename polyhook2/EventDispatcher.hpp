@@ -1,6 +1,6 @@
 #pragma once
-#include <functional>
-#include <vector>
+
+#include "polyhook2/PolyHookOs.hpp"
 
 namespace PLH {
 template<typename T>

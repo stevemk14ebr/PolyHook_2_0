@@ -1,8 +1,6 @@
 #ifndef POLYHOOK_2_0_EFFECTSTRACKER_HPP
 #define POLYHOOK_2_0_EFFECTSTRACKER_HPP
 
-#include <vector>
-
 #include "../UID.hpp"
 
 class Effect {

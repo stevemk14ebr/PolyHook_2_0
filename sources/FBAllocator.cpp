@@ -1,7 +1,5 @@
 #include "polyhook2/FBAllocator.hpp"
-#include <stdint.h>
-#include <assert.h>
-#include <string.h>
+#include "polyhook2/PolyHookOsIncludes.hpp"
 
 void* ALLOC_NewBlock(ALLOC_Allocator* alloc);
 void ALLOC_Push(ALLOC_Allocator* alloc, void* pBlock);
@@ -146,4 +144,4 @@ void ALLOC_Free(ALLOC_HANDLE hAlloc, void* pBlock)
     // Keep track of usage statistics
     self->deallocations++;
     self->blocksInUse--;
-} 
+}

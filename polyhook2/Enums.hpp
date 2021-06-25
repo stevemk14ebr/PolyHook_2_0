@@ -5,8 +5,7 @@
 #ifndef POLYHOOK_2_0_ENUMS_HPP
 #define POLYHOOK_2_0_ENUMS_HPP
 
-#include <string>
-#include <inttypes.h>
+#include "polyhook2/PolyHookOs.hpp"
 
 namespace PLH {
 

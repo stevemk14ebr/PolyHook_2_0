@@ -9,6 +9,10 @@
 #include "polyhook2/Tests/StackCanary.hpp"
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 
+#if defined(POLYHOOK2_OS_WINDOWS)
+
+#include "polyhook2/PolyHookOsIncludes.hpp"
+
 EffectTracker effects;
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
@@ -78,7 +82,6 @@ NOINLINE void h_nullstub() {
 	PH_UNUSED(i);
 }
 
-#include <stdlib.h>
 uint64_t hookMallocTramp = NULL;
 HOOK_CALLBACK(&malloc, h_hookMalloc, {
 	PLH::StackCanary canary;
@@ -183,3 +186,5 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 		REQUIRE(effects.PopEffect().didExecute());
 	}
 }
+
+#endif
