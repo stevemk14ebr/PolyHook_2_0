@@ -56,6 +56,7 @@
 #include <inttypes.h>
 #include <string.h>
 
-void Polyhook2DebugBreak();
+void PolyHook2DebugBreak();
+void* PolyHook2Alloca(size_t size);
 
 #endif

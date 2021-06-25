@@ -1,11 +1,12 @@
+#include "polyhook2/MemAccessor.hpp"
 #include "polyhook2/Misc.hpp"
 #include "polyhook2/PolyHookOsIncludes.hpp"
 
 uint64_t PLH::findPattern(const uint64_t rangeStart, size_t len, const char* pattern)
 {
 	const size_t patSize = (size_t)getPatternSize(pattern);
-	auto patt_base = (char*)_alloca(patSize + 1);
-	auto msk_base = (char*)_alloca(patSize + 1);
+	auto patt_base = (char*)PolyHook2Alloca(patSize + 1);
+	auto msk_base = (char*)PolyHook2Alloca(patSize + 1);
 	char* pat = patt_base;
 	char* msk = msk_base;
 
@@ -46,8 +47,8 @@ uint64_t PLH::getPatternSize(const char* pattern)
 uint64_t PLH::findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern)
 {
 	const size_t patSize = (size_t)getPatternSize(pattern);
-	auto patt_base = (char*)_alloca(patSize + 1);
-	auto msk_base = (char*)_alloca(patSize + 1);
+	auto patt_base = (char*)PolyHook2Alloca(patSize + 1);
+	auto msk_base = (char*)PolyHook2Alloca(patSize + 1);
 	char* pat = patt_base;
 	char* msk = msk_base;
 	
@@ -180,13 +181,13 @@ uint64_t PLH::boundAlloc(uint64_t min, uint64_t max, uint64_t size)
 
 uint64_t PLH::boundAllocLegacy(uint64_t start, uint64_t end, uint64_t size)
 {
-	void* hint = reinterpret_cast<void*>((max - 1) / 2 + min / 2);
-	uint64_t res = static_cast<uint64_t>(mmap(address_hint, (size_t)size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+	void* hint = reinterpret_cast<void*>((end - 1) / 2 + start / 2);
+	uint64_t res = (uint64_t)mmap(hint, (size_t)size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
 	if (res == (uint64_t)MAP_FAILED)
 		return 0;
 
-	if (res < min || res >= max)
+	if (res < start || res >= size)
 	{
 		boundAllocFree(res, size);
 		return 0;
