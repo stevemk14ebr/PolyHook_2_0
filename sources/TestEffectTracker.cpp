@@ -32,7 +32,7 @@ Effect EffectTracker::PopEffect() {
 
 Effect& EffectTracker::PeakEffect() {
 	if (m_effectQ.size() <= 0) {
-		__debugbreak();
+		Polyhook2DebugBreak();
 		PushEffect();
 	}
 		

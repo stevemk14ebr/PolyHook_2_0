@@ -135,7 +135,7 @@ public:
 	bool isBranching() const {
 		if (m_isBranching && m_isRelative) {
 			if (!m_hasDisplacement) {
-				__debugbreak();
+				Polyhook2DebugBreak();
 				assert(m_hasDisplacement);
 			}
 		}
@@ -179,7 +179,7 @@ public:
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
-			__debugbreak();
+			Polyhook2DebugBreak();
 			return;
 		}
 
@@ -197,7 +197,7 @@ public:
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Absolute)) {
-			__debugbreak();
+			Polyhook2DebugBreak();
 			return;
 		}
 
