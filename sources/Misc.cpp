@@ -181,7 +181,7 @@ uint64_t PLH::boundAlloc(uint64_t min, uint64_t max, uint64_t size)
 
 uint64_t PLH::boundAllocLegacy(uint64_t start, uint64_t end, uint64_t size)
 {
-	void* hint = reinterpret_cast<void*>((end - 1) / 2 + start / 2);
+	void* hint = (void*)((end - 1) / 2 + start / 2);
 	uint64_t res = (uint64_t)mmap(hint, (size_t)size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
 	if (res == (uint64_t)MAP_FAILED)
@@ -203,7 +203,18 @@ void PLH::boundAllocFree(uint64_t address, uint64_t size)
 
 uint64_t PLH::getAllocationAlignment()
 {
-	return PLH::MemAccessor::page_size();
+/*
+From malloc-internal.h and malloc-alignment.h
+
+#ifndef INTERNAL_SIZE_T
+# define INTERNAL_SIZE_T size_t
+#endif
+// The corresponding word size. 
+#define SIZE_SZ (sizeof (INTERNAL_SIZE_T))
+#define MALLOC_ALIGNMENT (2 * SIZE_SZ < __alignof__ (long double) \
+                          ? __alignof__ (long double) : 2 * SIZE_SZ)
+*/
+	return (2 * sizeof(size_t) < __alignof__ (long double) ? __alignof__ (long double) : 2 * sizeof(size_t));
 }
 
 #elif defined(POLYHOOK2_OS_APPLE)

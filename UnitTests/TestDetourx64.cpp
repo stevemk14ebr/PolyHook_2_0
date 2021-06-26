@@ -9,8 +9,6 @@
 #include "polyhook2/Tests/StackCanary.hpp"
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 
-#if defined(POLYHOOK2_OS_WINDOWS)
-
 #include "polyhook2/PolyHookOsIncludes.hpp"
 
 EffectTracker effects;
@@ -92,6 +90,7 @@ HOOK_CALLBACK(&malloc, h_hookMalloc, {
 	return PLH::FnCast(hookMallocTramp, &malloc)(_args...);
 });
 
+#if defined(POLYHOOK2_OS_WINDOWS)
 uint64_t oCreateMutexExA = 0;
 HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, {
 	PLH::StackCanary canary;
@@ -99,6 +98,7 @@ HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, {
 	printf("kernel32!CreateMutexExA  Name:%s",  lpName);
 	return PLH::FnCast(oCreateMutexExA, &CreateMutexExA)(_args...);
 });
+#endif
 
 TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x64);
@@ -139,12 +139,14 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 	    sub rsp, ...
 		... the goods ...
 	*/
+#if defined(POLYHOOK2_OS_WINDOWS)
 	SECTION("WinApi Indirection") {
 		PLH::StackCanary canary;
 		PLH::x64Detour detour((char*)&CreateMutexExA, (char*)hCreateMutexExA, &oCreateMutexExA, dis);
 		REQUIRE(detour.hook() == true);
 		REQUIRE(detour.unHook() == true);
 	}
+#endif
 
 	SECTION("Loop function") {
 		PLH::StackCanary canary;
@@ -186,5 +188,3 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 		REQUIRE(effects.PopEffect().didExecute());
 	}
 }
-
-#endif

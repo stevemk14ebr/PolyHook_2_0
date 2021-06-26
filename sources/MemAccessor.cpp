@@ -1,5 +1,6 @@
 #include "polyhook2/MemAccessor.hpp"
 #include "polyhook2/MemProtector.hpp"
+#include "polyhook2/Misc.hpp"
 
 #include "polyhook2/PolyHookOsIncludes.hpp"
 
@@ -47,7 +48,7 @@ static region_t get_region_from_addr(uint64_t addr) {
 	std::ifstream f("/proc/self/maps");
 	std::string s;
 	while (std::getline(f, s)) {
-		if (!s.empty())
+		if (!s.empty() && s.find("vdso") == std::string::npos && s.find("vsyscall") == std::string::npos)
 		{
 			char* strend = &s[0];
 			uint64_t start = strtoul(strend  , &strend, 16);
@@ -96,6 +97,7 @@ bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, uint64_t size,
 		return false;
 
 	size = std::min<uint64_t>(region_infos.end - src, size);
+
 	memcpy((void*)dest, (void*)src, (size_t)size);
 	read = size;
 
