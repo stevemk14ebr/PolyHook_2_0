@@ -99,6 +99,16 @@ struct callback_type<Ret(CCFROM Class::*)(Args...), void> \
     using type = Ret(CCTO*)(Class*, ## __VA_ARGS__, Args...); \
 };
 
+#ifdef POLYHOOK2_OS_WINDOWS
+
+#define FASTCALL __fastcall
+
+#else
+
+#define FASTCALL __attribute__((fastcall))
+
+#endif
+
 #ifndef POLYHOOK2_ARCH_X64
 MAKE_CALLBACK_IMPL(__stdcall, __stdcall)
 MAKE_CALLBACK_CLASS_IMPL(__stdcall, __stdcall)
@@ -110,8 +120,8 @@ MAKE_CALLBACK_IMPL(__thiscall, __thiscall)
 MAKE_CALLBACK_CLASS_IMPL(__thiscall, __fastcall, char*)
 #endif
 
-MAKE_CALLBACK_IMPL(__fastcall, __fastcall)
-MAKE_CALLBACK_CLASS_IMPL(_fastcall, __fastcall)
+MAKE_CALLBACK_IMPL(FASTCALL, FASTCALL)
+MAKE_CALLBACK_CLASS_IMPL(FASTCALL, FASTCALL)
 
 template <int I, class... Ts>
 decltype(auto) get_pack_idx(Ts&&... ts) {

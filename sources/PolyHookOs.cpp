@@ -17,11 +17,7 @@ void* PolyHook2Alloca(size_t size)
 
 void PolyHook2DebugBreak()
 {
-#if defined(__GNUC__)
-    __asm__("BKPT 0");
-#else
-    __BKPT(0)
-#endif
+    __asm__("int3");
 }
 
 void* PolyHook2Alloca(size_t size)
@@ -33,11 +29,7 @@ void* PolyHook2Alloca(size_t size)
 
 void PolyHook2DebugBreak()
 {
-#if defined(__GNUC__)
-    __asm__("BKPT 0");
-#else
-    __BKPT(0)
-#endif
+    __asm__("int3");
 }
 
 void* PolyHook2Alloca(size_t size)

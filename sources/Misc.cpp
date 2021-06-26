@@ -171,7 +171,7 @@ uint64_t PLH::getAllocationAlignment()
 
 bool PLH::boundedAllocSupported()
 {
-	return false;
+	return true;
 }
 
 uint64_t PLH::boundAlloc(uint64_t min, uint64_t max, uint64_t size)
@@ -187,7 +187,7 @@ uint64_t PLH::boundAllocLegacy(uint64_t start, uint64_t end, uint64_t size)
 	if (res == (uint64_t)MAP_FAILED)
 		return 0;
 
-	if (res < start || res >= size)
+	if (res < start || res >= end)
 	{
 		boundAllocFree(res, size);
 		return 0;

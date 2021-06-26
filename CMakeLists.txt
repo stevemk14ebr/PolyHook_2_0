@@ -205,6 +205,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 	${PROJECT_SOURCE_DIR}/sources/ErrorLog.cpp
 	${PROJECT_SOURCE_DIR}/sources/UID.cpp
 	${PROJECT_SOURCE_DIR}/sources/Misc.cpp
+	${PROJECT_SOURCE_DIR}/sources/PolyHookOs.cpp
 	)
 
 #DisAsm/Capstone

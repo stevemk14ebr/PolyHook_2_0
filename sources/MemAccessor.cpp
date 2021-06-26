@@ -35,6 +35,44 @@ size_t PLH::MemAccessor::page_size()
 
 #elif defined(POLYHOOK2_OS_LINUX)
 
+struct region_t {
+	uint64_t start;
+	uint64_t end;
+	PLH::ProtFlag prot;
+};
+
+static region_t get_region_from_addr(uint64_t addr) {
+	region_t res{};
+
+	std::ifstream f("/proc/self/maps");
+	std::string s;
+	while (std::getline(f, s)) {
+		if (!s.empty())
+		{
+			char* strend = &s[0];
+			uint64_t start = strtoul(strend  , &strend, 16);
+			uint64_t end   = strtoul(strend+1, &strend, 16);
+			if (start < addr && addr < end) {
+				res.start = start;
+				res.end = end;
+
+				++strend;
+				if (strend[0] == 'r')
+					res.prot = res.prot | PLH::ProtFlag::R;
+	
+				if (strend[1] == 'w')
+					res.prot = res.prot | PLH::ProtFlag::W;
+	
+				if (strend[2] == 'x')
+					res.prot = res.prot | PLH::ProtFlag::X;
+
+				break;
+			}
+		}
+	}
+	return res;
+}
+
 bool PLH::MemAccessor::mem_copy(uint64_t dest, uint64_t src, uint64_t size) const {
 	memcpy((char*)dest, (char*)src, (size_t)size);
 	return true;
@@ -51,18 +89,25 @@ bool PLH::MemAccessor::safe_mem_write(uint64_t dest, uint64_t src, uint64_t size
 }
 
 bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, uint64_t size, size_t& read) const noexcept {
-	bool res = memcpy((void*)dest, (void*)src, (size_t)size) != nullptr;
-	if (res)
-		read = size;
-	else
-		read = 0;
+	region_t region_infos = get_region_from_addr(src);
+	
+	// Make sure that the region we query is allocated
+	if(region_infos.start == 0 || region_infos.end == 0 || !(region_infos.prot & PLH::ProtFlag::R))
+		return false;
 
-	return res;
+	size = std::min<uint64_t>(region_infos.end - src, size);
+	memcpy((void*)dest, (void*)src, (size_t)size);
+	read = size;
+
+	return true;
 }
 
 PLH::ProtFlag PLH::MemAccessor::mem_protect(uint64_t dest, uint64_t size, PLH::ProtFlag prot, bool& status) const {
-	status = mprotect((void*)MEMORY_ROUND(dest, page_size()), (size_t)MEMORY_ROUND_UP(size, page_size()), TranslateProtection(prot)) == 0;
-	return PLH::ProtFlag::R | PLH::ProtFlag::X;
+	region_t region_infos = get_region_from_addr(dest);
+	uint64_t aligned_dest = MEMORY_ROUND(dest, page_size());
+	uint64_t aligned_size = MEMORY_ROUND_UP(size, page_size());
+	status = mprotect((void*)aligned_dest, aligned_size, TranslateProtection(prot)) == 0;
+	return region_infos.prot;
 }
 
 size_t PLH::MemAccessor::page_size()

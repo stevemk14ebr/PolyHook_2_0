@@ -28,6 +28,7 @@
 #include <iostream> //for debug printing
 #include <sstream>
 #include <iomanip> //setw
+#include <fstream>
 
 #include <vector>
 #include <map>
@@ -50,11 +51,11 @@
 
 #include <cctype>
 #include <cassert>
+#include <cstring>
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
-#include <string.h>
 
 void PolyHook2DebugBreak();
 void* PolyHook2Alloca(size_t size);
