@@ -27,13 +27,6 @@ PLH::ProtFlag PLH::MemAccessor::mem_protect(uint64_t dest, uint64_t size, PLH::P
 	return TranslateProtection(orig);
 }
 
-size_t PLH::MemAccessor::page_size()
-{
-	SYSTEM_INFO sysInfo;
-	GetSystemInfo(&sysInfo);
-	return static_cast<size_t>(sysInfo.dwPageSize);
-}
-
 #elif defined(POLYHOOK2_OS_LINUX)
 
 struct region_t {
@@ -106,15 +99,10 @@ bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, uint64_t size,
 
 PLH::ProtFlag PLH::MemAccessor::mem_protect(uint64_t dest, uint64_t size, PLH::ProtFlag prot, bool& status) const {
 	region_t region_infos = get_region_from_addr(dest);
-	uint64_t aligned_dest = MEMORY_ROUND(dest, page_size());
-	uint64_t aligned_size = MEMORY_ROUND_UP(size, page_size());
+	uint64_t aligned_dest = MEMORY_ROUND(dest, PLH::getPageSize());
+	uint64_t aligned_size = MEMORY_ROUND_UP(size, PLH::getPageSize());
 	status = mprotect((void*)aligned_dest, aligned_size, TranslateProtection(prot)) == 0;
 	return region_infos.prot;
-}
-
-size_t PLH::MemAccessor::page_size()
-{
-	return static_cast<size_t>(sysconf(_SC_PAGESIZE));
 }
 
 #elif defined(POLYHOOK2_OS_APPLE)
@@ -145,13 +133,8 @@ bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, uint64_t size,
 }
 
 PLH::ProtFlag PLH::MemAccessor::mem_protect(uint64_t dest, uint64_t size, PLH::ProtFlag prot, bool& status) const {
-	status = mach_vm_protect(mach_task_self(), (mach_vm_address_t)MEMORY_ROUND(dest, page_size()), (mach_vm_size_t)MEMORY_ROUND_UP(size, page_size()), FALSE, TranslateProtection(prot)) == KERN_SUCCESS;
+	status = mach_vm_protect(mach_task_self(), (mach_vm_address_t)MEMORY_ROUND(dest, PLH::getPageSize()), (mach_vm_size_t)MEMORY_ROUND_UP(size, PLH::getPageSize()), FALSE, TranslateProtection(prot)) == KERN_SUCCESS;
 	return PLH::ProtFlag::R | PLH::ProtFlag::X;
-}
-
-size_t PLH::MemAccessor::page_size()
-{
-	return static_cast<size_t>(sysconf(_SC_PAGESIZE));
 }
 
 #endif

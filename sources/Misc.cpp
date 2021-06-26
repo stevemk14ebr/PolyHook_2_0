@@ -167,6 +167,13 @@ uint64_t PLH::getAllocationAlignment()
 	return si.dwAllocationGranularity;
 }
 
+uint64_t PLH::getPageSize()
+{
+	SYSTEM_INFO sysInfo;
+	GetSystemInfo(&sysInfo);
+	return static_cast<uint64_t>(sysInfo.dwPageSize);
+}
+
 #elif defined(POLYHOOK2_OS_LINUX)
 
 bool PLH::boundedAllocSupported()
@@ -217,6 +224,11 @@ From malloc-internal.h and malloc-alignment.h
 	return (2 * sizeof(size_t) < __alignof__ (long double) ? __alignof__ (long double) : 2 * sizeof(size_t));
 }
 
+size_t PLH::getPageSize()
+{
+	return static_cast<size_t>(sysconf(_SC_PAGESIZE));
+}
+
 #elif defined(POLYHOOK2_OS_APPLE)
 
 bool PLH::boundedAllocSupported()
@@ -260,6 +272,11 @@ void PLH::boundAllocFree(uint64_t address, uint64_t size)
 uint64_t PLH::getAllocationAlignment()
 {
 	return PLH::MemAccessor::page_size();
+}
+
+size_t PLH::getPageSize()
+{
+	return static_cast<size_t>(sysconf(_SC_PAGESIZE));
 }
 
 #endif

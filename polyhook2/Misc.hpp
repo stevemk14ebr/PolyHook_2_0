@@ -155,6 +155,7 @@ uint64_t boundAlloc(uint64_t min, uint64_t max, uint64_t size);
 uint64_t boundAllocLegacy(uint64_t min, uint64_t max, uint64_t size);
 void     boundAllocFree(uint64_t address, uint64_t size);
 uint64_t getAllocationAlignment();
+uint64_t getPageSize();
 
 uint64_t calc_2gb_below(uint64_t address);
 uint64_t calc_2gb_above(uint64_t address);
