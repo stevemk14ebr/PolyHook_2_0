@@ -224,9 +224,9 @@ From malloc-internal.h and malloc-alignment.h
 	return (2 * sizeof(size_t) < __alignof__ (long double) ? __alignof__ (long double) : 2 * sizeof(size_t));
 }
 
-size_t PLH::getPageSize()
+uint64_t PLH::getPageSize()
 {
-	return static_cast<size_t>(sysconf(_SC_PAGESIZE));
+	return static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
 }
 
 #elif defined(POLYHOOK2_OS_APPLE)
@@ -271,12 +271,12 @@ void PLH::boundAllocFree(uint64_t address, uint64_t size)
 
 uint64_t PLH::getAllocationAlignment()
 {
-	return PLH::MemAccessor::page_size();
+	return PLH::MemAccessor::getPageSize();
 }
 
-size_t PLH::getPageSize()
+uint64_t PLH::getPageSize()
 {
-	return static_cast<size_t>(sysconf(_SC_PAGESIZE));
+	return static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
 }
 
 #endif

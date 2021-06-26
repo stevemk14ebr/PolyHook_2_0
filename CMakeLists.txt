@@ -28,10 +28,15 @@ option(POLYHOOK_DISASM_CAPSTONE "Enable capstone support" ON)
 option(POLYHOOK_DISASM_CAPSTONE_FULL "Build all features of capstone." OFF)
 option(POLYHOOK_DISASM_ZYDIS "Enable Zydis support." ON)
 
-option(POLYHOOK_FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
+if(WIN32)
+    option(POLYHOOK_FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
+    option(POLYHOOK_FEATURE_PE "Implement all win pe hooking functionality" ON)
+else()
+    set(POLYHOOK_FEATURE_EXCEPTION OFF)
+    set(POLYHOOK_FEATURE_PE OFF)
+endif()
 option(POLYHOOK_FEATURE_DETOURS "Implement detour functionality" ON)
 option(POLYHOOK_FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" ON)
-option(POLYHOOK_FEATURE_PE "Implement all win pe hooking functionality" ON)
 option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 
 #force capstone and zydis build for tests
