@@ -1,0 +1,60 @@
+name: CI
+
+on: [push]
+jobs:
+  job:
+    name: ${{ matrix.os }}-cmake-build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+            
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+        
+      - name: Linux cmake
+        if: matrix.os == 'ubuntu-latest'
+        uses: lukka/run-cmake@main
+        with:
+          cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+          useVcpkgToolchainFile: false
+          buildDirectory: '${{ runner.workspace }}/b/ninja/'
+          cmakeGenerator: Ninja
+          cmakeBuildType: 'Release'
+          cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+          cmakeAppendedArgs: ' -DCMAKE_BUILD_TYPE=Release -DPOLYHOOK_BUILD_DLL=OFF -DPOLYHOOK_FEATURE_INLINENTD=OFF -DPOLYHOOK_FEATURE_VIRTUALS=OFF"'
+          buildWithCMake: true
+          buildWithCMakeArgs: '--config Release --parallel'
+      
+      - name: Linux tests
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: >-
+          find ${{ runner.workspace }}/b;
+          ${{ runner.workspace }}/b/ninja/bin/PolyHook_2;
+        
+        
+      - name: Windows cmake
+        if: matrix.os == 'windows-latest'
+        uses: lukka/run-cmake@main
+        with:
+          cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+          useVcpkgToolchainFile: false
+          buildDirectory: '${{ runner.workspace }}/b/ninja/'
+          cmakeGenerator: Ninja
+          cmakeBuildType: 'Release'
+          cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+          cmakeAppendedArgs: ' -DCMAKE_BUILD_TYPE=Release -DPOLYHOOK_BUILD_DLL=OFF -DPOLYHOOK_FEATURE_EXCEPTION=OFF -DPOLYHOOK_FEATURE_INLINENTD=OFF -DPOLYHOOK_FEATURE_VIRTUALS=OFF -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}"'
+          buildWithCMake: true
+          buildWithCMakeArgs: '--config Release --parallel'
+          
+      - name: Windows tests
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: >-
+          Get-ChildItem -Recurse -Filter '*' ${{ runner.workspace }}\b;
+          ${{ runner.workspace }}\b\ninja\Release\PolyHook_2.exe;

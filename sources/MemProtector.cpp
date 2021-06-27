@@ -2,20 +2,6 @@
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/PolyHookOsIncludes.hpp"
 
-inline PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
-	using underlying = typename std::underlying_type<PLH::ProtFlag>::type;
-	return static_cast<PLH::ProtFlag> (
-		static_cast<underlying>(lhs) |
-		static_cast<underlying>(rhs)
-		);
-}
-
-inline bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
-	using underlying = typename std::underlying_type<PLH::ProtFlag>::type;
-	return static_cast<underlying>(lhs) &
-		static_cast<underlying>(rhs);
-}
-
 std::ostream& operator<<(std::ostream& os, const PLH::ProtFlag flags) {
 	if (flags == PLH::ProtFlag::UNSET) {
 		os << "UNSET";

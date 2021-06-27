@@ -135,7 +135,7 @@ will be a pointer to the function, and the variables _args... and name_t will be
 arguments of the function and the type of the callback respectively.
 **/
 #define HOOK_CALLBACK(pType, name, body) typedef PLH::callback_type_t<decltype(pType)> name##_t; \
-PLH::callback_type_t<decltype(pType)> name = PLH::make_callback(pType, [](auto... _args) body )
+PLH::callback_type_t<decltype(pType)> name = PLH::make_callback(pType, [](auto... _args) noexcept body )
 
 /**
 When using the HOOK_CALLBACK macro this helper utility can be used to retreive one of the original

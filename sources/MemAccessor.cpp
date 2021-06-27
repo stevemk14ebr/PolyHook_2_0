@@ -46,7 +46,7 @@ static region_t get_region_from_addr(uint64_t addr) {
 			char* strend = &s[0];
 			uint64_t start = strtoul(strend  , &strend, 16);
 			uint64_t end   = strtoul(strend+1, &strend, 16);
-			if (start < addr && addr < end) {
+			if (start != 0 && end != 0 && start < addr && addr < end) {
 				res.start = start;
 				res.end = end;
 
@@ -59,6 +59,9 @@ static region_t get_region_from_addr(uint64_t addr) {
 	
 				if (strend[2] == 'x')
 					res.prot = res.prot | PLH::ProtFlag::X;
+
+				if(res.prot == PLH::ProtFlag::UNSET)
+					res.prot = PLH::ProtFlag::NONE;
 
 				break;
 			}
@@ -73,20 +76,25 @@ bool PLH::MemAccessor::mem_copy(uint64_t dest, uint64_t src, uint64_t size) cons
 }
 
 bool PLH::MemAccessor::safe_mem_write(uint64_t dest, uint64_t src, uint64_t size, size_t& written) const noexcept {
-	bool res = memcpy((void*)dest, (void*)src, (size_t)size) != nullptr;
-	if (res)
-		written = size;
-	else
-		written = 0;
+	region_t region_infos = get_region_from_addr(src);
+	
+	// Make sure that the region we query is writable
+	if(!(region_infos.prot & PLH::ProtFlag::W))
+		return false;
+	
+	size = std::min<uint64_t>(region_infos.end - src, size);
+	
+	memcpy((void*)dest, (void*)src, (size_t)size);
+	written = size;
 
-	return res;
+	return true;
 }
 
 bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, uint64_t size, size_t& read) const noexcept {
 	region_t region_infos = get_region_from_addr(src);
 	
-	// Make sure that the region we query is allocated
-	if(region_infos.start == 0 || region_infos.end == 0 || !(region_infos.prot & PLH::ProtFlag::R))
+	// Make sure that the region we query is readable
+	if(!(region_infos.prot & PLH::ProtFlag::R))
 		return false;
 
 	size = std::min<uint64_t>(region_infos.end - src, size);
