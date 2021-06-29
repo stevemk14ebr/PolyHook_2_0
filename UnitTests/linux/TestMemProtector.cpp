@@ -13,7 +13,7 @@ TEST_CASE("Test protflag translation", "[MemProtector],[Enums]") {
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::R | PLH::ProtFlag::W) == (PROT_READ|PROT_WRITE));
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::R) == (PROT_EXEC|PROT_READ));
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::W) == (PROT_EXEC|PROT_WRITE));
-		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::W || PLH::ProtFlag::R) == (PROT_EXEC|PROT_WRITE|PROT_READ));
+		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::W | PLH::ProtFlag::R) == (PROT_EXEC|PROT_WRITE|PROT_READ));
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::NONE) == PROT_NONE);
 	}
 
@@ -63,7 +63,7 @@ TEST_CASE("Test setting page protections", "[MemProtector]") {
 
 		PLH::MemoryProtector prot2((uint64_t)page, 4 * 1024, PLH::ProtFlag::X | PLH::ProtFlag::R | PLH::ProtFlag::W, accessor);
 		REQUIRE(prot.isGood());
-		REQUIRE(prot2.originalProt() == (PLH::ProtFlag::X | PLH::ProtFlag::R | PLH::ProtFlag::W));
+		REQUIRE(prot2.originalProt() == (PLH::ProtFlag::X | PLH::ProtFlag::W));
 	}
 	munmap(page, 4*1024);
 }

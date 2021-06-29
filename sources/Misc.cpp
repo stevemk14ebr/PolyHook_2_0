@@ -221,7 +221,9 @@ From malloc-internal.h and malloc-alignment.h
 #define MALLOC_ALIGNMENT (2 * SIZE_SZ < __alignof__ (long double) \
                           ? __alignof__ (long double) : 2 * SIZE_SZ)
 */
-	return (2 * sizeof(size_t) < __alignof__ (long double) ? __alignof__ (long double) : 2 * sizeof(size_t));
+	//return (2 * sizeof(size_t) < __alignof__ (long double) ? __alignof__ (long double) : 2 * sizeof(size_t));
+
+	return getPageSize();
 }
 
 uint64_t PLH::getPageSize()

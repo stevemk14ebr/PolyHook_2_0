@@ -15,7 +15,7 @@ TEST_CASE("Test protflag translation", "[MemProtector],[Enums]") {
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::R | PLH::ProtFlag::W) == PAGE_READWRITE);
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::R) == PAGE_EXECUTE_READ);
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::W) == PAGE_EXECUTE_READWRITE);
-		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::W || PLH::ProtFlag::R) == PAGE_EXECUTE_READWRITE);
+		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::W | PLH::ProtFlag::R) == PAGE_EXECUTE_READWRITE);
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::NONE) == PAGE_NOACCESS);
 	}
 

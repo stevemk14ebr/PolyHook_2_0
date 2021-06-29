@@ -90,16 +90,6 @@ HOOK_CALLBACK(&malloc, h_hookMalloc, {
 	return PLH::FnCast(hookMallocTramp, &malloc)(_args...);
 });
 
-#if defined(POLYHOOK2_OS_WINDOWS)
-uint64_t oCreateMutexExA = 0;
-HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, {
-	PLH::StackCanary canary;
-	LPCSTR lpName = GET_ARG(1);
-	printf("kernel32!CreateMutexExA  Name:%s",  lpName);
-	return PLH::FnCast(oCreateMutexExA, &CreateMutexExA)(_args...);
-});
-#endif
-
 TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x64);
 
@@ -127,26 +117,6 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 		REQUIRE(effects.PopEffect().didExecute());
 		REQUIRE(detour.unHook() == true);
 	}
-
-	// In release mode win apis usually go through two levels of jmps 
-	/*
-	0xe9 ... jmp iat_thunk
-
-	iat_thunk:
-	0xff 25 ... jmp [api_implementation]
-
-	api_implementation:
-	    sub rsp, ...
-		... the goods ...
-	*/
-#if defined(POLYHOOK2_OS_WINDOWS)
-	SECTION("WinApi Indirection") {
-		PLH::StackCanary canary;
-		PLH::x64Detour detour((char*)&CreateMutexExA, (char*)hCreateMutexExA, &oCreateMutexExA, dis);
-		REQUIRE(detour.hook() == true);
-		REQUIRE(detour.unHook() == true);
-	}
-#endif
 
 	SECTION("Loop function") {
 		PLH::StackCanary canary;

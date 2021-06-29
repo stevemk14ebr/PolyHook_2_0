@@ -46,7 +46,7 @@ static region_t get_region_from_addr(uint64_t addr) {
 			char* strend = &s[0];
 			uint64_t start = strtoul(strend  , &strend, 16);
 			uint64_t end   = strtoul(strend+1, &strend, 16);
-			if (start != 0 && end != 0 && start < addr && addr < end) {
+			if (start != 0 && end != 0 && start <= addr && addr < end) {
 				res.start = start;
 				res.end = end;
 

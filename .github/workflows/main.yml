@@ -33,9 +33,9 @@ jobs:
       - name: Linux tests
         if: matrix.os == 'ubuntu-latest'
         shell: bash
-        run: >-
-          find ${{ runner.workspace }}/b;
-          ${{ runner.workspace }}/b/ninja/bin/PolyHook_2;
+        run: |
+          #find ${{ runner.workspace }}/b;
+          ${{ runner.workspace }}/b/ninja/PolyHook_2;
         
         
       - name: Windows cmake
@@ -55,6 +55,6 @@ jobs:
       - name: Windows tests
         if: matrix.os == 'windows-latest'
         shell: powershell
-        run: >-
-          Get-ChildItem -Recurse -Filter '*' ${{ runner.workspace }}\b;
+        run: |
+          #Get-ChildItem -Recurse -Filter '*' ${{ runner.workspace }}\b;
           ${{ runner.workspace }}\b\ninja\Release\PolyHook_2.exe;
