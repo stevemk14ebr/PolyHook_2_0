@@ -2,6 +2,7 @@
 #include "polyhook2/PE/IatHook.hpp"
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 #include "polyhook2/Tests/StackCanary.hpp"
+#include "polyhook2/PolyHookOsIncludes.hpp"
 
 EffectTracker iatEffectTracker;
 

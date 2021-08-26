@@ -1,14 +1,8 @@
 #ifndef POLYHOOK_2_PAGEALLOCATOR_HPP
 #define POLYHOOK_2_PAGEALLOCATOR_HPP
 
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/Misc.hpp"
-
-#include <cassert>
-#include <stdint.h>
-#include <mutex>
-#include <vector>
-#include <unordered_map>
-#include <memory>
 #include "polyhook2/FBAllocator.hpp"
 
 namespace PLH { 

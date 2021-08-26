@@ -5,7 +5,7 @@
 #ifndef POLYHOOK_2_UID_HPP
 #define POLYHOOK_2_UID_HPP
 
-#include <atomic>
+#include "polyhook2/PolyHookOs.hpp"
 namespace PLH {
 	class UID {
 	public:

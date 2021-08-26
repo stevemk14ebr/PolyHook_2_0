@@ -245,13 +245,13 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 }
 
 TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
-	// re-write ff 25 displacement to point to data (absolute)
-#ifndef _WIN64
-	*(uint32_t*)(x86ASM_FF25.data() + 2) = (uint32_t)(x86ASM_FF25.data() + 6); // 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
-#else
+#ifdef POLYHOOK2_ARCH_X64
 	// this test is not suitable for x64 due to ff 25 not being re-written
 	return;
 #endif
+
+	// re-write ff 25 displacement to point to data (absolute)
+	*(uint32_t*)(x86ASM_FF25.data() + 2) = (uint32_t)(x86ASM_FF25.data() + 6); // 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
 
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x86);
@@ -268,9 +268,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ADisassembler],[CapstoneDisa
 		}
 
 		// special little indirect ff25 jmp
-#ifndef _WIN64
 		REQUIRE(Instructions.back().getDestination() == 0xaa0000ab);
-#endif
 	}
 
 	REQUIRE(Instructions.at(0).isBranching());

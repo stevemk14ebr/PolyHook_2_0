@@ -5,15 +5,7 @@
 #ifndef POLYHOOK_2_0_INSTRUCTION_HPP
 #define POLYHOOK_2_0_INSTRUCTION_HPP
 
-#include <cassert>
-#include <cstring>
-#include <string>
-#include <vector>
-#include <sstream>
-#include <iostream> //ostream operator
-#include <iomanip> //setw
-#include <type_traits>
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/UID.hpp"
 #include "polyhook2/Enums.hpp"
 namespace PLH {
@@ -143,7 +135,7 @@ public:
 	bool isBranching() const {
 		if (m_isBranching && m_isRelative) {
 			if (!m_hasDisplacement) {
-				__debugbreak();
+				PolyHook2DebugBreak();
 				assert(m_hasDisplacement);
 			}
 		}
@@ -187,7 +179,7 @@ public:
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
-			__debugbreak();
+			PolyHook2DebugBreak();
 			return;
 		}
 
@@ -205,7 +197,7 @@ public:
 
 		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Absolute)) {
-			__debugbreak();
+			PolyHook2DebugBreak();
 			return;
 		}
 

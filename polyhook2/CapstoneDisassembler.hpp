@@ -5,14 +5,10 @@
 #ifndef POLYHOOK_2_0_CAPSTONEDISASSEMBLER_HPP
 #define POLYHOOK_2_0_CAPSTONEDISASSEMBLER_HPP
 
-#include "polyhook2/ADisassembler.hpp"
-
 #include <capstone/capstone.h>
 
-#include <string.h>
-#include <iostream> //for debug printing
-#include <limits>
-#include <cassert>
+#include "polyhook2/PolyHookOs.hpp"
+#include "polyhook2/ADisassembler.hpp"
 
 namespace PLH {
 

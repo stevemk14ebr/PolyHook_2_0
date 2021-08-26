@@ -1,9 +1,7 @@
 #ifndef POLYHOOK_2_0_VEHHOOK_HPP
 #define POLYHOOK_2_0_VEHHOOK_HPP
 
-#include <cassert>
-#include <unordered_set>
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/IHook.hpp"

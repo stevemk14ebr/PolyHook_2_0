@@ -1,9 +1,7 @@
 //https://github.com/odzhan/shellcode/blob/master/os/win/getapi/dynamic/getapi.c
 //https://modexp.wordpress.com/2017/01/15/shellcode-resolving-api-addresses/
-#include <string>
-#include <iostream>
-#include <algorithm>
 
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/IHook.hpp"
 #include "polyhook2/MemProtector.hpp"

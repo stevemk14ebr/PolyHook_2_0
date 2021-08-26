@@ -6,12 +6,11 @@
 #pragma warning( pop )
 
 #pragma warning( disable : 4200)
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/MemAccessor.hpp"
 
-#include <iostream>
-#include <vector>
 namespace PLH {
 	class ILCallback : public MemAccessor {
 	public:

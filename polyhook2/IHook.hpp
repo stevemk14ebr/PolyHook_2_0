@@ -5,14 +5,10 @@
 #ifndef POLYHOOK_2_0_IHOOK_HPP
 #define POLYHOOK_2_0_IHOOK_HPP
 
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/ADisassembler.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/MemAccessor.hpp"
-
-#include <type_traits>
-#include <tuple>
-#include <utility>
 
 
 #if defined(__clang__)
@@ -103,7 +99,17 @@ struct callback_type<Ret(CCFROM Class::*)(Args...), void> \
     using type = Ret(CCTO*)(Class*, ## __VA_ARGS__, Args...); \
 };
 
-#ifndef _WIN64 
+#ifdef POLYHOOK2_OS_WINDOWS
+
+#define FASTCALL __fastcall
+
+#else
+
+#define FASTCALL __attribute__((fastcall))
+
+#endif
+
+#ifndef POLYHOOK2_ARCH_X64
 MAKE_CALLBACK_IMPL(__stdcall, __stdcall)
 MAKE_CALLBACK_CLASS_IMPL(__stdcall, __stdcall)
 
@@ -114,8 +120,8 @@ MAKE_CALLBACK_IMPL(__thiscall, __thiscall)
 MAKE_CALLBACK_CLASS_IMPL(__thiscall, __fastcall, char*)
 #endif
 
-MAKE_CALLBACK_IMPL(__fastcall, __fastcall)
-MAKE_CALLBACK_CLASS_IMPL(_fastcall, __fastcall)
+MAKE_CALLBACK_IMPL(FASTCALL, FASTCALL)
+MAKE_CALLBACK_CLASS_IMPL(FASTCALL, FASTCALL)
 
 template <int I, class... Ts>
 decltype(auto) get_pack_idx(Ts&&... ts) {
@@ -128,7 +134,7 @@ Creates a hook callback function pointer that matches the type of a given functi
 will be a pointer to the function, and the variables _args... and name_t will be created to represent the original
 arguments of the function and the type of the callback respectively.
 **/
-#define HOOK_CALLBACK(pType, name, body) typedef PLH::callback_type_t<decltype(pType)> ##name##_t; \
+#define HOOK_CALLBACK(pType, name, body) typedef PLH::callback_type_t<decltype(pType)> name##_t; \
 PLH::callback_type_t<decltype(pType)> name = PLH::make_callback(pType, [](auto... _args) body )
 
 /**
