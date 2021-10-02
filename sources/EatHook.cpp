@@ -91,10 +91,10 @@ uint32_t* PLH::EatHook::FindEatFunction(const std::string& apiName, const std::w
         dte->DllBase != NULL;
         dte = (LDR_DATA_TABLE_ENTRY*)dte->InLoadOrderLinks.Flink) {
 
-        // try all modules if none given, otherwise only try specified
-        const ci_wstring_view baseModuleName{dte->BaseDllName.Buffer, dte->BaseDllName.Length / sizeof(wchar_t)};
-        if (!moduleName.empty() && baseModuleName.compare(moduleName.data()) != 0)
-            continue;
+		// try all modules if none given, otherwise only try specified
+		const ci_wstring_view baseModuleName{dte->BaseDllName.Buffer, dte->BaseDllName.Length / sizeof(wchar_t)};
+		if (!moduleName.empty() && baseModuleName.compare(moduleName.data()) != 0)
+		    continue;
 
 		//std::wcout << moduleName << L" Found module" << std::endl;
 
@@ -133,8 +133,7 @@ uint32_t* PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
 
 	for (uint32_t i = 0; i < pExports->NumberOfNames; i++)
 	{
-        if(my_narrow_stricmp(RVA2VA(char*, m_moduleBase, pAddressOfNames[i]),
-                             apiName.c_str()) != 0)
+        	if(my_narrow_stricmp(RVA2VA(char*, m_moduleBase, pAddressOfNames[i]), apiName.c_str()) != 0)
 			continue;
 
 		// std::cout << RVA2VA(char*, m_moduleBase, pAddressOfNames[i]) << std::endl;
