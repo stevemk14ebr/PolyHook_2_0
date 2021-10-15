@@ -21,7 +21,7 @@ bool PLH::EatHook::hook() {
 	if (pExport == nullptr)
 		return false;
 
-	uint64_t offset = m_fnCallback - m_moduleBase;
+	size_t offset = static_cast<size_t>(m_fnCallback - m_moduleBase);
 
 	/* account for when offset to our function is beyond EAT slots size. We
 	instead allocate a small trampoline within +- 2GB which will do the full
