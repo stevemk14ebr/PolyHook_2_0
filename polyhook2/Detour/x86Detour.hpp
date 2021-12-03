@@ -5,17 +5,15 @@
 #ifndef POLYHOOK_2_X86DETOUR_HPP
 #define POLYHOOK_2_X86DETOUR_HPP
 
-#include <sstream>
-#include <algorithm>
-#include <functional>
-using namespace std::placeholders;
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/Detour/ADetour.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/Instruction.hpp"
 #include "polyhook2/ADisassembler.hpp"
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/MemProtector.hpp"
+
+using namespace std::placeholders;
 
 namespace PLH {
 

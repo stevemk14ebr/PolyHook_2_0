@@ -5,16 +5,9 @@
 #ifndef POLYHOOK_2_MEMORYPROTECTOR_HPP
 #define POLYHOOK_2_MEMORYPROTECTOR_HPP
 
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/MemAccessor.hpp"
 #include "polyhook2/Enums.hpp"
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <iostream>
 
 PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs);
 bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs);

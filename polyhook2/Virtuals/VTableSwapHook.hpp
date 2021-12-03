@@ -1,10 +1,7 @@
 #ifndef POLYHOOK_2_0_VTBLSWAPHOOK_HPP
 #define POLYHOOK_2_0_VTBLSWAPHOOK_HPP
 
-#include <cassert>
-#include <memory>
-#include <map>
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/IHook.hpp"
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/Misc.hpp"

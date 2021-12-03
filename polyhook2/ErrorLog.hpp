@@ -1,9 +1,7 @@
 #ifndef POLYHOOK_2_0_ERRORLOG_HPP
 #define POLYHOOK_2_0_ERRORLOG_HPP
 
-#include <vector>
-#include <string>
-#include <iostream>
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/Enums.hpp"
 
 namespace PLH {

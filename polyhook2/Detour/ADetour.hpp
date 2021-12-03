@@ -5,12 +5,7 @@
 #ifndef POLYHOOK_2_0_ADETOUR_HPP
 #define POLYHOOK_2_0_ADETOUR_HPP
 
-#include <functional>
-#include <optional>
-#include <cassert>
-#include <vector>
-#include <map>
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/ADisassembler.hpp"
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/ErrorLog.hpp"

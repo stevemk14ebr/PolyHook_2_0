@@ -1,12 +1,5 @@
 #include "polyhook2/RangeAllocator.hpp"
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
-#include <Windows.h>
-
-#include <algorithm>
+#include "polyhook2/PolyHookOsIncludes.hpp"
 
 PLH::FBAllocator::FBAllocator(uint64_t min, uint64_t max, uint8_t blockSize, uint8_t blockCount) : m_allocator(nullptr), m_hAllocator(0) {
 	m_min = min;
@@ -20,14 +13,17 @@ PLH::FBAllocator::FBAllocator(uint64_t min, uint64_t max, uint8_t blockSize, uin
 
 PLH::FBAllocator::~FBAllocator()
 {
+	uint64_t freeSize = 0;
+
 	if (m_allocator) {
+		freeSize = m_allocator->blockSize * m_allocator->maxBlocks;
 		delete m_allocator;
 		m_allocator = 0;
 		m_hAllocator = 0;
 	}
 
 	if(m_dataPool) { 
-		VirtualFree((PVOID)m_dataPool, 0, MEM_RELEASE);
+		boundAllocFree(m_dataPool, freeSize);
 		m_dataPool = 0;
 	}
 }

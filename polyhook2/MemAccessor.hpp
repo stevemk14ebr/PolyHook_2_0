@@ -1,9 +1,15 @@
 
 #ifndef POLYHOOK_2_MEMORYACCESSOR_HPP
 #define POLYHOOK_2_MEMORYACCESSOR_HPP
-#include <cstring>
-#include <stdint.h>
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/Enums.hpp"
+
+#define MEMORY_ROUND(_numToRound_, _multiple_) \
+    (_numToRound_ & (((size_t)-1) ^ (_multiple_ - 1)))
+
+// Round _numToRound_ to the next higher _multiple_
+#define MEMORY_ROUND_UP(_numToRound_, _multiple_) \
+    ((_numToRound_ + (_multiple_ - 1)) & (((size_t)-1) ^ (_multiple_ - 1)))
 
 namespace PLH {
 	/**

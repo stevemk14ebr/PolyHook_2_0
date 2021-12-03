@@ -1,12 +1,10 @@
 #ifndef POLYHOOK_2_0_ZYDISDISASSEMBLER_HPP
 #define POLYHOOK_2_0_ZYDISDISASSEMBLER_HPP
 
-#include <memory>
-#include <string>
-
 #include <Zydis/Zydis.h>
 #include <Zycore/Status.h>
 
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/ADisassembler.hpp"
 
 #define unreferenced(P) (P)

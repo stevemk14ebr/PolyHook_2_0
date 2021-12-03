@@ -2,6 +2,10 @@
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/Tests/StackCanary.hpp"
 
+#if defined(POLYHOOK2_OS_WINDOWS)
+
+#include "polyhook2/PolyHookOsIncludes.hpp"
+
 TEST_CASE("Test protflag translation", "[MemProtector],[Enums]") {
 	SECTION("flags to native") {
 		PLH::StackCanary canary;
@@ -11,7 +15,7 @@ TEST_CASE("Test protflag translation", "[MemProtector],[Enums]") {
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::R | PLH::ProtFlag::W) == PAGE_READWRITE);
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::R) == PAGE_EXECUTE_READ);
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::W) == PAGE_EXECUTE_READWRITE);
-		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::W || PLH::ProtFlag::R) == PAGE_EXECUTE_READWRITE);
+		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::X | PLH::ProtFlag::W | PLH::ProtFlag::R) == PAGE_EXECUTE_READWRITE);
 		REQUIRE(PLH::TranslateProtection(PLH::ProtFlag::NONE) == PAGE_NOACCESS);
 	}
 
@@ -63,3 +67,5 @@ TEST_CASE("Test setting page protections", "[MemProtector]") {
 	}
 	VirtualFree(page, 0, MEM_RELEASE);
 }
+
+#endif

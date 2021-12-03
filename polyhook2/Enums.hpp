@@ -5,8 +5,7 @@
 #ifndef POLYHOOK_2_0_ENUMS_HPP
 #define POLYHOOK_2_0_ENUMS_HPP
 
-#include <string>
-#include <inttypes.h>
+#include "polyhook2/PolyHookOs.hpp"
 
 namespace PLH {
 
@@ -56,4 +55,19 @@ enum class ErrorLevel {
 	NONE
 };
 }
+
+inline PLH::ProtFlag operator|(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
+	using underlying = typename std::underlying_type<PLH::ProtFlag>::type;
+	return static_cast<PLH::ProtFlag> (
+		static_cast<underlying>(lhs) |
+		static_cast<underlying>(rhs)
+		);
+}
+
+inline bool operator&(PLH::ProtFlag lhs, PLH::ProtFlag rhs) {
+	using underlying = typename std::underlying_type<PLH::ProtFlag>::type;
+	return static_cast<underlying>(lhs) &
+		static_cast<underlying>(rhs);
+}
+
 #endif //POLYHOOK_2_0_ENUMS_HPP
