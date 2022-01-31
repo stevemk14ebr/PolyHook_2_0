@@ -89,7 +89,7 @@ I've setup an example project to show how to use this as a static library. You s
 - Breakpoint tests must not be run under a debugger. They are commented out by default now.
 
 # Future
-Linux support
+Linux support. There is a partial unix implementation, but it is not well tested. Please contribute or report bugs.
 
 # License
 MIT - Please consider donating
