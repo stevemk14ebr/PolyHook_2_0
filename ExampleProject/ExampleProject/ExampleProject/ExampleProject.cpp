@@ -27,6 +27,7 @@ int main()
 
 	printf("%s %f\n", "hi", .5f);
 	detour->unHook();
+	delete detour;
 	getchar();
 	return 0;
 }
