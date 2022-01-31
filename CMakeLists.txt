@@ -171,7 +171,7 @@ if(MSVC)
 	endif()
 
 	if(MSVC)
-		  set(COMPILE_FLAGS_PLH "/W4 /WX /Z7")
+		  set(COMPILE_FLAGS_PLH "/W4 /Z7")
 		  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 			set(COMPILE_FLAGS_PLH "/MP ${COMPILE_FLAGS_PLH}")
 		  endif()

@@ -159,7 +159,7 @@ void PLH::boundAllocFree(uint64_t address, uint64_t size)
 	VirtualFree((LPVOID)address, (SIZE_T)0, MEM_RELEASE);
 }
 
-uint64_t PLH::getAllocationAlignment()
+size_t PLH::getAllocationAlignment()
 {
 	SYSTEM_INFO si;
 	memset(&si, 0, sizeof(si));
@@ -167,7 +167,7 @@ uint64_t PLH::getAllocationAlignment()
 	return si.dwAllocationGranularity;
 }
 
-uint64_t PLH::getPageSize()
+size_t PLH::getPageSize()
 {
 	SYSTEM_INFO sysInfo;
 	GetSystemInfo(&sysInfo);
@@ -208,7 +208,7 @@ void PLH::boundAllocFree(uint64_t address, uint64_t size)
 	munmap((void*)address, (size_t)size);
 }
 
-uint64_t PLH::getAllocationAlignment()
+size_t PLH::getAllocationAlignment()
 {
 /*
 From malloc-internal.h and malloc-alignment.h
@@ -226,7 +226,7 @@ From malloc-internal.h and malloc-alignment.h
 	return getPageSize();
 }
 
-uint64_t PLH::getPageSize()
+size_t PLH::getPageSize()
 {
 	return static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
 }
@@ -271,12 +271,12 @@ void PLH::boundAllocFree(uint64_t address, uint64_t size)
 	mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)address, size);
 }
 
-uint64_t PLH::getAllocationAlignment()
+size_t PLH::getAllocationAlignment()
 {
 	return PLH::MemAccessor::getPageSize();
 }
 
-uint64_t PLH::getPageSize()
+size_t PLH::getPageSize()
 {
 	return static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
 }

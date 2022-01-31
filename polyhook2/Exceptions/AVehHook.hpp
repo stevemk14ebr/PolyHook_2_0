@@ -2,6 +2,7 @@
 #define POLYHOOK_2_0_VEHHOOK_HPP
 
 #include "polyhook2/PolyHookOs.hpp"
+#include "polyhook2/PolyHookOsIncludes.hpp"
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/IHook.hpp"
