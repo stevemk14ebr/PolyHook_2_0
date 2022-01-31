@@ -22,11 +22,11 @@ int main()
 {
 	// Switch modes for x64
 	PLH::CapstoneDisassembler dis(PLH::Mode::x86);
-	PLH::x86Detour detour((char*)&printf, (char*)&h_hookPrintf, &hookPrintfTramp, dis);
-	detour.hook();
+	PLH::x86Detour* detour = new PLH::x86Detour((char*)&printf, (char*)&h_hookPrintf, &hookPrintfTramp, dis);
+	detour->hook();
 
 	printf("%s %f\n", "hi", .5f);
-	detour.unHook();
+	detour->unHook();
 	getchar();
 	return 0;
 }
