@@ -21,7 +21,7 @@ bool PLH::EatHook::hook() {
 	if (pExport == nullptr)
 		return false;
 
-	uint64_t offset = m_fnCallback - m_moduleBase;
+	size_t offset = static_cast<size_t>(m_fnCallback - m_moduleBase);
 
 	/* account for when offset to our function is beyond EAT slots size. We
 	instead allocate a small trampoline within +- 2GB which will do the full
@@ -36,7 +36,7 @@ bool PLH::EatHook::hook() {
 		MemoryProtector protector(m_trampoline, 64, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 
 		PLH::ADisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback), *this);
-		offset = m_trampoline - m_moduleBase;
+		offset = static_cast<size_t>(m_trampoline - m_moduleBase);
 
 		Log::log("EAT hook offset is > 32bit's. Allocation of trampoline necessary", ErrorLevel::INFO);
 	}
@@ -91,10 +91,10 @@ uint32_t* PLH::EatHook::FindEatFunction(const std::string& apiName, const std::w
         dte->DllBase != NULL;
         dte = (LDR_DATA_TABLE_ENTRY*)dte->InLoadOrderLinks.Flink) {
 
-        // try all modules if none given, otherwise only try specified
-        const ci_wstring_view baseModuleName{dte->BaseDllName.Buffer, dte->BaseDllName.Length / sizeof(wchar_t)};
-        if (!moduleName.empty() && baseModuleName.compare(moduleName.data()) != 0)
-            continue;
+		// try all modules if none given, otherwise only try specified
+		const ci_wstring_view baseModuleName{dte->BaseDllName.Buffer, dte->BaseDllName.Length / sizeof(wchar_t)};
+		if (!moduleName.empty() && baseModuleName.compare(moduleName.data()) != 0)
+		    continue;
 
 		//std::wcout << moduleName << L" Found module" << std::endl;
 
@@ -133,8 +133,7 @@ uint32_t* PLH::EatHook::FindEatFunctionInModule(const std::string& apiName) {
 
 	for (uint32_t i = 0; i < pExports->NumberOfNames; i++)
 	{
-        if(my_narrow_stricmp(RVA2VA(char*, m_moduleBase, pAddressOfNames[i]),
-                             apiName.c_str()) != 0)
+        	if(my_narrow_stricmp(RVA2VA(char*, m_moduleBase, pAddressOfNames[i]), apiName.c_str()) != 0)
 			continue;
 
 		// std::cout << RVA2VA(char*, m_moduleBase, pAddressOfNames[i]) << std::endl;

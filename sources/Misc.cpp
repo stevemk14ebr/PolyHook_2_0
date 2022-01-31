@@ -137,8 +137,10 @@ uint64_t PLH::boundAllocLegacy(uint64_t start, uint64_t end, uint64_t size)
 			return 0;
 
 		assert(mbi.RegionSize != 0);
-		if (mbi.State != MEM_FREE || mbi.RegionSize < size)
+		if (mbi.State != MEM_FREE || mbi.RegionSize < size) {
+			Addr = (uint64_t)mbi.BaseAddress + mbi.RegionSize;
 			continue;
+		}
 
 		uint64_t nextPage = (uint64_t)AlignUpwards((uint64_t)mbi.BaseAddress, si.dwAllocationGranularity);
 		
