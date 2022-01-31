@@ -278,35 +278,57 @@ bool PLH::x64Detour::hook() {
 	m_nopProlOffset = (uint16_t)minProlSz;
 
 	MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
-	if (_detourScheme == detour_scheme_t::VALLOC2 || (_detourScheme == detour_scheme_t::VALLOC2_FALLBACK_CODE_CAVE && boundedAllocSupported())) {
+	if (_detourScheme & detour_scheme_t::VALLOC2 && boundedAllocSupported()) {
 		// TODO: We wast a whole page, put this in the PageAllocator instead
 		uint64_t max = (uint64_t)AlignDownwards(calc_2gb_above(m_fnAddress), PLH::getPageSize());
 		uint64_t min = (uint64_t)AlignDownwards(calc_2gb_below(m_fnAddress), PLH::getPageSize());
 		uint64_t region = (uint64_t)m_allocator.allocate(min, max);
 		if (!region) {
+			if (_detourScheme & detour_scheme_t::CODE_CAVE || _detourScheme & detour_scheme_t::INPLACE) {
+				goto trycave;
+			}
+
 			Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
 			return false;
+		} else {
+			m_valloc2_region = region;
+
+			MemoryProtector holderProt(region, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
+			m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, region);
+			goto success;
 		}
-
-		m_valloc2_region = region;
-
-		MemoryProtector holderProt(region, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
-		m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, region);
-	} else if(_detourScheme == detour_scheme_t::CODE_CAVE || _detourScheme == detour_scheme_t::VALLOC2_FALLBACK_CODE_CAVE){
+	} 
+	
+	trycave:
+	if(_detourScheme & detour_scheme_t::CODE_CAVE){
 		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
 		auto cave = findNearestCodeCave<8>(m_fnAddress);
 		if (!cave) {
+			if (_detourScheme & detour_scheme_t::INPLACE) {
+				goto tryinplace;
+			}
+
 			Log::log("No code caves found near function", ErrorLevel::SEV);
 			return false;
+		}else {
+			MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
+			m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+			goto success;
 		}
-
-		MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
-		m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
-	} else {
+	} 
+	
+	tryinplace:
+	if(_detourScheme & detour_scheme_t::INPLACE) {
 		//inplace scheme. This is more stable than the cave finder since that may potentially find a region of unstable memory. 
 		// However, this INPLACE scheme may only be done for functions with a large enough prologue, otherwise this will overwrite adjacent bytes
 		m_hookInsts = makeInplaceDetour(m_fnAddress, m_fnCallback);
+		goto success;
+	} else {
+		Log::log("No allowed hooking scheme succeeded", ErrorLevel::SEV);
+		return false;
 	}
+
+	success:
 	m_disasm.writeEncoding(m_hookInsts, *this);
 
 	// Nop the space between jmp and end of prologue

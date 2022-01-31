@@ -17,7 +17,7 @@ endif()
 #
 # Options
 #
-option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" ON)
+option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" OFF)
 
 option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook as shared libary" OFF)
 option(POLYHOOK_BUILD_SHARED_ASMJIT "Build polyhook as shared libary" OFF)
