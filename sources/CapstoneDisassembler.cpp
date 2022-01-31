@@ -152,7 +152,7 @@ void PLH::CapstoneDisassembler::copyDispSx(PLH::Instruction& inst,
 	 * and 0 when sign bit not set (positive displacement)*/
 	int64_t displacement = 0;
 	if (offset + size > (uint8_t)inst.getBytes().size()) {
-		__debugbreak();
+		PolyHook2DebugBreak();
 		return;
 	}
 
@@ -176,7 +176,7 @@ void PLH::CapstoneDisassembler::copyDispSx(PLH::Instruction& inst,
 		inst.setRelativeDisplacement(displacement);
 	} else {
 		if (((uint64_t)displacement) != ((uint64_t)immDestination))
-			__debugbreak();
+			PolyHook2DebugBreak();
 		assert(((uint64_t)displacement) == ((uint64_t)immDestination));
 		inst.setAbsoluteDisplacement((uint64_t)displacement);
 	}

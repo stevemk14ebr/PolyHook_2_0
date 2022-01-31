@@ -1,8 +1,7 @@
 #ifndef POLYHOOK_2_0_HWBPHOOK_HPP
 #define POLYHOOK_2_0_HWBPHOOK_HPP
 
-#include <cassert>
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/Exceptions/AVehHook.hpp"
 #include "polyhook2/Misc.hpp"
 

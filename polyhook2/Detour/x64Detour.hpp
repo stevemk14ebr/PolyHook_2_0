@@ -5,10 +5,7 @@
 #ifndef POLYHOOK_2_X64DETOUR_HPP
 #define POLYHOOK_2_X64DETOUR_HPP
 
-#include <functional>
-#include <optional>
-using namespace std::placeholders;
-
+#include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/Detour/ADetour.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/Instruction.hpp"
@@ -16,15 +13,18 @@ using namespace std::placeholders;
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/RangeAllocator.hpp"
 
+using namespace std::placeholders;
+
 namespace PLH {
 
 class x64Detour : public Detour {
 public:
-    enum class detour_scheme_t {
-        CODE_CAVE = 1, //searching for code-cave to keep fnCallback.
-        INPLACE = 2,    //use push-ret for fnCallback in-place storage.
-		VALLOC2 = 3, // use virtualalloc2 to allocate in range. Only on win10 > 1803
-		VALLOC2_FALLBACK_CODE_CAVE = 4, // first try to allocate, then fallback to code cave if not supported (will not fallback on failure of allocation)
+    enum detour_scheme_t : uint8_t {
+        CODE_CAVE = 1 << 0, //searching for code-cave to keep fnCallback.
+        INPLACE =  1 << 1,    //use push-ret for fnCallback in-place storage.
+		VALLOC2 = 1 << 2, // use virtualalloc2 to allocate in range. Only on win10 > 1803
+		RECOMMENDED = VALLOC2 | CODE_CAVE,
+	    ALL =  CODE_CAVE | INPLACE | VALLOC2, // first try to allocate, then fallback to code cave if not supported (will not fallback on failure of allocation)
     };
 
 	x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
@@ -50,7 +50,7 @@ private:
 	template<uint16_t SIZE>
 	std::optional<uint64_t> findNearestCodeCave(uint64_t addr);
 
-	detour_scheme_t _detourScheme { detour_scheme_t::VALLOC2_FALLBACK_CODE_CAVE }; // this is the most stable configuration.
+	detour_scheme_t _detourScheme { detour_scheme_t::RECOMMENDED }; // this is the most stable configuration.
 	std::optional<uint64_t> m_valloc2_region;
 	RangeAllocator m_allocator;
 };

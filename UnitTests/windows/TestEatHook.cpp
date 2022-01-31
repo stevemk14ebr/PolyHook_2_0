@@ -3,6 +3,7 @@
 #include "polyhook2/PE/EatHook.hpp"
 #include "polyhook2/Tests/StackCanary.hpp"
 #include "polyhook2/Tests/TestEffectTracker.hpp"
+#include "polyhook2/PolyHookOsIncludes.hpp"
 
 EffectTracker eatEffectTracker;
 

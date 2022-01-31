@@ -8,8 +8,8 @@
 #ifndef _FB_ALLOCATOR_H
 #define _FB_ALLOCATOR_H
 
-#include <stdlib.h>
-#include <stdint.h>
+#include "polyhook2/PolyHookOs.hpp"
+#include "MemAccessor.hpp"
 
 typedef void* ALLOC_HANDLE;
 
@@ -40,14 +40,10 @@ typedef struct
 // Get the maximum between a or b
 #define ALLOC_MAX(a,b) (((a)>(b))?(a):(b))
 
-// Round _numToRound_ to the next higher _multiple_
-#define ALLOC_ROUND_UP(_numToRound_, _multiple_) \
-    (((_numToRound_ + _multiple_ - 1) / _multiple_) * _multiple_)
-
 // Ensure the memory block size is: (a) is aligned on desired boundary and (b) at
 // least the size of a ALLOC_Allocator*. 
 #define ALLOC_BLOCK_SIZE(_size_) \
-    (ALLOC_MAX((ALLOC_ROUND_UP(_size_, ALLOC_MEM_ALIGN)), sizeof(ALLOC_Allocator*)))
+    (ALLOC_MAX((MEMORY_ROUND_UP(_size_, ALLOC_MEM_ALIGN)), sizeof(ALLOC_Allocator*)))
 
 // Defines block memory, allocator instance and a handle. On the example below, 
 // the ALLOC_Allocator instance is myAllocatorObj and the handle is myAllocator.

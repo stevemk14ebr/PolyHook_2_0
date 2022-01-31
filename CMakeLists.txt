@@ -6,10 +6,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(CMakePackageConfigHelpers)
 
+if(WIN32)
+	set(POLYHOOK_OS "windows")
+elseif(APPLE)
+	set(POLYHOOK_OS "macos")
+elseif(UNIX)
+	set(POLYHOOK_OS "linux")
+endif()
+
 #
 # Options
 #
-option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" ON)
+option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" OFF)
 
 option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook as shared libary" OFF)
 option(POLYHOOK_BUILD_SHARED_ASMJIT "Build polyhook as shared libary" OFF)
@@ -28,10 +36,15 @@ option(POLYHOOK_DISASM_CAPSTONE "Enable capstone support" ON)
 option(POLYHOOK_DISASM_CAPSTONE_FULL "Build all features of capstone." OFF)
 option(POLYHOOK_DISASM_ZYDIS "Enable Zydis support." ON)
 
-option(POLYHOOK_FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
+if(WIN32)
+    option(POLYHOOK_FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
+    option(POLYHOOK_FEATURE_PE "Implement all win pe hooking functionality" ON)
+else()
+    set(POLYHOOK_FEATURE_EXCEPTION OFF)
+    set(POLYHOOK_FEATURE_PE OFF)
+endif()
 option(POLYHOOK_FEATURE_DETOURS "Implement detour functionality" ON)
 option(POLYHOOK_FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" ON)
-option(POLYHOOK_FEATURE_PE "Implement all win pe hooking functionality" ON)
 option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 
 #force capstone and zydis build for tests
@@ -158,7 +171,7 @@ if(MSVC)
 	endif()
 
 	if(MSVC)
-		  set(COMPILE_FLAGS_PLH "/W4 /WX /Z7")
+		  set(COMPILE_FLAGS_PLH "/W4 /Z7")
 		  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 			set(COMPILE_FLAGS_PLH "/MP ${COMPILE_FLAGS_PLH}")
 		  endif()
@@ -205,7 +218,14 @@ target_sources(${PROJECT_NAME} PRIVATE
 	${PROJECT_SOURCE_DIR}/sources/ErrorLog.cpp
 	${PROJECT_SOURCE_DIR}/sources/UID.cpp
 	${PROJECT_SOURCE_DIR}/sources/Misc.cpp
+	${PROJECT_SOURCE_DIR}/sources/PolyHookOs.cpp
 	)
+
+if(NOT POLYHOOK_BUILD_DLL)
+	target_compile_options(${PROJECT_NAME} PRIVATE
+		$<$<BOOL:${UNIX}>:-fpermissive>
+	)
+endif()
 
 #DisAsm/Capstone
 if(POLYHOOK_DISASM_CAPSTONE)
@@ -261,9 +281,9 @@ if(POLYHOOK_FEATURE_DETOURS)
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8) #64-bit
-			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx64.cpp)
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx64.cpp)
 		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4) #32-bit
-			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/TestDetourx86.cpp)
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx86.cpp)
 		endif()
 	endif()
 endif()
@@ -284,8 +304,8 @@ if(POLYHOOK_FEATURE_EXCEPTION)
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
 		target_sources(${PROJECT_NAME} PRIVATE
-			${PROJECT_SOURCE_DIR}/UnitTests/TestBreakpointHook.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestHWBreakpointHook.cpp)
+			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestBreakpointHook.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestHWBreakpointHook.cpp)
 	endif()
 endif()
 
@@ -308,9 +328,9 @@ if(POLYHOOK_FEATURE_INLINENTD)
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx64.cpp)
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourNoTDx64.cpp)
 		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/TestDetourNoTDx86.cpp)
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourNoTDx86.cpp)
 		endif()
 	endif()
 endif()
@@ -331,8 +351,8 @@ if(POLYHOOK_FEATURE_PE)
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
 		target_sources(${PROJECT_NAME} PRIVATE
-			${PROJECT_SOURCE_DIR}/UnitTests/TestEatHook.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestIatHook.cpp)
+			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestEatHook.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestIatHook.cpp)
 	endif()
 endif()
 
@@ -351,9 +371,9 @@ if(POLYHOOK_FEATURE_VIRTUALS)
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
 		target_sources(${PROJECT_NAME} PRIVATE
-			${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestVTableSwapHook2.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/TestVFuncSwapHook.cpp)
+			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestVTableSwapHook.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestVTableSwapHook2.cpp
+			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestVFuncSwapHook.cpp)
 	endif()
 endif()
 
@@ -362,8 +382,8 @@ endif()
 if(NOT POLYHOOK_BUILD_DLL)
 	target_sources(${PROJECT_NAME} PRIVATE
 		${PROJECT_SOURCE_DIR}/MainTests.cpp
-		${PROJECT_SOURCE_DIR}/UnitTests/TestDisassembler.cpp
-		${PROJECT_SOURCE_DIR}/UnitTests/TestMemProtector.cpp)
+		${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDisassembler.cpp
+		${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestMemProtector.cpp)
 endif()
 
 
