@@ -30,10 +30,11 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 	TYPEID_MATCH_STR_ELSEIF(type, unsigned long)
 	#ifdef POLYHOOK2_OS_WINDOWS
 	TYPEID_MATCH_STR_ELSEIF(type, __int64)
-	#else
-	TYPEID_MATCH_STR_ELSEIF(type, __int64_t)	
-	#endif
 	TYPEID_MATCH_STR_ELSEIF(type, unsigned __int64)
+	#else
+	TYPEID_MATCH_STR_ELSEIF(type, __int64_t)
+	TYPEID_MATCH_STR_ELSEIF(type, unsigned __int64_t)
+	#endif
 	TYPEID_MATCH_STR_ELSEIF(type, long long)
 	TYPEID_MATCH_STR_ELSEIF(type, unsigned long long)
 	TYPEID_MATCH_STR_ELSEIF(type, char)

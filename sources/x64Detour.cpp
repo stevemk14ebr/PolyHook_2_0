@@ -279,9 +279,10 @@ bool PLH::x64Detour::hook() {
 
 	MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
 	if (_detourScheme & detour_scheme_t::VALLOC2 && boundedAllocSupported()) {
-		// TODO: We wast a whole page, put this in the PageAllocator instead
 		uint64_t max = (uint64_t)AlignDownwards(calc_2gb_above(m_fnAddress), PLH::getPageSize());
 		uint64_t min = (uint64_t)AlignDownwards(calc_2gb_below(m_fnAddress), PLH::getPageSize());
+
+		// each block is m_blocksize (8) at the time of writing. Do not write more than this.
 		uint64_t region = (uint64_t)m_allocator.allocate(min, max);
 		if (!region) {
 			if (_detourScheme & detour_scheme_t::CODE_CAVE || _detourScheme & detour_scheme_t::INPLACE) {
