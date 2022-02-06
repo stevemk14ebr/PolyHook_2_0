@@ -9,11 +9,11 @@
 #include "polyhook2/Misc.hpp"
 #include "polyhook2/MemProtector.hpp"
 
-PLH::x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis), m_allocator(8, 100) {
+PLH::x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth), m_allocator(8, 100) {
 
 }
 
-PLH::x64Detour::x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis), m_allocator(8, 100) {
+PLH::x64Detour::x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth), m_allocator(8, 100) {
 
 }
 
@@ -225,7 +225,7 @@ bool PLH::x64Detour::hook() {
 		return false;
 	}
 
-	if (!followJmp(insts)) {
+	if (!followJmp(insts, 0, m_maxDepth)) {
 		Log::log("Prologue jmp resolution failed", ErrorLevel::SEV);
 		return false;
 	}

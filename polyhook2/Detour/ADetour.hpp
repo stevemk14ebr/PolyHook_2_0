@@ -42,9 +42,10 @@ T FnCast(void* fnToCast, T pFnCastTo) {
 
 class Detour : public PLH::IHook {
 public:
-	Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : m_disasm(dis) {
+	Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth = c_maxDepth) : m_disasm(dis) {
 		assert(fnAddress != 0 && fnCallback != 0);
 		assert(sizeof(*userTrampVar) == sizeof(uint64_t) && "Given trampoline holder to small");
+		assert(maxDepth > 0);
 
 		m_fnAddress = fnAddress;
 		m_fnCallback = fnCallback;
@@ -55,11 +56,13 @@ public:
 		m_nopSize = 0;
 		m_nopProlOffset = 0;
 		m_hookSize = 0;
+		m_maxDepth = maxDepth;
 	}
 
-	Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : m_disasm(dis) {
+	Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth = c_maxDepth) : m_disasm(dis) {
 		assert(fnAddress != nullptr && fnCallback != nullptr);
 		assert(sizeof(*userTrampVar) == sizeof(uint64_t) && "Given trampoline holder to small");
+		assert(maxDepth > 0);
 
 		m_fnAddress = (uint64_t)fnAddress;
 		m_fnCallback = (uint64_t)fnCallback;
@@ -70,6 +73,7 @@ public:
 		m_nopSize = 0;
 		m_nopProlOffset = 0;
 		m_hookSize = 0;
+		m_maxDepth = maxDepth;
 	}
 
 	virtual ~Detour() {
@@ -99,6 +103,8 @@ protected:
 	uint16_t			    m_trampolineSz;
 	uint64_t*				m_userTrampVar;
 	ADisassembler&			m_disasm;
+	uint8_t					m_maxDepth;
+	static const uint8_t    c_maxDepth = 5;
 
 	PLH::insts_t			m_originalInsts;
 
@@ -118,7 +124,7 @@ protected:
 	/**If function starts with a jump follow it until the first non-jump instruction, recursively. This handles already hooked functions
 	and also compilers that emit jump tables on function call. Returns true if resolution was successful (nothing to resolve, or resolution worked),
 	false if resolution failed.**/
-	bool followJmp(insts_t& functionInsts, const uint8_t curDepth = 0, const uint8_t depth = 5);
+	bool followJmp(insts_t& functionInsts, const uint8_t curDepth = 0, const uint8_t maxDepth = c_maxDepth);
 
 	/**Expand the prologue up to the address of the last jmp that points back into the prologue. This
 	is necessary because we modify the location of things in the prologue, so re-entrant jmps point

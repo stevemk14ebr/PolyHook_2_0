@@ -27,9 +27,9 @@ public:
 	    ALL =  CODE_CAVE | INPLACE | VALLOC2, // first try to allocate, then fallback to code cave if not supported (will not fallback on failure of allocation)
     };
 
-	x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
+	x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth = c_maxDepth);
 
-	x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis);
+	x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth = c_maxDepth);
 	virtual ~x64Detour() override;
 	virtual bool hook() override;
 	virtual bool unHook() override;
