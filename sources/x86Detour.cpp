@@ -3,11 +3,11 @@
 //
 #include "polyhook2/Detour/x86Detour.hpp"
 
-PLH::x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
+PLH::x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth) {
 
 }
 
-PLH::x86Detour::x86Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis) {
+PLH::x86Detour::x86Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth) {
 
 }
 
@@ -26,7 +26,7 @@ bool PLH::x86Detour::hook() {
 		return false;
 	}
 
-	if (!followJmp(insts)) {
+	if (!followJmp(insts, 0, m_maxDepth)) {
 		Log::log("Prologue jmp resolution failed", ErrorLevel::SEV);
 		return false;
 	}
