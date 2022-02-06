@@ -17,7 +17,7 @@ endif()
 #
 # Options
 #
-option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" ON)
+option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" OFF)
 
 option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook as shared libary" OFF)
 option(POLYHOOK_BUILD_SHARED_ASMJIT "Build polyhook as shared libary" OFF)
@@ -204,6 +204,8 @@ set(POLYHOOK_CORE_HEADERS ${PROJECT_SOURCE_DIR}/polyhook2/ADisassembler.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Tests/TestEffectTracker.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Tests/StackCanary.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/EventDispatcher.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/PolyHookOs.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/PolyHookOsIncludes.hpp
 		)
 install(FILES ${POLYHOOK_CORE_HEADERS} DESTINATION include/polyhook2)
 
