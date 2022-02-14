@@ -16,7 +16,9 @@ namespace PLH {
 class EatHook : public IHook {
 public:
 	EatHook(const std::string& apiName, const std::wstring& moduleName, const char* fnCallback, uint64_t* userOrigVar);
-	EatHook(const std::string& apiName, const std::wstring& moduleName, const uint64_t fnCallback, uint64_t* userOrigVar);
+	EatHook(const std::string& apiName, const std::wstring& moduleName, uint64_t fnCallback, uint64_t* userOrigVar);
+	EatHook(const std::string& apiName, HMODULE moduleHandle, const char* fnCallback, uint64_t* userOrigVar);
+	EatHook(const std::string& apiName, HMODULE moduleHandle, uint64_t fnCallback, uint64_t* userOrigVar);
 	virtual ~EatHook()
 	{
 		if (m_trampoline) {
@@ -31,10 +33,15 @@ public:
 	virtual HookType getType() const override {
 		return HookType::EAT;
 	}
-private:
+
+protected:
+    EatHook(std::string apiName, std::wstring moduleName, HMODULE moduleHandle, uint64_t fnCallback, uint64_t* userOrigVar);
+
+	uint32_t* FindEatFunction();
+	uint32_t* FindEatFunctionInModule() const;
+	uint64_t FindModule();
+
 	const uint16_t m_trampolineSize = 32;
-	uint32_t* FindEatFunction(const std::string& apiName, const std::wstring& moduleName = L"");
-	uint32_t* FindEatFunctionInModule(const std::string& apiName);
 
 	std::wstring m_moduleName;
 	std::string m_apiName;
