@@ -4,6 +4,7 @@
 #include "polyhook2/Tests/StackCanary.hpp"
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 #include "polyhook2/PolyHookOsIncludes.hpp"
+#include "polyhook2/Detour/ADetour.hpp"
 
 EffectTracker eatEffectTracker;
 
@@ -16,32 +17,32 @@ extern "C" __declspec(dllexport) NOINLINE void EatTestExport()
 }
 
 NOINLINE void hkEatTestExport()
-{	
+{
 	PLH::StackCanary canary;
 	eatEffectTracker.PeakEffect().trigger();
 }
 
-TEST_CASE("Eat Hook Tests", "[EatHook]") {
-	SECTION("Verify if export is found and hooked") {
+TEST_CASE("Hook internal test export", "[EatHook]") {
+	SECTION("Verify if export is found and hooked when module name is empty") {
 		PLH::StackCanary canary;
 		PLH::EatHook hook("EatTestExport", L"", (char*)&hkEatTestExport, (uint64_t*)&oEatTestExport);
 		REQUIRE(hook.hook());
 
-		tEatTestExport pExport = (tEatTestExport)GetProcAddress(GetModuleHandle(nullptr), "EatTestExport");
-		REQUIRE(pExport);  
+		auto pExport = (tEatTestExport)GetProcAddress(GetModuleHandle(nullptr), "EatTestExport");
+		REQUIRE(pExport);
 
 		eatEffectTracker.PushEffect();
-		pExport();	
+		pExport();
 		REQUIRE(eatEffectTracker.PopEffect().didExecute());
 		REQUIRE(hook.unHook());
 	}
 
-	SECTION("Verify if export is found and hooked when module explicitly named") {
+	SECTION("Verify if export is found and hooked when module name is explicitly given") {
 		PLH::StackCanary canary;
 		PLH::EatHook hook("EatTestExport", L"Polyhook_2.exe", (char*)&hkEatTestExport, (uint64_t*)&oEatTestExport);
 		REQUIRE(hook.hook());
 
-		tEatTestExport pExport = (tEatTestExport)GetProcAddress(GetModuleHandle(nullptr), "EatTestExport");
+		auto pExport = (tEatTestExport)GetProcAddress(GetModuleHandle(nullptr), "EatTestExport");
 		REQUIRE(pExport);
 
 		eatEffectTracker.PushEffect();
@@ -51,29 +52,17 @@ TEST_CASE("Eat Hook Tests", "[EatHook]") {
 	}
 }
 
-typedef  int(__stdcall* tEatMessageBox)(HWND    hWnd,
-	LPCTSTR lpText,
-	LPCTSTR lpCaption,
-	UINT    uType);
-uint64_t  oEatMessageBox;
-
-int __stdcall hkEatMessageBox(HWND    hWnd,
-	LPCTSTR lpText,
-	LPCTSTR lpCaption,
-	UINT    uType)
-{
-	UNREFERENCED_PARAMETER(lpText);
-	UNREFERENCED_PARAMETER(lpCaption);
-	UNREFERENCED_PARAMETER(uType);
-	UNREFERENCED_PARAMETER(hWnd);
+typedef int(__stdcall* tEatMessageBox)(HWND, LPCTSTR, LPCTSTR, UINT);
+uint64_t oEatMessageBox;
+int __stdcall hkEatMessageBox(HWND, LPCTSTR, LPCTSTR, UINT) {
 	PLH::StackCanary canary;
-	tEatMessageBox MsgBox = (tEatMessageBox)oEatMessageBox;
-	MsgBox(0, TEXT("My Hook"), TEXT("text"), 0);
+	auto MsgBox = (tEatMessageBox)oEatMessageBox;
+	MsgBox(nullptr, TEXT("My Hook"), TEXT("text"), 0);
 	eatEffectTracker.PeakEffect().trigger();
 	return 1;
 }
 
-TEST_CASE("Eat winapi tests", "[EatHook]") {
+TEST_CASE("Hook User32.MessageBoxA using module name", "[EatHook]") {
 	PLH::StackCanary canary;
 	LoadLibrary(TEXT("User32.dll"));
 
@@ -88,13 +77,82 @@ TEST_CASE("Eat winapi tests", "[EatHook]") {
 	eatEffectTracker.PushEffect();
 
 	// force walk of EAT
-	tEatMessageBox MsgBox = (tEatMessageBox)GetProcAddress(GetModuleHandleA("User32.dll"), apiName.c_str());
-	MsgBox(0, TEXT("test"), TEXT("test"), 0);
+	auto MsgBox = (tEatMessageBox)GetProcAddress(GetModuleHandleA("User32.dll"), apiName.c_str());
+	MsgBox(nullptr, TEXT("test"), TEXT("test"), 0);
 	REQUIRE(eatEffectTracker.PopEffect().didExecute());
 	hook.unHook();
 }
 
-typedef  void(__stdcall* tEatGetSystemTime)(PSYSTEMTIME systemTime);
+
+typedef DWORD(__stdcall* tGetTickCount)();
+uint64_t oGetTickCount = 0;
+DWORD WINAPI hkGetTickCount()
+{
+	PLH::StackCanary canary;
+	eatEffectTracker.PeakEffect().trigger();
+
+	auto result = ((tGetTickCount)oGetTickCount)();
+	PLH::Log::log("Original GetTickCount: " + std::to_string(result), PLH::ErrorLevel::INFO);
+
+	return 0x1337;
+}
+
+TEST_CASE("Hook Kernel32.GetTickCount using module path", "[EatHook]") {
+	PLH::StackCanary canary;
+
+	const auto libHandle = LoadLibrary(TEXT("Kernel32.dll"));
+	WCHAR libPath[MAX_PATH];
+	GetModuleFileNameW(libHandle, libPath, MAX_PATH);
+
+	constexpr auto apiName = "GetTickCount";
+
+	PLH::EatHook hook(apiName, libPath, (char*) hkGetTickCount, &oGetTickCount);
+	REQUIRE(hook.hook());
+
+	eatEffectTracker.PushEffect();
+
+	auto address = (void*) GetProcAddress(libHandle, apiName);
+	auto result = ((tGetTickCount) address)();
+
+	REQUIRE(eatEffectTracker.PopEffect().didExecute());
+	REQUIRE(result == 0x1337);
+	hook.unHook();
+}
+
+typedef ULONGLONG(__stdcall* tGetTickCount64)();
+uint64_t oGetTickCount64 = 0;
+ULONGLONG WINAPI hkGetTickCount64()
+{
+	PLH::StackCanary canary;
+	eatEffectTracker.PeakEffect().trigger();
+
+	auto result = ((tGetTickCount)oGetTickCount64)();
+	PLH::Log::log("Original GetTickCount64: " + std::to_string(result), PLH::ErrorLevel::INFO);
+
+	return 0xDEADBEEF;
+}
+
+TEST_CASE("Hook Kernel32.GetTickCount64 using module handle", "[EatHook]") {
+	PLH::StackCanary canary;
+
+	const auto libHandle = LoadLibrary(TEXT("Kernel32.dll"));
+
+	constexpr auto apiName = "GetTickCount64";
+
+	PLH::EatHook hook(apiName, libHandle, (uint64_t) hkGetTickCount64, &oGetTickCount64);
+	REQUIRE(hook.hook());
+
+	eatEffectTracker.PushEffect();
+
+	auto address = (void*) GetProcAddress(libHandle, apiName);
+	auto result = ((tGetTickCount64) address)();
+
+	REQUIRE(eatEffectTracker.PopEffect().didExecute());
+	REQUIRE(result == 0xDEADBEEF);
+	hook.unHook();
+}
+
+typedef void(__stdcall* tEatGetSystemTime)(PSYSTEMTIME systemTime);
 uint64_t oEatGetSystemTime;
 void WINAPI hkGetSystemTime(PSYSTEMTIME systemTime)
 {
@@ -112,16 +170,16 @@ void WINAPI hkGetLocalTime(PSYSTEMTIME systemTime)
 	((tEatGetLocalTime)oEatGetLocalTime)(systemTime);
 }
 
-TEST_CASE("Eat winapi multiple hook", "[EatHook]") {
+TEST_CASE("Hook Kernel32.[GetSystemTime,GetLocalTime]", "[EatHook]") {
 	// These are out of module hooks that require a trampoline stub.
-	// Multiple hooks can fail if the trampoline region isn't re-used 
+	// Multiple hooks can fail if the trampoline region isn't re-used
 	// across multiple calls. Or if no free block is found at all
 	PLH::StackCanary canary;
 	PLH::EatHook hook_GST("GetSystemTime", L"kernel32.dll", (char*)&hkGetSystemTime, (uint64_t*)&oEatGetSystemTime);
 	REQUIRE(hook_GST.hook());
 	eatEffectTracker.PushEffect();
 
-	tEatGetSystemTime GST = (tEatGetSystemTime)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetSystemTime");
+	auto GST = (tEatGetSystemTime)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetSystemTime");
 	SYSTEMTIME t;
 	memset(&t, 0, sizeof(t));
 	GST(&t);
@@ -131,7 +189,7 @@ TEST_CASE("Eat winapi multiple hook", "[EatHook]") {
 	REQUIRE(hook_GLT.hook());
 	eatEffectTracker.PushEffect();
 
-	tEatGetLocalTime GLT = (tEatGetLocalTime)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetLocalTime");
+	auto GLT = (tEatGetLocalTime)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetLocalTime");
 	memset(&t, 0, sizeof(t));
 	GLT(&t);
 
