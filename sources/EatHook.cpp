@@ -8,11 +8,11 @@ PLH::EatHook::EatHook(const std::string& apiName, const std::wstring& moduleName
     : EatHook(apiName, moduleName, nullptr, fnCallback, userOrigVar)
 {}
 
-PLH::EatHook::EatHook(const std::string& apiName, HMODULE moduleHandle, const char* fnCallback, uint64_t* userOrigVar)
+PLH::EatHook::EatHook(const std::string& apiName, const HMODULE moduleHandle, const char* fnCallback, uint64_t* userOrigVar)
     : EatHook(apiName, moduleHandle, (uint64_t)fnCallback, userOrigVar)
 {}
 
-PLH::EatHook::EatHook(const std::string& apiName, HMODULE moduleHandle, const uint64_t fnCallback, uint64_t* userOrigVar)
+PLH::EatHook::EatHook(const std::string& apiName, const HMODULE moduleHandle, const uint64_t fnCallback, uint64_t* userOrigVar)
     : EatHook(apiName, L"", moduleHandle, fnCallback, userOrigVar)
 {}
 
@@ -23,7 +23,7 @@ PLH::EatHook::EatHook(std::string apiName, std::wstring moduleName, const  HMODU
 	, m_userOrigVar(userOrigVar)
 	, m_allocator(64, 64) // arbitrary, size is big enough but an overshoot
 	, m_trampoline(0)
-	, m_moduleBase(reinterpret_cast<uint64_t>(moduleHandle))
+	, m_moduleBase((uint64_t)moduleHandle)
 	, m_origFunc(0)
 {}
 
@@ -33,7 +33,7 @@ bool PLH::EatHook::hook() {
 	if (pExport == nullptr)
 		return false;
 
-	auto offset = static_cast<size_t>(m_fnCallback - m_moduleBase);
+	auto offset = (size_t)(m_fnCallback - m_moduleBase);
 
 	/* account for when offset to our function is beyond EAT slots size. We
 	instead allocate a small trampoline within +- 2GB which will do the full
@@ -48,7 +48,7 @@ bool PLH::EatHook::hook() {
 		MemoryProtector protector(m_trampoline, 64, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 
 		PLH::ADisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback), *this);
-		offset = static_cast<size_t>(m_trampoline - m_moduleBase);
+		offset = (size_t)(m_trampoline - m_moduleBase);
 
 		Log::log("EAT hook offset is > 32bit's. Allocation of trampoline necessary", ErrorLevel::INFO);
 	}
@@ -113,7 +113,7 @@ uint64_t PLH::EatHook::FindModule() {
 
 	// Empty module name implies current process
 	if(m_moduleName.empty()){
-		return reinterpret_cast<uint64_t>(dte->DllBase);
+		return (uint64_t)(dte->DllBase);
 	}
 
 	const auto useFullPath = std::filesystem::path(m_moduleName).is_absolute();
@@ -128,7 +128,7 @@ uint64_t PLH::EatHook::FindModule() {
 		const auto maxCharCount = std::min(pebModuleName.length(), m_moduleName.length());
 		if(_wcsnicmp(pebModuleName.data(), m_moduleName.c_str(), maxCharCount) == 0){
 			// std::wcout << L"Found module: " << path_or_name << std::endl;
-			return reinterpret_cast<uint64_t>(dte->DllBase);
+			return (uint64_t)(dte->DllBase);
 		}
 
 		dte = (LDR_DATA_TABLE_ENTRY*)dte->InLoadOrderLinks.Flink;

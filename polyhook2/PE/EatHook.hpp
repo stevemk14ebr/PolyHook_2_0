@@ -16,9 +16,9 @@ namespace PLH {
 class EatHook : public IHook {
 public:
 	EatHook(const std::string& apiName, const std::wstring& moduleName, const char* fnCallback, uint64_t* userOrigVar);
-	EatHook(const std::string& apiName, const std::wstring& moduleName, uint64_t fnCallback, uint64_t* userOrigVar);
-	EatHook(const std::string& apiName, HMODULE moduleHandle, const char* fnCallback, uint64_t* userOrigVar);
-	EatHook(const std::string& apiName, HMODULE moduleHandle, uint64_t fnCallback, uint64_t* userOrigVar);
+	EatHook(const std::string& apiName, const std::wstring& moduleName, const uint64_t fnCallback, uint64_t* userOrigVar);
+	EatHook(const std::string& apiName, const HMODULE moduleHandle, const char* fnCallback, uint64_t* userOrigVar);
+	EatHook(const std::string& apiName, const HMODULE moduleHandle, const uint64_t fnCallback, uint64_t* userOrigVar);
 	virtual ~EatHook()
 	{
 		if (m_trampoline) {

@@ -11,7 +11,7 @@ EffectTracker eatEffectTracker;
 typedef void(* tEatTestExport)();
 uint64_t oEatTestExport;
 
-extern "C" [[maybe_unused]] __declspec(dllexport) NOINLINE void EatTestExport()
+extern "C" __declspec(dllexport) NOINLINE void EatTestExport()
 {
 	PLH::StackCanary canary;
 }
