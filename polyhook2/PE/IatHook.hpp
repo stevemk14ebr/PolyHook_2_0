@@ -26,7 +26,7 @@ public:
 	virtual HookType getType() const override {
 		return HookType::IAT;
 	}
-private:
+protected:
 	IMAGE_THUNK_DATA* FindIatThunk(const std::string& dllName, const std::string& apiName, const std::wstring moduleName = L"");
 	IMAGE_THUNK_DATA* FindIatThunkInModule(void* moduleBase, const std::string& dllName, const std::string& apiName);
 

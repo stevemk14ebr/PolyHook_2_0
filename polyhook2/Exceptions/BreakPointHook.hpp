@@ -25,7 +25,7 @@ public:
 			hook();
 		});
 	}
-private:
+protected:
 	uint64_t m_fnCallback;
 	uint64_t m_fnAddress;
 	uint8_t m_origByte;

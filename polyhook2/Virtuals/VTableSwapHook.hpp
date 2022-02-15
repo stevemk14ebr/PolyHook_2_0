@@ -58,7 +58,7 @@ public:
 	virtual HookType getType() const override {
 		return HookType::VTableSwap;
 	}
-private:
+protected:
 	uint16_t countVFuncs();
 
 	std::unique_ptr<uintptr_t[]> m_newVtable;

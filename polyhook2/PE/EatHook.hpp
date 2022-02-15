@@ -33,7 +33,6 @@ public:
 	virtual HookType getType() const override {
 		return HookType::EAT;
 	}
-
 protected:
     EatHook(std::string apiName, std::wstring moduleName, HMODULE moduleHandle, uint64_t fnCallback, uint64_t* userOrigVar);
 
