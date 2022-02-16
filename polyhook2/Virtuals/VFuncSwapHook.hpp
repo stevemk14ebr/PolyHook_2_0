@@ -24,7 +24,7 @@ public:
 	virtual HookType getType() const override {
 		return HookType::VTableSwap;
 	}
-private:
+protected:
 	uint16_t countVFuncs();
 	uint64_t  m_class;
 	uintptr_t* m_vtable;

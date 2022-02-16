@@ -43,7 +43,7 @@ public:
 	detour_scheme_t getDetourScheme() const;
 	void setDetourScheme(detour_scheme_t scheme);
 
-private:
+protected:
 	bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
 
 	// assumes we are looking within a +-2GB window
