@@ -147,6 +147,6 @@ bool PLH::x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	};
 
 	const uint64_t jmpTblStart = jmpToProlAddr + getJmpSize();
-	trampolineOut = relocateTrampoline(prologue, jmpTblStart, delta, getJmpSize(), makeJmpFn, instsNeedingReloc, instsNeedingEntry);
+	trampolineOut = relocateTrampoline(prologue, jmpTblStart, delta, makeJmpFn, instsNeedingReloc, instsNeedingEntry);
 	return true;
 }

@@ -138,7 +138,7 @@ protected:
 	bool buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t &instsNeedingEntry, PLH::insts_t &instsNeedingReloc);
 
 	template<typename MakeJmpFn>
-	PLH::insts_t relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry);
+	PLH::insts_t relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry);
 
 	/**
 	Insert nops from [Base, Base+size). We _MUST_ insert multi-byte nops so we don't accidentally
@@ -148,9 +148,11 @@ protected:
 };
 
 template<typename MakeJmpFn>
-PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, const uint8_t jmpSz, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry) {
+PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry) {
 	uint64_t jmpTblCurAddr = jmpTblStart;
 	insts_t jmpTblEntries;
+
+	// MIGHT NEED TO REDO ALL THIS JUMP TABLE STUFF IT's CONFUSING - needlessly
 	for (auto& inst : prologue) {
 
 		if (std::find(instsNeedingEntry.begin(), instsNeedingEntry.end(), inst) != instsNeedingEntry.end()) {
@@ -158,8 +160,8 @@ PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblS
 			// make an entry pointing to where inst did point to
 			auto entry = makeJmp(jmpTblCurAddr, inst);
 			
-	        // TODO: is this correct? - MIGHT NEED TO FIX ALL THIS JUMP TABLE STUFF IT's CONFUSING
-			jmpTblCurAddr += jmpSz;
+	        // Move to next entry, some jmp types can emit more than one instruction
+			jmpTblCurAddr += calcInstsSz(entry);
 
 			m_disasm.writeEncoding(entry, *this);
 			jmpTblEntries.insert(jmpTblEntries.end(), entry.begin(), entry.end());
