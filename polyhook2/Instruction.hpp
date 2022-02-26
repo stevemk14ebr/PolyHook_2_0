@@ -146,6 +146,10 @@ public:
 		return m_isCalling;
 	}
 
+	bool isIndirect() const {
+		return m_isIndirect;
+	}
+
 	const std::vector<uint8_t>& getBytes() const {
 		return m_bytes;
 	}

@@ -73,6 +73,15 @@ unsigned char hookMe4[] = {
 	0xc3
 };
 
+// test call instructions in prologue
+unsigned char hookMe5[] =
+{
+  0x48, 0x83, 0xEC, 0x28, // 180009240: sub rsp, 28h
+  0xE8, 0x96, 0xA8, 0xFF, 0xFF, // call 180003ADF
+  0x48, 0x83, 0xC4, 0x28,  // add rsp, 28h
+  0x48, 0xFF, 0xA0, 0x20, 0x01, 0x00, 0x00 // jmp qword ptr[rax+120h]
+};
+
 uint64_t nullTramp = NULL;
 NOINLINE void h_nullstub() {
 	PLH::StackCanary canary;
@@ -165,6 +174,14 @@ TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneD
 	SECTION("Jmp into prol w/src out of range") {
 		PLH::StackCanary canary;
 		PLH::x64Detour detour((char*)&hookMe4, (char*)&h_nullstub, &nullTramp, dis);
+
+		REQUIRE(detour.hook() == true);
+		REQUIRE(detour.unHook() == true);
+	}
+
+	SECTION("Call instruction early in prologue") {
+		PLH::StackCanary canary;
+		PLH::x64Detour detour((char*)&hookMe5, (char*)&h_nullstub, &nullTramp, dis);
 
 		REQUIRE(detour.hook() == true);
 		REQUIRE(detour.unHook() == true);

@@ -417,11 +417,13 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 		assert(captureAddress > (uint64_t)m_trampoline && (captureAddress + destHldrSz) < (m_trampoline + m_trampolineSz));
 
 		// move inst to trampoline and point instruction to entry
+		const bool isIndirectCall = inst.isCalling() && inst.isIndirect();
 		auto oldDest = inst.getDestination();
 		inst.setAddress(inst.getAddress() + delta);
-		inst.setDestination(inst.isCalling() ? captureAddress : a);
+		inst.setDestination(isIndirectCall ? captureAddress : a);
 
-		return inst.isCalling() ? makex64DestHolder(oldDest, captureAddress) : makex64MinimumJump(a, oldDest, captureAddress);
+		// ff 25 indirect call re-written to point at dest-holder. e8 direct call, or jmps of any time point to literal jmp instruction
+		return isIndirectCall ? makex64DestHolder(oldDest, captureAddress) : makex64MinimumJump(a, oldDest, captureAddress);
 	};
 
 	const uint64_t jmpTblStart = jmpToProlAddr + getMinJmpSize();
