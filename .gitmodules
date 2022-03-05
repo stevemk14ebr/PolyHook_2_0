@@ -1,7 +1,3 @@
-[submodule "capstone"]
-	path = capstone
-	url = https://github.com/aquynh/capstone.git
-	branch = master
 [submodule "zydis"]
 	path = zydis
 	url = https://github.com/zyantific/zydis.git

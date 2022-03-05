@@ -6,7 +6,7 @@
 #define POLYHOOK_2_0_IHOOK_HPP
 
 #include "polyhook2/PolyHookOs.hpp"
-#include "polyhook2/ADisassembler.hpp"
+#include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/MemAccessor.hpp"
 

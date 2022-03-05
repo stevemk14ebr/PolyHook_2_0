@@ -47,7 +47,7 @@ bool PLH::EatHook::hook() {
 
 		MemoryProtector protector(m_trampoline, 64, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 
-		PLH::ADisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback), *this);
+		PLH::ZydisDisassembler::writeEncoding(makeAgnosticJmp(m_trampoline, m_fnCallback), *this);
 		offset = (size_t)(m_trampoline - m_moduleBase);
 
 		Log::log("EAT hook offset is > 32bit's. Allocation of trampoline necessary", ErrorLevel::INFO);

@@ -14,7 +14,7 @@ or releasewithdebinfo mode (relwithdebinfo optimizes sliiiightly less)**/
 
 EffectTracker effectsNTD64;
 #include "polyhook2/Detour/x64Detour.hpp"
-#include "polyhook2/CapstoneDisassembler.hpp"
+#include "polyhook2/ZydisDisassembler.hpp"
 
 NOINLINE void hookMeInt(int a) {
 	PLH::StackCanary canary;
@@ -74,7 +74,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 		uint64_t JIT = callback.getJitFunc(sig, asmjit::Environment::kArchHost, &myCallback);
 		REQUIRE(JIT != 0);
 
-		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::ZydisDisassembler dis(PLH::Mode::x64);
 		PLH::x64Detour detour((char*)&hookMeInt, (char*)JIT, callback.getTrampolineHolder(), dis);
 		REQUIRE(detour.hook() == true);
 
@@ -89,7 +89,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 		uint64_t JIT = callback.getJitFunc("void", {"float"}, asmjit::Environment::kArchHost, &myCallback);
 		REQUIRE(JIT != 0);
 
-		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::ZydisDisassembler dis(PLH::Mode::x64);
 		PLH::x64Detour detour((char*)&hookMeFloat, (char*)JIT, callback.getTrampolineHolder(), dis);
 		REQUIRE(detour.hook() == true);
 
@@ -104,7 +104,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
 		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double" }, asmjit::Environment::kArchHost, &myCallback);
 		REQUIRE(JIT != 0);
 
-		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::ZydisDisassembler dis(PLH::Mode::x64);
 		PLH::x64Detour detour((char*)&hookMeIntFloatDouble, (char*)JIT, callback.getTrampolineHolder(), dis);
 		REQUIRE(detour.hook() == true);
 
@@ -215,7 +215,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 		uint64_t JIT = callback.getJitFunc("void", { "int", "float", "double", "int" }, asmjit::Environment::kArchHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
-		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::ZydisDisassembler dis(PLH::Mode::x64);
 		PLH::x64Detour detour((char*)&rw, (char*)JIT, callback.getTrampolineHolder(), dis);
 		REQUIRE(detour.hook() == true);
 
@@ -230,7 +230,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 		uint64_t JIT = callback.getJitFunc("float", { "int", "float", "double", "int" }, asmjit::Environment::kArchHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
-		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::ZydisDisassembler dis(PLH::Mode::x64);
 		PLH::x64Detour detour((char*)&rw_float, (char*)JIT, callback.getTrampolineHolder(), dis);
 		REQUIRE(detour.hook() == true);
 
@@ -246,7 +246,7 @@ TEST_CASE("ILCallback Argument re-writing", "[ILCallback]") {
 		uint64_t JIT = callback.getJitFunc("double", { "int", "float", "double", "int" }, asmjit::Environment::kArchHost, &mySecondCallback);
 		REQUIRE(JIT != 0);
 
-		PLH::CapstoneDisassembler dis(PLH::Mode::x64);
+		PLH::ZydisDisassembler dis(PLH::Mode::x64);
 		PLH::x64Detour detour((char*)&rw_double, (char*)JIT, callback.getTrampolineHolder(), dis);
 		REQUIRE(detour.hook() == true);
 

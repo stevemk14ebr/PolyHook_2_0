@@ -3,11 +3,11 @@
 //
 #include "polyhook2/Detour/x86Detour.hpp"
 
-PLH::x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth) {
+PLH::x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ZydisDisassembler& dis, const uint8_t maxDepth) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth) {
 
 }
 
-PLH::x86Detour::x86Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth) {
+PLH::x86Detour::x86Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ZydisDisassembler& dis, const uint8_t maxDepth) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth) {
 
 }
 

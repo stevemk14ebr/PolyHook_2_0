@@ -3,7 +3,6 @@
 //
 #include <Catch.hpp>
 #include "polyhook2/Detour/x86Detour.hpp"
-#include "polyhook2/CapstoneDisassembler.hpp"
 #include "polyhook2/ZydisDisassembler.hpp"
 
 #include "polyhook2/Tests/TestEffectTracker.hpp"
@@ -134,7 +133,7 @@ void hkRecv(SOCKET s, char* buf, int len, int flags)
 	PLH::FnCast(g_hook_recv_tramp, &hkRecv)(s, buf, len, flags);
 }
 
-TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x86);
 
 	SECTION("Normal function") {

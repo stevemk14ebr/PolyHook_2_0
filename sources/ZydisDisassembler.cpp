@@ -1,8 +1,8 @@
 #include "polyhook2/ZydisDisassembler.hpp"
+#include "polyhook2/ErrorLog.hpp"
 
-
-PLH::ZydisDisassembler::ZydisDisassembler(PLH::Mode mode) : ADisassembler(mode), m_decoder(new ZydisDecoder()), m_formatter(new ZydisFormatter()) {
-	
+PLH::ZydisDisassembler::ZydisDisassembler(PLH::Mode mode) : m_decoder(new ZydisDecoder()), m_formatter(new ZydisFormatter()) {
+	m_mode = mode;
 	if (ZYAN_FAILED(ZydisDecoderInit(m_decoder,
 		(mode == PLH::Mode::x64) ? ZYDIS_MACHINE_MODE_LONG_64 : ZYDIS_MACHINE_MODE_LONG_COMPAT_32,
 		(mode == PLH::Mode::x64) ? ZYDIS_ADDRESS_WIDTH_64 : ZYDIS_ADDRESS_WIDTH_32)))
@@ -22,8 +22,15 @@ PLH::ZydisDisassembler::ZydisDisassembler(PLH::Mode mode) : ADisassembler(mode),
 }
 
 PLH::ZydisDisassembler::~ZydisDisassembler() {
-	delete m_decoder;
-	delete m_formatter;
+	if (m_decoder) {
+		delete m_decoder;
+		m_decoder = 0;
+	}
+
+	if (m_formatter) {
+		delete m_formatter;
+		m_formatter = 0;
+	}
 }
 
 PLH::insts_t

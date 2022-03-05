@@ -6,7 +6,7 @@
 #define POLYHOOK_2_0_ADETOUR_HPP
 
 #include "polyhook2/PolyHookOs.hpp"
-#include "polyhook2/ADisassembler.hpp"
+#include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/IHook.hpp"
@@ -42,7 +42,7 @@ T FnCast(void* fnToCast, T pFnCastTo) {
 
 class Detour : public PLH::IHook {
 public:
-	Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth = c_maxDepth) : m_disasm(dis) {
+	Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ZydisDisassembler& dis, const uint8_t maxDepth = c_maxDepth) : m_disasm(dis) {
 		assert(fnAddress != 0 && fnCallback != 0);
 		assert(sizeof(*userTrampVar) == sizeof(uint64_t) && "Given trampoline holder to small");
 		assert(maxDepth > 0);
@@ -59,7 +59,7 @@ public:
 		m_maxDepth = maxDepth;
 	}
 
-	Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth = c_maxDepth) : m_disasm(dis) {
+	Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ZydisDisassembler& dis, const uint8_t maxDepth = c_maxDepth) : m_disasm(dis) {
 		assert(fnAddress != nullptr && fnCallback != nullptr);
 		assert(sizeof(*userTrampVar) == sizeof(uint64_t) && "Given trampoline holder to small");
 		assert(maxDepth > 0);
@@ -102,7 +102,7 @@ protected:
 	uint64_t				m_trampoline;
 	uint16_t			    m_trampolineSz;
 	uint64_t*				m_userTrampVar;
-	ADisassembler&			m_disasm;
+	ZydisDisassembler&			m_disasm;
 	uint8_t					m_maxDepth;
 	static const uint8_t    c_maxDepth = 5;
 

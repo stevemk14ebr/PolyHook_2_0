@@ -2,7 +2,7 @@
 //
 
 #include "ExampleProject.h"
-#include "polyhook2/CapstoneDisassembler.hpp"
+#include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/Detour/x86Detour.hpp"
 
 #include <cstdarg>
@@ -21,7 +21,7 @@ NOINLINE int __cdecl h_hookPrintf(const char* format, ...) {
 int main()
 {
 	// Switch modes for x64
-	PLH::CapstoneDisassembler dis(PLH::Mode::x86);
+	PLH::ZydisDisassembler dis(PLH::Mode::x86);
 	PLH::x86Detour* detour = new PLH::x86Detour((char*)&printf, (char*)&h_hookPrintf, &hookPrintfTramp, dis);
 	detour->hook();
 
