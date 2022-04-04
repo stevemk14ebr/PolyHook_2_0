@@ -26,7 +26,7 @@ public:
 				const std::string& opStr,
 				Mode mode) : m_uid(UID::singleton()) {
 
-		Init(address, displacement, displacementOffset, isRelative, isIndirect, bytes, mnemonic, opStr, false, m_uid, mode);
+		Init(address, displacement, displacementOffset, isRelative, isIndirect, bytes, mnemonic, opStr, false, false, m_uid, mode);
 	}
 
 	Instruction(uint64_t address,
@@ -41,12 +41,12 @@ public:
 				Mode mode) : m_uid(UID::singleton()) {
 
 		std::vector<uint8_t> Arr(bytes, bytes + arrLen);
-		Init(address, displacement, displacementOffset, isRelative, isIndirect, Arr, mnemonic, opStr, false, m_uid, mode);
+		Init(address, displacement, displacementOffset, isRelative, isIndirect, Arr, mnemonic, opStr, false, false, m_uid, mode);
 	}
 
 	Instruction& operator=(const Instruction& rhs) {
 		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative, rhs.m_isIndirect,
-			 rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr, rhs.m_hasDisplacement, rhs.m_uid, rhs.m_mode);
+			 rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr, rhs.m_hasDisplacement,  rhs.m_hasImmediate, rhs.m_uid, rhs.m_mode);
 		return *this;
 	}
 
@@ -166,7 +166,8 @@ public:
 
 	size_t getDispSize() {
 		// jmp (e9 eb be ad de) = 5 bytes, 1 disp off, 4 disp sz
-		return size() - getDisplacementOffset();
+		// 83 3d a5 7e 09 00 00 | cmp dword ptr ds:[0x00007FFD68ED336C], 0x00 = 7 bytes, 2 disp off, 4 disp size, 1 imm sz
+		return (m_hasImmediate ? m_immediateOffset : size()) - getDisplacementOffset();
 	}
 
 	size_t size() const {
@@ -209,6 +210,11 @@ public:
 		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, dispSz);
 	}
 
+	void setImmediateOffset(const uint8_t immediateOffset ){
+        m_hasImmediate = true;
+	    m_immediateOffset = immediateOffset;
+	}
+
 	long getUID() const {
 		return m_uid.val;
 	}
@@ -229,6 +235,7 @@ public:
 	bool		 m_isBranching;     // Does this instrunction jmp/call or otherwise change control flow
 	bool         m_isIndirect;      // Does this instruction get it's destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
 	bool         m_isCalling;       // Does this instruction is of a CALL type.
+    Displacement m_displacement;    // Where an instruction points too (valid for jmp + call types)
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
@@ -239,6 +246,7 @@ private:
 			  const std::string& mnemonic,
 			  const std::string& opStr,
 			  const bool hasDisp,
+			  const bool hasImmediate,
 			  const UID id,
 			  Mode mode) {
 		m_address = address;
@@ -247,6 +255,7 @@ private:
 		m_isRelative = isRelative;
 		m_isIndirect = isIndirect;
 		m_hasDisplacement = hasDisp;
+		m_hasImmediate = hasImmediate;
 
 		m_bytes = bytes;
 		m_mnemonic = mnemonic;
@@ -255,9 +264,10 @@ private:
 		m_uid = id;
 		m_mode = mode;
 	}
+    bool         m_hasImmediate;    // Does this instruction have the immediate field filled?
+    uint8_t      m_immediateOffset; // Offset into the byte array where immediate is encoded
 
 	uint64_t     m_address;         // Address the instruction is at
-	Displacement m_displacement;    // Where an instruction points too (valid for jmp + call types)
 	uint8_t      m_dispOffset;      // Offset into the byte array where displacement is encoded
 
 	std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction

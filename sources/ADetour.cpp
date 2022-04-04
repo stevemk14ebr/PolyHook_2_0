@@ -160,7 +160,7 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 		// data operations (duplicated because clearer)
 		if (!inst.isBranching() && inst.hasDisplacement()) {
 			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
-			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); 
+			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits - 1) - 1.0);
 			if ((uint64_t)std::llabs(delta) > maxInstDisp) {
 				/*EX: 48 8d 0d 96 79 07 00    lea rcx, [rip + 0x77996]
 				If instruction is moved beyond displacement field width

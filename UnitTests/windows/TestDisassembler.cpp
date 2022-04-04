@@ -134,9 +134,9 @@ TEST_CASE("Test Instruction UUID generator", "[Instruction],[UID]") {
 	}
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ZydisDisassembler]", PLH::ZydisDisassembler) {
+TEST_CASE("Test Disassemblers x64", "[ZydisDisassembler]") {
 	PLH::StackCanary canaryg;
-	TestType disasm(PLH::Mode::x64);
+    PLH::ZydisDisassembler disasm(PLH::Mode::x64);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
 		(uint64_t)&x64ASM.front() + x64ASM.size(), PLH::MemAccessor());
 
@@ -245,7 +245,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ZydisDisassembler]", PLH::ZydisDi
 	}
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]", PLH::ZydisDisassembler) {
+TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]") {
 #ifdef POLYHOOK2_ARCH_X64
 	// this test is not suitable for x64 due to ff 25 not being re-written
 	return;
@@ -255,7 +255,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]", PLH::Zy
 	*(uint32_t*)(x86ASM_FF25.data() + 2) = (uint32_t)(x86ASM_FF25.data() + 6); // 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
 
 	PLH::StackCanary canaryg;
-	TestType disasm(PLH::Mode::x86);
+    PLH::ZydisDisassembler disasm(PLH::Mode::x86);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM_FF25.front(), (uint64_t)&x86ASM_FF25.front(),
 		(uint64_t)&x86ASM_FF25.front() + x86ASM_FF25.size(), PLH::MemAccessor());
 
@@ -276,9 +276,9 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]", PLH::Zy
 	REQUIRE(Instructions.at(0).hasDisplacement());
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ZydisDisassembler]", PLH::ZydisDisassembler) {
+TEST_CASE("Test Disassemblers x86", "[ZydisDisassembler]") {
 	PLH::StackCanary canaryg;
-	TestType disasm(PLH::Mode::x86);
+    PLH::ZydisDisassembler disasm(PLH::Mode::x86);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
 		(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
 
@@ -381,9 +381,9 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ZydisDisassembler]", PLH::ZydisDi
 	}
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers x64 Two", "[ZydisDisassembler]", PLH::ZydisDisassembler) {
+TEST_CASE("Test Disassemblers x64 Two", "[ZydisDisassembler]") {
 	PLH::StackCanary canaryg;
-	TestType disasm(PLH::Mode::x64);
+    PLH::ZydisDisassembler disasm(PLH::Mode::x64);
 	PLH::insts_t Instructions = disasm.disassemble((uint64_t)&x64ASM2.front(), (uint64_t)&x64ASM2.front(),
 		(uint64_t)&x64ASM2.front() + x64ASM2.size(), PLH::MemAccessor());
 
@@ -405,27 +405,27 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64 Two", "[ZydisDisassembler]", PLH::Zyd
 	}
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers NOPS", "[ZydisDisassembler]",PLH::ZydisDisassembler) {
+TEST_CASE("Test Disassemblers NOPS", "[ZydisDisassembler]") {
 	PLH::StackCanary canaryg;
-	TestType disasm(PLH::Mode::x64);
+    PLH::ZydisDisassembler disasm(PLH::Mode::x64);
 	PLH::insts_t Instructions = disasm.disassemble((uint64_t)&x86x64Nops.front(), (uint64_t)&x86x64Nops.front(),
 		(uint64_t)&x86x64Nops.front() + x86x64Nops.size(), PLH::MemAccessor());
 
-	TestType disasmx86(PLH::Mode::x86);
+    PLH::ZydisDisassembler disasmx86(PLH::Mode::x86);
 	PLH::insts_t Instructionsx86 = disasmx86.disassemble((uint64_t)&x86x64Nops.front(), (uint64_t)&x86x64Nops.front(),
 		(uint64_t)&x86x64Nops.front() + x86x64Nops.size(), PLH::MemAccessor());
 
 	SECTION("Verify multi-byte nops decodings x64") {
 		for (auto& ins : Instructions) {
 			REQUIRE(ins.getMnemonic() == "nop");
-			REQUIRE(TestType::isPadBytes(ins));
+			REQUIRE(PLH::ZydisDisassembler::isPadBytes(ins));
 		}
 	}
 
 	SECTION("Verify multi-byte nops decodings x86") {
 		for (auto& ins : Instructionsx86) {
 			REQUIRE(ins.getMnemonic() == "nop");
-			REQUIRE(TestType::isPadBytes(ins));			
+			REQUIRE(PLH::ZydisDisassembler::isPadBytes(ins));
 		}
 	}
 }
