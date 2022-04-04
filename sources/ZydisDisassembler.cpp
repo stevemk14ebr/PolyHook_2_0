@@ -57,7 +57,7 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 		displacement.Absolute = 0;
 
 		uint64_t address = start + offset;
-
+		
 		std::string opstr;
 		if(!getOpStr(&insInfo, address, &opstr))
 			break;
@@ -126,12 +126,10 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 			// Relative to RIP/EIP
 		
 		{
-			bool set = false;
 			if (zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE)
 			{
 				inst.setDisplacementOffset(zydisInst->raw.disp.offset);
 				inst.setRelativeDisplacement(operand->mem.disp.value);
-				set = true;
 			}
 
 			if ((zydisInst->mnemonic == ZydisMnemonic::ZYDIS_MNEMONIC_JMP && inst.size() >= 2 && inst.getBytes().at(0) == 0xff && inst.getBytes().at(1) == 0x25) ||
@@ -140,7 +138,8 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 				(zydisInst->mnemonic == ZydisMnemonic::ZYDIS_MNEMONIC_JMP && inst.size() >= 3 && inst.getBytes().at(1) == 0xff && inst.getBytes().at(2) == 0x15)
 				) {
 
-				if (!set) {
+				// is displacement set earlier already?
+				if (!inst.hasDisplacement()) {
 					// displacement is absolute on x86 mode
 					inst.setDisplacementOffset(zydisInst->raw.disp.offset);
 					inst.setAbsoluteDisplacement(zydisInst->raw.disp.value);
@@ -153,7 +152,8 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 			
             break;
 		case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-			if(zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE)
+			// is displacement set earlier already?
+			if(!inst.hasDisplacement() && zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE)
 			{
 				inst.setDisplacementOffset(zydisInst->raw.imm->offset);
 				inst.setRelativeDisplacement(zydisInst->raw.imm->value.s);

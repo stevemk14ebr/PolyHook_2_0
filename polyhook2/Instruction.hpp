@@ -261,7 +261,7 @@ private:
 	uint8_t      m_dispOffset;      // Offset into the byte array where displacement is encoded
 
 	std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
-	std::string          m_mnemonic; //If you don't know what these two are then gtfo of this source code :)
+	std::string          m_mnemonic;
 	std::string          m_opStr;
 
 	Mode m_mode;
