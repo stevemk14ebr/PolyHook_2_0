@@ -158,6 +158,8 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 				inst.setDisplacementOffset(zydisInst->raw.imm->offset);
 				inst.setRelativeDisplacement(zydisInst->raw.imm->value.s);
 				return;
+			} else {
+                inst.setImmediateOffset(zydisInst->raw.imm->offset);
 			}
             break;
 		}
