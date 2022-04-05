@@ -8,7 +8,6 @@
 #include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/UID.hpp"
 #include "polyhook2/Enums.hpp"
-#include <algorithm>
 
 namespace PLH {
 class Instruction {
@@ -277,7 +276,6 @@ private:
 inline bool operator==(const Instruction& lhs, const Instruction& rhs) {
 	return lhs.getUID() == rhs.getUID();
 }
-
 
 inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
 	std::stringstream byteStream;
