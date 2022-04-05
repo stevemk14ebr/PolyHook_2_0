@@ -388,20 +388,21 @@ TEST_CASE("Test Disassemblers x64 Two", "[ZydisDisassembler]") {
 		(uint64_t)&x64ASM2.front() + x64ASM2.size(), PLH::MemAccessor());
 
 	SECTION("Verify relative displacements") {
-		REQUIRE(Instructions.at(0).m_isRelative);
-		REQUIRE(Instructions.at(0).m_hasDisplacement);
-		REQUIRE(Instructions.at(0).m_isIndirect == false);
+		REQUIRE(Instructions.at(0).isDisplacementRelative());
+		REQUIRE(Instructions.at(0).hasDisplacement());
+		REQUIRE(Instructions.at(0).isIndirect() == false);
 		REQUIRE(Instructions.at(0).getDestination() == Instructions.at(0).getAddress() + Instructions.at(0).size() + 0x10);
 
-		REQUIRE(Instructions.at(1).m_isRelative == false);
-		REQUIRE(Instructions.at(1).m_isIndirect == false);
+		REQUIRE(Instructions.at(1).isDisplacementRelative() == false);
+		REQUIRE(Instructions.at(1).isIndirect() == false);
 	}
 
 	Instructions = disasm.disassemble((uint64_t)&x64ASM3.front(), (uint64_t)&x64ASM3.front(),
 		(uint64_t)&x64ASM3.front() + x64ASM3.size(), PLH::MemAccessor());
 	SECTION("Verify displacements with immediates") {
-		REQUIRE(Instructions.at(0).m_isRelative);
-		REQUIRE(Instructions.at(0).m_displacement.Relative == 0x0000000000097ea5);
+		REQUIRE(Instructions.at(0).isDisplacementRelative());
+		REQUIRE(Instructions.at(0).getDispSize() == 4);
+		REQUIRE(Instructions.at(0).getDisplacement().Relative == 0x0000000000097ea5);
 	}
 }
 

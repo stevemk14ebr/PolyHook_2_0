@@ -8,6 +8,8 @@
 #include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/UID.hpp"
 #include "polyhook2/Enums.hpp"
+#include <algorithm>
+
 namespace PLH {
 class Instruction {
 public:
@@ -25,7 +27,6 @@ public:
 				const std::string& mnemonic,
 				const std::string& opStr,
 				Mode mode) : m_uid(UID::singleton()) {
-
 		Init(address, displacement, displacementOffset, isRelative, isIndirect, bytes, mnemonic, opStr, false, false, m_uid, mode);
 	}
 
@@ -42,12 +43,6 @@ public:
 
 		std::vector<uint8_t> Arr(bytes, bytes + arrLen);
 		Init(address, displacement, displacementOffset, isRelative, isIndirect, Arr, mnemonic, opStr, false, false, m_uid, mode);
-	}
-
-	Instruction& operator=(const Instruction& rhs) {
-		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative, rhs.m_isIndirect,
-			 rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr, rhs.m_hasDisplacement,  rhs.m_hasImmediate, rhs.m_uid, rhs.m_mode);
-		return *this;
 	}
 
 	/**Get the address of where the instruction points if it's a branching instruction
@@ -229,13 +224,6 @@ public:
 	void setIndirect(const bool isIndirect) {
 		m_isIndirect = isIndirect;
 	}
-
-	bool         m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
-	bool         m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
-	bool		 m_isBranching;     // Does this instrunction jmp/call or otherwise change control flow
-	bool         m_isIndirect;      // Does this instruction get it's destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
-	bool         m_isCalling;       // Does this instruction is of a CALL type.
-    Displacement m_displacement;    // Where an instruction points too (valid for jmp + call types)
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
@@ -264,8 +252,15 @@ private:
 		m_uid = id;
 		m_mode = mode;
 	}
+
+	bool         m_isIndirect;      // Does this instruction get it's destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
+	bool         m_isCalling;       // Does this instruction is of a CALL type.
+	bool		 m_isBranching;     // Does this instrunction jmp/call or otherwise change control flow
+	bool         m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
+	bool         m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
     bool         m_hasImmediate;    // Does this instruction have the immediate field filled?
     uint8_t      m_immediateOffset; // Offset into the byte array where immediate is encoded
+	Displacement m_displacement;    // Where an instruction points too (valid for jmp + call types, and RIP relative MEM types)
 
 	uint64_t     m_address;         // Address the instruction is at
 	uint8_t      m_dispOffset;      // Offset into the byte array where displacement is encoded

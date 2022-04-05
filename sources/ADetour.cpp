@@ -143,7 +143,7 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 
             //indirect-call always needs an entry (only a dest-holder)
 			//its destination cannot be used for relocating since it is already deferenced.(ref: inst.getDestination)
-            if(inst.isCalling() && inst.m_isIndirect){
+            if(inst.isCalling() && inst.isIndirect()){
 				instsNeedingEntry.push_back(inst);
 			}else{
 				// can inst just be re-encoded or do we need a tbl entry
