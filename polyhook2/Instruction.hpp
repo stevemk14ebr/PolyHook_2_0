@@ -8,6 +8,7 @@
 #include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/UID.hpp"
 #include "polyhook2/Enums.hpp"
+#include <type_traits>
 
 namespace PLH {
 class Instruction {
@@ -272,6 +273,7 @@ private:
 
 	UID m_uid;
 };
+static_assert(std::is_nothrow_move_constructible<Instruction>::value, "PLH::Instruction should be noexcept move constructible");
 
 inline bool operator==(const Instruction& lhs, const Instruction& rhs) {
 	return lhs.getUID() == rhs.getUID();
