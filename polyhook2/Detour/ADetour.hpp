@@ -102,7 +102,7 @@ protected:
 	uint64_t				m_trampoline;
 	uint16_t			    m_trampolineSz;
 	uint64_t*				m_userTrampVar;
-	ZydisDisassembler&			m_disasm;
+	ZydisDisassembler&		m_disasm;
 	uint8_t					m_maxDepth;
 	static const uint8_t    c_maxDepth = 5;
 
@@ -135,10 +135,10 @@ protected:
 							uint64_t& minProlSz,
 							uint64_t& roundProlSz);
 
-	bool buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t &instsNeedingEntry, PLH::insts_t &instsNeedingReloc);
+	bool buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t &instsNeedingEntry, PLH::insts_t &instsNeedingReloc, PLH::insts_t& instsNeedingTranslation);
 
 	template<typename MakeJmpFn>
-	PLH::insts_t relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry);
+	PLH::insts_t relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry, const PLH::insts_t& instsNeedingTranslation = {});
 
 	/**
 	Insert nops from [Base, Base+size). We _MUST_ insert multi-byte nops so we don't accidentally
@@ -147,8 +147,12 @@ protected:
 	void writeNop(uint64_t base, uint32_t size);
 };
 
+/**
+ * Corrects displacement for IP-relative instructions
+ * @return Jump table entries
+ */
 template<typename MakeJmpFn>
-PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry) {
+PLH::insts_t PLH::Detour::relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry, const PLH::insts_t& instsNeedingTranslation) {
 	uint64_t jmpTblCurAddr = jmpTblStart;
 	insts_t jmpTblEntries;
 

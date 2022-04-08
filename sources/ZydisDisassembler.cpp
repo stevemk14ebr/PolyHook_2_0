@@ -113,7 +113,10 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 		const ZydisDecodedOperand* const operand = &zydisInst->operands[i];
 
 		// skip implicit operands (r/w effects)
-		if(operand->visibility == ZYDIS_OPERAND_VISIBILITY_HIDDEN)
+		if(
+			operand->visibility == ZYDIS_OPERAND_VISIBILITY_HIDDEN ||
+			operand->visibility == ZYDIS_OPERAND_VISIBILITY_INVALID
+		)
 			continue;
 
 		switch (operand->type)
@@ -160,6 +163,7 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 				return;
 			} else {
                 inst.setImmediateOffset(zydisInst->raw.imm->offset);
+				inst.setImmediate(zydisInst->raw.imm->value.s);
 			}
             break;
 		}

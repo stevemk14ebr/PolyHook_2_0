@@ -224,6 +224,16 @@ public:
 	void setIndirect(const bool isIndirect) {
 		m_isIndirect = isIndirect;
 	}
+
+	void setImmediate(uint64_t immediate){
+		m_hasImmediate = true;
+		m_immediate = immediate;
+	}
+
+	uint64_t getImmediate() const {
+		return m_immediate;
+	}
+
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
@@ -244,6 +254,7 @@ private:
 		m_isIndirect = isIndirect;
 		m_hasDisplacement = hasDisp;
 		m_hasImmediate = hasImmediate;
+		m_immediate = 0; // read from constructor?
 
 		m_bytes = bytes;
 		m_mnemonic = mnemonic;
@@ -263,6 +274,7 @@ private:
 	Displacement m_displacement;    // Where an instruction points too (valid for jmp + call types, and RIP relative MEM types)
 
 	uint64_t     m_address;         // Address the instruction is at
+	uint64_t     m_immediate;       // Immediate op
 	uint8_t      m_dispOffset;      // Offset into the byte array where displacement is encoded
 
 	std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
@@ -363,7 +375,6 @@ inline PLH::insts_t makex64PreferredJump(const uint64_t address, const uint64_t 
 	std::vector<uint8_t> retBytes = { 0xC3 };
 	Instruction ret(curInstAddress, zeroDisp, 0, false, false,
 		retBytes, "ret", "", Mode::x64);
-	curInstAddress += ret.size();
 
 	return { pushRax, movRax, xchgRspRax, ret };
 }

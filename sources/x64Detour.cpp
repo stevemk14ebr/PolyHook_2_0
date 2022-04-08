@@ -54,7 +54,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	});
 
 	// RPM so we don't pagefault, careful to check for partial reads
-	
+
 	// these patterns are listed in order of most accurate to least accurate with size taken into account
 	// simple c3 ret is more accurate than c2 ?? ?? and series of CC or 90 is more accurate than complex multi-byte nop
 	std::string CC_PATTERN_RET = "c3 " + repeat_n("cc", SIZE, " ");
@@ -73,7 +73,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	const char* NOP9_RET = "c3 cc cc cc cc cc cc 66 66 0f 1f 84 00 00 00 00 00";
 	const char* NOP10_RET = "c3 cc cc cc cc cc cc cc 66 66 0f 1f 84 00 00 00 00 00";
 	const char* NOP11_RET = "c3 cc cc cc cc cc cc cc 66 66 0f 1f 84 00 00 00 00 00";
-	
+
 	const char* NOP2_RETN = "c2 ?? ?? 0f 1f 44 00 00";
 	const char* NOP3_RETN = "c2 ?? ?? 0f 1f 84 00 00 00 00 00";
 	const char* NOP4_RETN = "c2 ?? ?? 66 0f 1f 84 00 00 00 00 00";
@@ -128,7 +128,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 			};
 
 			for (const char* pat : PATTERNS_OFF1) {
-				if(getPatternSize(pat) - 1 < SIZE) 
+				if(getPatternSize(pat) - 1 < SIZE)
 					continue;
 
 				if (auto found = finder(pat, 1)) {
@@ -137,7 +137,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 			}
 
 			for (const char* pat : PATTERNS_OFF3) {
-				if(getPatternSize(pat) - 3 < SIZE) 
+				if(getPatternSize(pat) - 3 < SIZE)
 					continue;
 
 				if (auto found = finder(pat, 3)) {
@@ -166,7 +166,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 			};
 
 			for (const char* pat : PATTERNS_OFF1) {
-				if(getPatternSize(pat) - 1 < SIZE) 
+				if(getPatternSize(pat) - 1 < SIZE)
 					continue;
 
 				if (auto found = finder(pat, 1)) {
@@ -175,7 +175,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 			}
 
 			for (const char* pat : PATTERNS_OFF3) {
-				if(getPatternSize(pat) - 3 < SIZE) 
+				if(getPatternSize(pat) - 3 < SIZE)
 					continue;
 
 				if (auto found = finder(pat, 3)) {
@@ -236,7 +236,7 @@ bool PLH::x64Detour::hook() {
 	// --------------- END RECURSIVE JMP RESOLUTION ---------------------
 	Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
-	
+
 	uint64_t minProlSz = (_detourScheme != detour_scheme_t::INPLACE) ? getMinJmpSize() : INPLACE_DETOUR_SIZE; // min size of patches that may split instructions
 	uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
 
@@ -261,7 +261,7 @@ bool PLH::x64Detour::hook() {
 
 	m_originalInsts = prologue;
 	Log::log("Prologue to overwrite:\n" + instsToStr(prologue) + "\n", ErrorLevel::INFO);
-	
+
 	{   // copy all the prologue stuff to trampoline
 		insts_t jmpTblOpt;
 		if (!makeTrampoline(prologue, jmpTblOpt)) {
@@ -298,8 +298,8 @@ bool PLH::x64Detour::hook() {
 			m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, region);
 			goto success;
 		}
-	} 
-	
+	}
+
 	trycave:
 	if(_detourScheme & detour_scheme_t::CODE_CAVE){
 		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
@@ -316,11 +316,11 @@ bool PLH::x64Detour::hook() {
 			m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
 			goto success;
 		}
-	} 
-	
+	}
+
 	tryinplace:
 	if(_detourScheme & detour_scheme_t::INPLACE) {
-		//inplace scheme. This is more stable than the cave finder since that may potentially find a region of unstable memory. 
+		//inplace scheme. This is more stable than the cave finder since that may potentially find a region of unstable memory.
 		// However, this INPLACE scheme may only be done for functions with a large enough prologue, otherwise this will overwrite adjacent bytes
 		m_hookInsts = makeInplaceDetour(m_fnAddress, m_fnCallback);
 		goto success;
@@ -351,7 +351,84 @@ bool PLH::x64Detour::unHook()
 	return status;
 }
 
-bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
+template <typename T>
+std::vector<uint8_t> encode_immediate(T immediate, uint8_t size){
+	auto* destination_ptr = (uint8_t*) &immediate;
+	std::vector<uint8_t> bytes;
+
+	for(int i = 0; i < size; i++){ // reverse for little-endian encoding
+		bytes.push_back(destination_ptr[i]);
+	}
+
+	return bytes;
+}
+
+
+PLH::Instruction translateInstruction(const PLH::Instruction& instruction){
+	if(instruction.getMnemonic() == "cmp"){
+		// 83 3d a5 7e 09 00 00  cmp dword ptr ds:[0x00007FFB2000336C], 0x00 -> 7ffb2000336c
+		std::vector<uint8_t> cmp_rax_bytes{ 0x48, 0x3D };
+		auto immediate_bytes = encode_immediate(instruction.getImmediate(), 4);
+		cmp_rax_bytes.insert(cmp_rax_bytes.end(), immediate_bytes.begin(), immediate_bytes.end());
+		return PLH::Instruction(0, {0}, 0, false, false, cmp_rax_bytes, "cmp", "rax, " + PLH::int_to_hex(instruction.getImmediate()), PLH::Mode::x64);
+	} else {
+		// TODO: return empty optional
+	}
+
+	return instruction;
+}
+
+
+PLH::insts_t PLH::x64Detour::generateTranslationRoutine(const PLH::Instruction& instruction, int64_t delta){
+	auto translated_instruction = translateInstruction(instruction);
+
+	// Calculate size, in bytes, of the entire translation routine
+	auto translation_size = 8 + 1 + 10 + translated_instruction.size() + 1 + 8 + 5;
+
+	// TODO: Ensure allocation within 2gb offset
+	const auto translation_address = new uint8_t[translation_size];
+
+	PLH::insts_t translation; // vector of instructions that comprise translation routine
+	auto current_address = (uint64_t) translation_address;
+
+	// + lea rsp, [rsp-128]
+	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, {0x48, 0x8D, 0xA4, 0x24, 0xD8, 0xFE, 0xFF, 0xFF}, "lea", "rsp, ss:[rsp-0x128]", PLH::Mode::x64));
+	current_address += 8;
+
+	// + push rax
+	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, {0x50}, "push", "rax", PLH::Mode::x64));
+	current_address += 1;
+
+	// + mov rax, <absolute address>
+	std::vector<uint8_t> mov_rax_bytes{ 0x48, 0xB8 };
+	auto immediate_bytes = encode_immediate(instruction.getDestination(), 8);
+	mov_rax_bytes.insert(mov_rax_bytes.end(), immediate_bytes.begin(), immediate_bytes.end());
+	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, mov_rax_bytes, "mov", "rax, " + PLH::int_to_hex(instruction.getDestination()), PLH::Mode::x64));
+	current_address += 10;
+
+	// + translated instruction
+	translated_instruction.setAddress(current_address);
+	current_address += translated_instruction.size();
+	translation.push_back(translated_instruction);
+
+	// + pop rax
+	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, {0x58}, "pop", "rax", PLH::Mode::x64));
+	current_address += 1;
+
+	// + lea rsp, [rsp+128]
+	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, {0x48, 0x8D, 0xA4, 0x24, 0x28, 0x01, 0x00, 0x00}, "lea", "rsp, ss:[rsp+0x128]", PLH::Mode::x64));
+	current_address += 8;
+
+	// + jmp <resume>
+	uint64_t resume_address = instruction.getAddress() + instruction.size() + delta;
+	translation.push_back(PLH::makex86Jmp(current_address, resume_address)[0]);
+
+	MemoryProtector prot((uint64_t) translation_address, translation_size, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
+
+	return translation;
+}
+
+bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 	assert(!prologue.empty());
 	assert(m_trampoline == NULL);
 
@@ -362,33 +439,35 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	/** Make a guess for the number entries we need so we can try to allocate a trampoline. The allocation
 	address will change each attempt, which changes delta, which changes the number of needed entries. So
 	we just try until we hit that lucky number that works
-	
+
 	The relocation could also because of data operations too. But that's specific to the function and can't
 	work again on a retry (same function, duh). Return immediately in that case.**/
 	uint8_t neededEntryCount = 0;
-	PLH::insts_t instsNeedingEntry;
-	PLH::insts_t instsNeedingReloc;
+	insts_t instsNeedingEntry;
+	insts_t instsNeedingReloc;
+	insts_t instsNeedingTranslation;
 	uint8_t retries = 0;
+	int64_t delta;
 
 	bool good = false;
 	do {
 		neededEntryCount = std::max((uint8_t)instsNeedingEntry.size(), (uint8_t)5);
-		
+
 		// prol + jmp back to prol + N * jmpEntries
 		m_trampolineSz = (uint16_t)(prolSz + (getMinJmpSize() + destHldrSz) +
 			(getMinJmpSize() + destHldrSz)* neededEntryCount +
-			7); //extra bytes for dest-holders 8 bytes alignment 
+			7); //extra bytes for dest-holders 8 bytes alignment
 
 		// allocate new trampoline before deleting old to increase odds of new mem address
-		uint64_t tmpTrampoline = (uint64_t)new unsigned char[m_trampolineSz];
+		auto tmpTrampoline = (uint64_t)new unsigned char[m_trampolineSz];
 		if (m_trampoline != NULL) {
 			delete[](unsigned char*)m_trampoline;
 		}
 
 		m_trampoline = tmpTrampoline;
-		const int64_t delta = m_trampoline - prolStart;
+		delta = m_trampoline - prolStart;
 
-		if (!buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc))
+		if (!buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc, instsNeedingTranslation))
 			continue;
 
 		good = true;
@@ -398,17 +477,42 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 		return false;
 	}
 
-	const int64_t delta = m_trampoline - prolStart;
+	for(auto& instruction : instsNeedingTranslation){
+		insts_t translation = generateTranslationRoutine(instruction, delta);
+
+		Log::log("Translation:\n" + instsToStr(translation) + "\n", ErrorLevel::INFO);
+
+		PLH::ZydisDisassembler::writeEncoding(translation, *this);
+
+		// replace the rip-relative instruction with jump to prologue
+		auto inst_iterator = std::find(prologue.begin(), prologue.end(), instruction);//prologue.begin() + index + 1;
+		*inst_iterator = makex86Jmp(instruction.getAddress(), translation[0].getAddress())[0];
+		inst_iterator->setRelativeDisplacement(inst_iterator->getDisplacement().Relative);
+		instsNeedingReloc.push_back(*inst_iterator); // TODO: Is this necessary
+
+		// nop the garbage bytes if necessary
+		auto current_address = (uint8_t*) (inst_iterator->getAddress() + inst_iterator->size());
+		for(int i = 0; i < instruction.size() - 5; i++){
+			auto nop = PLH::Instruction((uint64_t)current_address++, {0}, 0, false, false, {0x90}, "nop", "", PLH::Mode::x64);
+			if(inst_iterator == prologue.end()){
+				prologue.push_back(nop);
+				inst_iterator = prologue.end();
+			} else {
+				inst_iterator = prologue.insert(inst_iterator, nop) + 1; // TODO: Is this correct?
+			}
+		}
+	}
+
 	MemoryProtector prot(m_trampoline, m_trampolineSz, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 
 	// Insert jmp from trampoline -> prologue after overwritten section
 	const uint64_t jmpToProlAddr = m_trampoline + prolSz;
 	const uint64_t jmpHolderCurAddr = (m_trampoline + m_trampolineSz - destHldrSz) & ~0x7; //8 bytes align for performance.
 	{
-		const auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prologue.front().getAddress() + prolSz, jmpHolderCurAddr);
+		const auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prolStart + prolSz, jmpHolderCurAddr);
 
 		Log::log("Jmp To Prol:\n" + instsToStr(jmpToProl) + "\n", ErrorLevel::INFO);
-		m_disasm.writeEncoding(jmpToProl, *this);
+		PLH::ZydisDisassembler::writeEncoding(jmpToProl, *this);
 	}
 
 	// each jmp tbl entries holder is one slot down from the previous (lambda holds state)
@@ -427,7 +531,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	};
 
 	const uint64_t jmpTblStart = jmpToProlAddr + getMinJmpSize();
-	trampolineOut = relocateTrampoline(prologue, jmpTblStart, delta, makeJmpFn, instsNeedingReloc, instsNeedingEntry);
+	outJmpTable = relocateTrampoline(prologue, jmpTblStart, delta, makeJmpFn, instsNeedingReloc, instsNeedingEntry, instsNeedingTranslation);
 
 	return true;
 }

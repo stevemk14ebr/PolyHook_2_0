@@ -128,7 +128,14 @@ bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
 	return true;
 }
 
-bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t& instsNeedingEntry, PLH::insts_t& instsNeedingReloc) {
+bool PLH::Detour::buildRelocationList(
+    insts_t& prologue,
+    const uint64_t roundProlSz,
+    const int64_t delta,
+    PLH::insts_t& instsNeedingEntry,
+    PLH::insts_t& instsNeedingReloc,
+	PLH::insts_t& instsNeedingTranslation
+) {
 	assert(instsNeedingEntry.size() == 0);
 	assert(instsNeedingReloc.size() == 0);
 	assert(prologue.size() > 0);
@@ -148,7 +155,7 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 			}else{
 				// can inst just be re-encoded or do we need a tbl entry
 				const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
-				const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits) / 2.0 - 1.0); // 2^bitSz give max val, /2 and -1 because signed ex (int8_t [-128, 127] = [2^8 / 2, 2^8 / 2 - 1]
+				const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits - 1) - 1.0); // 2^(bitSz-1) give max val, and -1 because signed ex (int8_t [-128, 127] = [-2^7, 2^7 - 1]
 				if ((uint64_t)std::llabs(delta) > maxInstDisp) {
 					instsNeedingEntry.push_back(inst);
 				} else {
@@ -158,19 +165,21 @@ bool PLH::Detour::buildRelocationList(insts_t& prologue, const uint64_t roundPro
 		}
 
 		// data operations (duplicated because clearer)
-		if (!inst.isBranching() && inst.hasDisplacement()) {
+		if (!inst.isBranching() && inst.hasDisplacement()) { // Can this happen on 32-bit?
 			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
 			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits - 1) - 1.0);
-			if ((uint64_t)std::llabs(delta) > maxInstDisp) {
+			const auto absDelta = (uint64_t)std::llabs(delta);
+            if (absDelta > maxInstDisp) {
 				/*EX: 48 8d 0d 96 79 07 00    lea rcx, [rip + 0x77996]
 				If instruction is moved beyond displacement field width
 				we can't fix the load. TODO: generate equivalent load
 				with asmjit and insert it at position
 				*/
 				std::string err = "Cannot fixup IP relative data operation, needed disp. beyond max disp range: " + inst.getFullName() +
-					" needed: " + int_to_hex((uint64_t)std::llabs(delta)) + " raw: " + int_to_hex(delta) +  " max: " + int_to_hex(maxInstDisp);
-				Log::log(err, ErrorLevel::SEV);
-				return false;
+					" needed: " + int_to_hex(absDelta) + " raw: " + int_to_hex(delta) +  " max: " + int_to_hex(maxInstDisp);
+				Log::log(err, ErrorLevel::WARN);
+//				 return false;
+				instsNeedingTranslation.push_back(inst);
 			}else {
 				instsNeedingReloc.push_back(inst);
 			}

@@ -44,11 +44,12 @@ public:
 	void setDetourScheme(detour_scheme_t scheme);
 
 protected:
-	bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
+	bool makeTrampoline(insts_t& prologue, insts_t& outJmpTable);
 
 	// assumes we are looking within a +-2GB window
 	template<uint16_t SIZE>
 	std::optional<uint64_t> findNearestCodeCave(uint64_t addr);
+	insts_t generateTranslationRoutine(const Instruction& instruction, int64_t delta);
 
 	detour_scheme_t _detourScheme { detour_scheme_t::RECOMMENDED }; // this is the most stable configuration.
 	std::optional<uint64_t> m_valloc2_region;

@@ -102,7 +102,7 @@ uint64_t oCreateMutexExA = 0;
 HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, {
 	PLH::StackCanary canary;
 	LPCSTR lpName = GET_ARG(1);
-	printf("kernel32!CreateMutexExA  Name:%s",  lpName);
+	printf("kernel32!CreateMutexExA  Name:%s\n",  lpName);
 	return PLH::FnCast(oCreateMutexExA, &CreateMutexExA)(_args...);
 });
 
@@ -113,37 +113,36 @@ HOOK_CALLBACK(&SetProcessDPIAware, hookSetProcessDPIAware, {
     PH_UNUSED(i);
     effects.PeakEffect().trigger();
 
-    printf("Hooked SetProcessDPIAware");
+    printf("Hooked SetProcessDPIAware\n");
 
     return PLH::FnCast(oSetProcessDPIAware, &SetProcessDPIAware)(_args...);
 });
 
-TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
+TEST_CASE("Testing 64 detours", "[x64Detour][ADetour]") {
     PLH::ZydisDisassembler dis(PLH::Mode::x64);
 
-    SECTION("RIP-relative data operation"){
-        // TODO: Place this at the end once this test passes
+	SECTION("RIP-relative data operation"){
+		// TODO: Place this at the end once this test passes
 
-        PLH::StackCanary canary;
+		PLH::StackCanary canary;
+		// Function 'SetProcessDPIAware' in User32.dll was chosen
+		// because it starts with a RIP-relative data operation:
+		//
+		// cmp dword ptr ds:[7FFCA36D336C],0
+		// jne user32.7FFCA3661DA6
+		// mov rcx,FFFFFFFFFFFFFFFE
+		// jmp <user32.SetProcessDpiAwarenessContext>
 
-        // Function 'SetProcessDPIAware' in User32.dll was chosen
-        // because it starts with a RIP-relative data operation:
-        //
-        // cmp dword ptr ds:[7FFCA36D336C],0
-        // jne user32.7FFCA3661DA6
-        // mov rcx,FFFFFFFFFFFFFFFE
-        // jmp <user32.SetProcessDpiAwarenessContext>
+		PLH::x64Detour detour((char*)SetProcessDPIAware, (char*)hookSetProcessDPIAware, &oSetProcessDPIAware, dis);
 
-        PLH::x64Detour detour((char*)SetProcessDPIAware, (char*)&hookSetProcessDPIAware, &oSetProcessDPIAware, dis);
+		REQUIRE(detour.hook() == true);
 
-        REQUIRE(detour.hook() == true);
+		effects.PushEffect();
+		const auto result = SetProcessDPIAware();
+		REQUIRE(effects.PopEffect().didExecute());
 
-        const auto result = SetProcessDPIAware();
-
-        REQUIRE(detour.unHook() == true);
-
-        REQUIRE(effects.PopEffect().didExecute());
-    }
+		REQUIRE(detour.unHook() == true);
+	}
 
 	SECTION("Normal function") {
 		PLH::StackCanary canary;

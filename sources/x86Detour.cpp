@@ -102,8 +102,9 @@ bool PLH::x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 	work again on a retry (same function, duh). Return immediately in that case.
 	**/
 	uint8_t neededEntryCount = 5;
-	PLH::insts_t instsNeedingEntry;
-	PLH::insts_t instsNeedingReloc;
+	insts_t instsNeedingEntry;
+	insts_t instsNeedingReloc;
+	insts_t instsNeedingTranslation;
 
 	uint8_t retries = 0;
 	do {
@@ -123,7 +124,7 @@ bool PLH::x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
 
 		const int64_t delta = m_trampoline - prolStart;
 
-		if (!buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc))
+		if (!buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc, instsNeedingTranslation))
 			return false;
 	} while (instsNeedingEntry.size() > neededEntryCount);
 
