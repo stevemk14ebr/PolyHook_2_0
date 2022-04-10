@@ -484,11 +484,11 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 
 		PLH::ZydisDisassembler::writeEncoding(translation, *this);
 
-		// replace the rip-relative instruction with jump to prologue
-		auto inst_iterator = std::find(prologue.begin(), prologue.end(), instruction);//prologue.begin() + index + 1;
+		// replace the rip-relative instruction with jump to translation
+		auto inst_iterator = std::find(prologue.begin(), prologue.end(), instruction);
 		*inst_iterator = makex86Jmp(instruction.getAddress(), translation[0].getAddress())[0];
 		inst_iterator->setRelativeDisplacement(inst_iterator->getDisplacement().Relative);
-		instsNeedingReloc.push_back(*inst_iterator); // TODO: Is this necessary
+		instsNeedingReloc.push_back(*inst_iterator);
 
 		// nop the garbage bytes if necessary
 		auto current_address = (uint8_t*) (inst_iterator->getAddress() + inst_iterator->size());
