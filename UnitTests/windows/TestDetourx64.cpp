@@ -10,8 +10,6 @@
 
 #include "polyhook2/PolyHookOsIncludes.hpp"
 
-#include <memoryapi.h>
-
 EffectTracker effects;
 
 /**These tests can spontaneously fail if the compiler desides to optimize away

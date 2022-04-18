@@ -354,8 +354,8 @@ bool PLH::x64Detour::unHook() {
  * Translations of such instruction require storing contents
  * of the scratch register into the destination
  */
-const static std::set<std::string> instructions_to_store{
-	"add", "adc"
+const static std::set<std::string> instructions_to_store{ // NOLINT(cert-err58-cpp)
+	"add", "adc" // TODO: Complete with full list
 };
 
 const static std::map<ZydisRegister, ZydisRegister> a_to_b{ // NOLINT(cert-err58-cpp)
@@ -491,7 +491,7 @@ uint64_t PLH::x64Detour::generateTranslationRoutine(
 	translation.emplace_back("lea rsp, ss:[rsp + 0x128]");
 
 	// Jump back to trampoline
-	translation.emplace_back(generate_jmp_instruction_string(resume_address));
+	translation.emplace_back("jmp " + int_to_hex(resume_address));
 
 	// Join all instructions into one string delimited by newlines
 	std::ostringstream translation_stream;
