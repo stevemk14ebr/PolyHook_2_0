@@ -12,6 +12,7 @@
 #include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/RangeAllocator.hpp"
+#include <asmjit/asmjit.h>
 
 using namespace std::placeholders;
 
@@ -49,11 +50,12 @@ protected:
 	// assumes we are looking within a +-2GB window
 	template<uint16_t SIZE>
 	std::optional<uint64_t> findNearestCodeCave(uint64_t addr);
-	insts_t generateTranslationRoutine(const Instruction& instruction, int64_t delta);
+	uint64_t generateTranslationRoutine(const Instruction& instruction, uint64_t resume_address);
 
 	detour_scheme_t _detourScheme { detour_scheme_t::RECOMMENDED }; // this is the most stable configuration.
 	std::optional<uint64_t> m_valloc2_region;
 	RangeAllocator m_allocator;
+	asmjit::JitRuntime m_asmjit_rt;
 };
 }
 #endif //POLYHOOK_2_X64DETOUR_HPP

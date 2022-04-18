@@ -9,3 +9,7 @@ std::atomic_long& PLH::UID::singleton() {
 	base++;
 	return base;
 }
+
+PLH::UID::UID() {
+	this->val = -1;
+}

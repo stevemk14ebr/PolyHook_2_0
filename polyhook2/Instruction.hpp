@@ -8,6 +8,7 @@
 #include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/UID.hpp"
 #include "polyhook2/Enums.hpp"
+#include "polyhook2/Misc.hpp"
 #include <type_traits>
 
 namespace PLH {
@@ -26,8 +27,8 @@ public:
 				const std::vector<uint8_t>& bytes,
 				const std::string& mnemonic,
 				const std::string& opStr,
-				Mode mode) : m_uid(UID::singleton()) {
-		Init(address, displacement, displacementOffset, isRelative, isIndirect, bytes, mnemonic, opStr, false, false, m_uid, mode);
+				Mode mode) {
+		Init(address, displacement, displacementOffset, isRelative, isIndirect, bytes, mnemonic, opStr, false, false, mode);
 	}
 
 	Instruction(uint64_t address,
@@ -39,10 +40,9 @@ public:
 				const size_t arrLen,
 				const std::string& mnemonic,
 				const std::string& opStr,
-				Mode mode) : m_uid(UID::singleton()) {
-
+				Mode mode) {
 		std::vector<uint8_t> Arr(bytes, bytes + arrLen);
-		Init(address, displacement, displacementOffset, isRelative, isIndirect, Arr, mnemonic, opStr, false, false, m_uid, mode);
+		Init(address, displacement, displacementOffset, isRelative, isIndirect, Arr, mnemonic, opStr, false, false, mode);
 	}
 
 	/**Get the address of where the instruction points if it's a branching instruction
@@ -169,7 +169,7 @@ public:
 		return m_bytes.size();
 	}
 
-	void setRelativeDisplacement(const int64_t displacement) {
+	void setRelativeDisplacement(const int64_t displacement, const bool ip_relative = false) {
 		/**Update our class' book-keeping of this stuff and then modify the byte array.
 		 * This doesn't actually write the changes to the executeable code, it writes to our
 		 * copy of the bytes**/
@@ -177,7 +177,7 @@ public:
 		m_isRelative = true;
 		m_hasDisplacement = true;
 
-		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
+		const uint32_t dispSz = ip_relative ? 4 : (uint32_t)(size() - getDisplacementOffset());
 		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
 			PolyHook2DebugBreak();
 			return;
@@ -230,8 +230,24 @@ public:
 		m_immediate = immediate;
 	}
 
+	bool hasImmediate() const {
+		return m_hasImmediate;
+	}
+
 	uint64_t getImmediate() const {
 		return m_immediate;
+	}
+
+	void setRegister(ZydisRegister reg){
+		m_register = reg;
+	}
+
+	ZydisRegister getRegister() const {
+		return m_register;
+	}
+
+	bool hasRegister() const {
+		return m_register != ZYDIS_REGISTER_NONE;
 	}
 
 private:
@@ -245,7 +261,6 @@ private:
 			  const std::string& opStr,
 			  const bool hasDisp,
 			  const bool hasImmediate,
-			  const UID id,
 			  Mode mode) {
 		m_address = address;
 		m_displacement = displacement;
@@ -254,28 +269,30 @@ private:
 		m_isIndirect = isIndirect;
 		m_hasDisplacement = hasDisp;
 		m_hasImmediate = hasImmediate;
-		m_immediate = 0; // read from constructor?
+		m_immediate = 0;
+		m_register = ZydisRegister::ZYDIS_REGISTER_NONE;
 
 		m_bytes = bytes;
 		m_mnemonic = mnemonic;
 		m_opStr = opStr;
 
-		m_uid = id;
+		m_uid = UID(UID::singleton());
 		m_mode = mode;
 	}
 
-	bool         m_isIndirect;      // Does this instruction get it's destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
-	bool         m_isCalling;       // Does this instruction is of a CALL type.
-	bool		 m_isBranching;     // Does this instrunction jmp/call or otherwise change control flow
-	bool         m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
-	bool         m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
-    bool         m_hasImmediate;    // Does this instruction have the immediate field filled?
-    uint8_t      m_immediateOffset; // Offset into the byte array where immediate is encoded
-	Displacement m_displacement;    // Where an instruction points too (valid for jmp + call types, and RIP relative MEM types)
+	ZydisRegister m_register;        // Register operand when displacement is present
+	bool          m_isIndirect;      // Does this instruction get its destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
+	bool          m_isCalling;       // Does this instruction is of a CALL type.
+	bool		  m_isBranching;     // Does this instruction jmp/call or otherwise change control flow
+	bool          m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
+	bool          m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
+    bool          m_hasImmediate;    // Does this instruction have the immediate field filled?
+    uint8_t       m_immediateOffset; // Offset into the byte array where immediate is encoded
+	Displacement  m_displacement;    // Where an instruction points too (valid for jmp + call types, and RIP relative MEM types)
 
-	uint64_t     m_address;         // Address the instruction is at
-	uint64_t     m_immediate;       // Immediate op
-	uint8_t      m_dispOffset;      // Offset into the byte array where displacement is encoded
+	uint64_t      m_address;         // Address the instruction is at
+	uint64_t      m_immediate;       // Immediate op
+	uint8_t       m_dispOffset;      // Offset into the byte array where displacement is encoded
 
 	std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
 	std::string          m_mnemonic;
@@ -412,10 +429,7 @@ inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destinatio
 	bytes[0] = 0xE9;
 	memcpy(&bytes[1], &disp.Relative, 4);
 
-	std::stringstream ss;
-	ss << std::hex << destination;
-
-	return { Instruction(address, disp, 1, true, false, bytes, "jmp", ss.str(), Mode::x86) };
+	return { Instruction(address, disp, 1, true, false, bytes, "jmp", PLH::int_to_hex(destination), Mode::x86) };
 }
 
 

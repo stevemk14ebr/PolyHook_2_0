@@ -1,6 +1,7 @@
 //
 // Created by steve on 7/5/17.
 //
+#include <set>
 #include <sstream>
 #include <algorithm>
 #include <functional>
@@ -8,6 +9,8 @@
 #include "polyhook2/Detour/x64Detour.hpp"
 #include "polyhook2/Misc.hpp"
 #include "polyhook2/MemProtector.hpp"
+
+#include <asmtk/asmtk.h>
 
 PLH::x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ZydisDisassembler& dis, const uint8_t maxDepth) : PLH::Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth), m_allocator(8, 100) {
 
@@ -17,8 +20,7 @@ PLH::x64Detour::x64Detour(const char* fnAddress, const char* fnCallback, uint64_
 
 }
 
-PLH::x64Detour::~x64Detour()
-{
+PLH::x64Detour::~x64Detour() {
 	if (m_valloc2_region) {
 		m_allocator.deallocate(*m_valloc2_region);
 		m_valloc2_region = {};
@@ -37,11 +39,11 @@ uint8_t PLH::x64Detour::getPrefJmpSize() const {
 	return 16;
 }
 
-PLH::x64Detour::detour_scheme_t PLH::x64Detour::getDetourScheme() const{
+PLH::x64Detour::detour_scheme_t PLH::x64Detour::getDetourScheme() const {
 	return _detourScheme;
 }
 
-void PLH::x64Detour::setDetourScheme(detour_scheme_t scheme){
+void PLH::x64Detour::setDetourScheme(detour_scheme_t scheme) {
 	_detourScheme = scheme;
 }
 
@@ -88,13 +90,13 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	// Scan in same order as listing above
 	const char* PATTERNS_OFF1[] = {
 		CC_PATTERN_RET.c_str(), NOP1_PATTERN_RET.c_str(),
-		NOP2_RET, NOP3_RET, NOP4_RET, NOP5_RET,NOP6_RET,
+		NOP2_RET, NOP3_RET, NOP4_RET, NOP5_RET, NOP6_RET,
 		NOP7_RET, NOP8_RET, NOP9_RET, NOP10_RET, NOP11_RET
 	};
 
 	const char* PATTERNS_OFF3[] = {
 		CC_PATTERN_RETN.c_str(), NOP1_PATTERN_RETN.c_str(),
-		NOP2_RETN, NOP3_RETN, NOP4_RETN, NOP5_RETN,NOP6_RETN,
+		NOP2_RETN, NOP3_RETN, NOP4_RETN, NOP5_RETN, NOP6_RETN,
 		NOP7_RETN, NOP8_RETN, NOP9_RETN, NOP10_RETN, NOP11_RETN,
 	};
 
@@ -115,20 +117,20 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	// Search 2GB below
 	for (uint64_t search = addr - chunkSize; (search + chunkSize) >= calc_2gb_below(addr); search -= chunkSize) {
 		size_t read = 0;
-		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
+		if (safe_mem_read(search, (uint64_t) data, chunkSize, read)) {
 			assert(read <= chunkSize);
 			if (read == 0 || read < SIZE)
 				continue;
 
 			auto finder = [&](const char* pattern, const uint64_t offset) -> std::optional<uint64_t> {
-				if (auto found = (uint64_t)findPattern_rev((uint64_t)data, read, pattern)) {
-					return search + (found + offset - (uint64_t)data);
+				if (auto found = (uint64_t) findPattern_rev((uint64_t) data, read, pattern)) {
+					return search + (found + offset - (uint64_t) data);
 				}
 				return {};
 			};
 
-			for (const char* pat : PATTERNS_OFF1) {
-				if(getPatternSize(pat) - 1 < SIZE)
+			for (const char* pat: PATTERNS_OFF1) {
+				if (getPatternSize(pat) - 1 < SIZE)
 					continue;
 
 				if (auto found = finder(pat, 1)) {
@@ -136,8 +138,8 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 				}
 			}
 
-			for (const char* pat : PATTERNS_OFF3) {
-				if(getPatternSize(pat) - 3 < SIZE)
+			for (const char* pat: PATTERNS_OFF3) {
+				if (getPatternSize(pat) - 3 < SIZE)
 					continue;
 
 				if (auto found = finder(pat, 3)) {
@@ -150,7 +152,7 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 	// Search 2GB above
 	for (uint64_t search = addr; (search + chunkSize) < calc_2gb_above(addr); search += chunkSize) {
 		size_t read = 0;
-		if (safe_mem_read(search, (uint64_t)data, chunkSize, read)) {
+		if (safe_mem_read(search, (uint64_t) data, chunkSize, read)) {
 			uint32_t contiguousInt3 = 0;
 			uint32_t contiguousNop = 0;
 
@@ -159,14 +161,14 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 				continue;
 
 			auto finder = [&](const char* pattern, const uint64_t offset) -> std::optional<uint64_t> {
-				if (auto found = (uint64_t)findPattern((uint64_t)data, read, pattern)) {
-					return search + (found + offset - (uint64_t)data);
+				if (auto found = (uint64_t) findPattern((uint64_t) data, read, pattern)) {
+					return search + (found + offset - (uint64_t) data);
 				}
 				return {};
 			};
 
-			for (const char* pat : PATTERNS_OFF1) {
-				if(getPatternSize(pat) - 1 < SIZE)
+			for (const char* pat: PATTERNS_OFF1) {
+				if (getPatternSize(pat) - 1 < SIZE)
 					continue;
 
 				if (auto found = finder(pat, 1)) {
@@ -174,8 +176,8 @@ std::optional<uint64_t> PLH::x64Detour::findNearestCodeCave(uint64_t addr) {
 				}
 			}
 
-			for (const char* pat : PATTERNS_OFF3) {
-				if(getPatternSize(pat) - 3 < SIZE)
+			for (const char* pat: PATTERNS_OFF3) {
+				if (getPatternSize(pat) - 3 < SIZE)
 					continue;
 
 				if (auto found = finder(pat, 3)) {
@@ -191,32 +193,30 @@ namespace {
 
 #pragma pack(push, 1)
 
-struct InplaceDetour {
-	uint16_t mov_r10 { 0xba49 };
-	uint64_t target;
-	uint16_t push_r10 { 0x5241 };
-	uint8_t ret {0xc3};
-};
+	struct InplaceDetour {
+		uint16_t mov_r10{0xba49};
+		uint64_t target;
+		uint16_t push_r10{0x5241};
+		uint8_t ret{0xc3};
+	};
 
 #pragma pack(pop)
 
-constexpr auto INPLACE_DETOUR_SIZE = sizeof(InplaceDetour);
+	constexpr auto INPLACE_DETOUR_SIZE = sizeof(InplaceDetour);
 
-PLH::insts_t makeInplaceDetour(const uint64_t address, const uint64_t destination){
-	PLH::Instruction::Displacement disp { 0 };
+	PLH::insts_t makeInplaceDetour(const uint64_t address, const uint64_t destination) {
+		PLH::Instruction::Displacement disp{0};
 
-	InplaceDetour dt;
-	dt.target = destination;
+		InplaceDetour dt;
+		dt.target = destination;
 
-	std::vector<uint8_t> destBytes;
-	destBytes.resize(INPLACE_DETOUR_SIZE);
-	memcpy(destBytes.data(), &dt, INPLACE_DETOUR_SIZE);
-	return { PLH::Instruction(address, disp, 0, false, false, destBytes, "inplace-detour", "", PLH::Mode::x64) };
+		std::vector<uint8_t> destBytes;
+		destBytes.resize(INPLACE_DETOUR_SIZE);
+		memcpy(destBytes.data(), &dt, INPLACE_DETOUR_SIZE);
+		return {PLH::Instruction(address, disp, 0, false, false, destBytes, "inplace-detour", "", PLH::Mode::x64)};
+	}
+
 }
-
-}
-
-
 
 bool PLH::x64Detour::hook() {
 	insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
@@ -268,22 +268,22 @@ bool PLH::x64Detour::hook() {
 			return false;
 		}
 
-		Log::log("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz, *this)) + "\n", ErrorLevel::INFO);
+		Log::log("Trampoline:\n" + instsToStr(m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz, *this)) + "\n\n", ErrorLevel::INFO);
 		if (!jmpTblOpt.empty())
-			Log::log("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
+			Log::log("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n\n", ErrorLevel::INFO);
 	}
 
 	*m_userTrampVar = m_trampoline;
-	m_hookSize = (uint32_t)roundProlSz;
-	m_nopProlOffset = (uint16_t)minProlSz;
+	m_hookSize = (uint32_t) roundProlSz;
+	m_nopProlOffset = (uint16_t) minProlSz;
 
 	MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
 	if (_detourScheme & detour_scheme_t::VALLOC2 && boundedAllocSupported()) {
-		uint64_t max = (uint64_t)AlignDownwards(calc_2gb_above(m_fnAddress), PLH::getPageSize());
-		uint64_t min = (uint64_t)AlignDownwards(calc_2gb_below(m_fnAddress), PLH::getPageSize());
+		uint64_t max = (uint64_t) AlignDownwards(calc_2gb_above(m_fnAddress), PLH::getPageSize());
+		uint64_t min = (uint64_t) AlignDownwards(calc_2gb_below(m_fnAddress), PLH::getPageSize());
 
 		// each block is m_blocksize (8) at the time of writing. Do not write more than this.
-		uint64_t region = (uint64_t)m_allocator.allocate(min, max);
+		uint64_t region = (uint64_t) m_allocator.allocate(min, max);
 		if (!region) {
 			if (_detourScheme & detour_scheme_t::CODE_CAVE || _detourScheme & detour_scheme_t::INPLACE) {
 				goto trycave;
@@ -301,7 +301,7 @@ bool PLH::x64Detour::hook() {
 	}
 
 	trycave:
-	if(_detourScheme & detour_scheme_t::CODE_CAVE){
+	if (_detourScheme & detour_scheme_t::CODE_CAVE) {
 		// we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
 		auto cave = findNearestCodeCave<8>(m_fnAddress);
 		if (!cave) {
@@ -311,7 +311,7 @@ bool PLH::x64Detour::hook() {
 
 			Log::log("No code caves found near function", ErrorLevel::SEV);
 			return false;
-		}else {
+		} else {
 			MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 			m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
 			goto success;
@@ -319,7 +319,7 @@ bool PLH::x64Detour::hook() {
 	}
 
 	tryinplace:
-	if(_detourScheme & detour_scheme_t::INPLACE) {
+	if (_detourScheme & detour_scheme_t::INPLACE) {
 		//inplace scheme. This is more stable than the cave finder since that may potentially find a region of unstable memory.
 		// However, this INPLACE scheme may only be done for functions with a large enough prologue, otherwise this will overwrite adjacent bytes
 		m_hookInsts = makeInplaceDetour(m_fnAddress, m_fnCallback);
@@ -334,15 +334,14 @@ bool PLH::x64Detour::hook() {
 
 	// Nop the space between jmp and end of prologue
 	assert(m_hookSize >= m_nopProlOffset);
-	m_nopSize = (uint16_t)(m_hookSize - m_nopProlOffset);
+	m_nopSize = (uint16_t) (m_hookSize - m_nopProlOffset);
 	writeNop(m_fnAddress + m_nopProlOffset, m_nopSize);
 
 	m_hooked = true;
 	return true;
 }
 
-bool PLH::x64Detour::unHook()
-{
+bool PLH::x64Detour::unHook() {
 	bool status = PLH::Detour::unHook();
 	if (m_valloc2_region) {
 		m_allocator.deallocate(*m_valloc2_region);
@@ -351,81 +350,172 @@ bool PLH::x64Detour::unHook()
 	return status;
 }
 
-template <typename T>
-std::vector<uint8_t> encode_immediate(T immediate, uint8_t size){
-	auto* destination_ptr = (uint8_t*) &immediate;
-	std::vector<uint8_t> bytes;
+/**
+ * Translations of such instruction require storing contents
+ * of the scratch register into the destination
+ */
+const static std::set<std::string> instructions_to_store{
+	"add", "adc"
+};
 
-	for(int i = 0; i < size; i++){ // reverse for little-endian encoding
-		bytes.push_back(destination_ptr[i]);
+const static std::map<ZydisRegister, ZydisRegister> a_to_b{ // NOLINT(cert-err58-cpp)
+	{ZYDIS_REGISTER_RAX, ZYDIS_REGISTER_RBX},
+	{ZYDIS_REGISTER_EAX, ZYDIS_REGISTER_EBX},
+	{ZYDIS_REGISTER_AX,  ZYDIS_REGISTER_BX},
+	{ZYDIS_REGISTER_AH,  ZYDIS_REGISTER_BH},
+	{ZYDIS_REGISTER_AL,  ZYDIS_REGISTER_BL},
+};
+
+const static std::map<ZydisRegisterClass, ZydisRegister> class_to_reg{ // NOLINT(cert-err58-cpp)
+	{ZYDIS_REGCLASS_GPR64, ZYDIS_REGISTER_RAX},
+	{ZYDIS_REGCLASS_GPR32, ZYDIS_REGISTER_EAX},
+	{ZYDIS_REGCLASS_GPR16, ZYDIS_REGISTER_AX},
+	{ZYDIS_REGCLASS_GPR8,  ZYDIS_REGISTER_AL},
+};
+
+/**
+ * For push/pop operations, we have to use 64-bit operands.
+ * This map translates all possible scratch registers into
+ * the corresponding 64-bit register for push/pop operations.
+ */
+const static std::map<std::string, std::string> scratch_to_64{ // NOLINT(cert-err58-cpp)
+	{"rbx", "rbx"},
+	{"ebx", "rbx"},
+	{"bx",  "rbx"},
+	{"bh",  "rbx"},
+	{"bl",  "rbx"},
+	{"rax", "rax"},
+	{"eax", "rax"},
+	{"ax",  "rax"},
+	{"ah",  "rax"},
+	{"al",  "rax"},
+};
+
+
+struct TranslationResult {
+	std::string instruction;
+	std::string scratch_register;
+};
+
+TranslationResult translateInstruction(const PLH::Instruction& instruction) {
+	const auto& mnemonic = instruction.getMnemonic();
+	ZydisRegister scratch_register;
+	std::string scratch_register_string;
+
+	if (instruction.hasImmediate()) { // 2nd operand is immediate
+		// TODO
+		throw std::exception("No translation support for immediate operands yet");
+	} else if (instruction.hasRegister()) { // 2nd operand is register
+		const auto reg = instruction.getRegister();
+		const auto regClass = ZydisRegisterGetClass(reg);
+		const std::string reg_string = ZydisRegisterGetString(reg);
+
+		if (a_to_b.count(reg)) {
+			// This is a register A
+			scratch_register = a_to_b.at(reg);
+		} else if (class_to_reg.count(regClass)) {
+			// This is not a register A
+			scratch_register = class_to_reg.at(regClass);
+		} else {
+			// Unexpected register
+			auto message = "Unexpected register: " + reg_string;
+			throw std::exception(message.c_str());
+		}
+
+		scratch_register_string = ZydisRegisterGetString(scratch_register);
+
+		if (!scratch_to_64.count(scratch_register_string)) {
+			auto message = "Unexpected scratch register: " + scratch_register_string;
+			throw std::exception(message.c_str());
+		}
+
+		return {
+			mnemonic + " " + scratch_register_string + ", " + reg_string,
+			scratch_register_string,
+		};
 	}
 
-	return bytes;
+	throw std::exception("No translation support for such instruction");
 }
 
 
-PLH::Instruction translateInstruction(const PLH::Instruction& instruction){
-	if(instruction.getMnemonic() == "cmp"){
-		// 83 3d a5 7e 09 00 00  cmp dword ptr ds:[0x00007FFB2000336C], 0x00 -> 7ffb2000336c
-		std::vector<uint8_t> cmp_rax_bytes{ 0x48, 0x3D };
-		auto immediate_bytes = encode_immediate(instruction.getImmediate(), 4);
-		cmp_rax_bytes.insert(cmp_rax_bytes.end(), immediate_bytes.begin(), immediate_bytes.end());
-		return PLH::Instruction(0, {0}, 0, false, false, cmp_rax_bytes, "cmp", "rax, " + PLH::int_to_hex(instruction.getImmediate()), PLH::Mode::x64);
-	} else {
-		// TODO: return empty optional
-	}
-
-	return instruction;
+std::string generate_jmp_instruction_string(const uint64_t destination) {
+	std::stringstream stream;
+	stream << "jmp 0x" << std::hex << destination;
+	return stream.str();
 }
 
+/**
+ * @throws std::exception
+ */
+uint64_t PLH::x64Detour::generateTranslationRoutine(
+	const PLH::Instruction& instruction,
+	uint64_t resume_address
+) {
+	// AsmTK parses strings for AsmJit, which generates the binary code.
+	asmjit::CodeHolder code;
 
-PLH::insts_t PLH::x64Detour::generateTranslationRoutine(const PLH::Instruction& instruction, int64_t delta){
-	auto translated_instruction = translateInstruction(instruction);
+	// FIXME: Without providing base address, asmjit will likely fail on relocation
+	code.init(m_asmjit_rt.environment());
 
-	// Calculate size, in bytes, of the entire translation routine
-	auto translation_size = 8 + 1 + 10 + translated_instruction.size() + 1 + 8 + 5;
+	asmjit::x86::Assembler a(&code);
+	asmtk::AsmParser p(&a);
 
-	// TODO: Ensure allocation within 2gb offset
-	const auto translation_address = new uint8_t[translation_size];
+	auto [translated_instruction, scratch_register] = translateInstruction(instruction);
 
-	PLH::insts_t translation; // vector of instructions that comprise translation routine
-	auto current_address = (uint64_t) translation_address;
+	// Stores vector of instruction strings that comprise translation routine
+	std::vector<std::string> translation;
 
-	// + lea rsp, [rsp-128]
-	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, {0x48, 0x8D, 0xA4, 0x24, 0xD8, 0xFE, 0xFF, 0xFF}, "lea", "rsp, ss:[rsp-0x128]", PLH::Mode::x64));
-	current_address += 8;
+	// Avoid spoiling the shadow space
+	translation.emplace_back("lea rsp, ss:[rsp - 0x128]");
 
-	// + push rax
-	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, {0x50}, "push", "rax", PLH::Mode::x64));
-	current_address += 1;
+	// Save the scratch register
+	translation.emplace_back("push " + scratch_to_64.at(scratch_register));
 
-	// + mov rax, <absolute address>
-	std::vector<uint8_t> mov_rax_bytes{ 0x48, 0xB8 };
-	auto immediate_bytes = encode_immediate(instruction.getDestination(), 8);
-	mov_rax_bytes.insert(mov_rax_bytes.end(), immediate_bytes.begin(), immediate_bytes.end());
-	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, mov_rax_bytes, "mov", "rax, " + PLH::int_to_hex(instruction.getDestination()), PLH::Mode::x64));
-	current_address += 10;
+	// Load the destination content into scratch register
+	const auto destination = int_to_hex(instruction.getDestination());
+	translation.emplace_back("mov " + scratch_register + ", ds:[" + destination + "]");
 
-	// + translated instruction
-	translated_instruction.setAddress(current_address);
-	current_address += translated_instruction.size();
-	translation.push_back(translated_instruction);
+	// Replace RIP-relative instruction
+	translation.emplace_back(translated_instruction);
 
-	// + pop rax
-	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, {0x58}, "pop", "rax", PLH::Mode::x64));
-	current_address += 1;
+	// Store the scratch register content into the destination, if necessary
+	if (instructions_to_store.count(instruction.getMnemonic())) {
+		translation.emplace_back("mov ds:[" + destination + "], " + scratch_register);
+	}
 
-	// + lea rsp, [rsp+128]
-	translation.push_back(PLH::Instruction(current_address, {0}, 0, false, false, {0x48, 0x8D, 0xA4, 0x24, 0x28, 0x01, 0x00, 0x00}, "lea", "rsp, ss:[rsp+0x128]", PLH::Mode::x64));
-	current_address += 8;
+	// Restore the scratch register
+	translation.emplace_back("pop " + scratch_to_64.at(scratch_register));
 
-	// + jmp <resume>
-	uint64_t resume_address = instruction.getAddress() + instruction.size() + delta;
-	translation.push_back(PLH::makex86Jmp(current_address, resume_address)[0]);
+	// Restore the stack pointer
+	translation.emplace_back("lea rsp, ss:[rsp + 0x128]");
 
-	MemoryProtector prot((uint64_t) translation_address, translation_size, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
+	// Jump back to trampoline
+	translation.emplace_back(generate_jmp_instruction_string(resume_address));
 
-	return translation;
+	// Join all instructions into one string delimited by newlines
+	std::ostringstream translation_stream;
+	std::copy(translation.begin(), translation.end(), std::ostream_iterator<std::string>(translation_stream, "\n"));
+	const auto translation_string = translation_stream.str();
+
+	PLH::Log::log("Translation:\n" + translation_string, PLH::ErrorLevel::INFO);
+
+	// Parse the instructions via AsmTK
+	if (auto error = p.parse(translation_string.c_str())) {
+		auto message = std::string("AsmTK error: ") + asmjit::DebugUtils::errorAsString(error);
+		throw std::exception(message.c_str());
+	}
+
+	// Generate the binary code via AsmJit
+	uint64_t translation_address = 0;
+	if (auto error = m_asmjit_rt.add(&translation_address, &code)) {
+		auto message = std::string("AsmJit error: ") + asmjit::DebugUtils::errorAsString(error);
+		throw std::exception(message.c_str());
+	}
+
+	PLH::Log::log("Translation address: " + int_to_hex(translation_address) + "\n", PLH::ErrorLevel::INFO);
+
+	return translation_address;
 }
 
 bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
@@ -451,17 +541,17 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 
 	bool good = false;
 	do {
-		neededEntryCount = std::max((uint8_t)instsNeedingEntry.size(), (uint8_t)5);
+		neededEntryCount = std::max((uint8_t) instsNeedingEntry.size(), (uint8_t) 5);
 
 		// prol + jmp back to prol + N * jmpEntries
-		m_trampolineSz = (uint16_t)(prolSz + (getMinJmpSize() + destHldrSz) +
-			(getMinJmpSize() + destHldrSz)* neededEntryCount +
-			7); //extra bytes for dest-holders 8 bytes alignment
+		m_trampolineSz = (uint16_t) (prolSz + (getMinJmpSize() + destHldrSz) +
+									 (getMinJmpSize() + destHldrSz) * neededEntryCount +
+									 7); //extra bytes for dest-holders 8 bytes alignment
 
 		// allocate new trampoline before deleting old to increase odds of new mem address
-		auto tmpTrampoline = (uint64_t)new unsigned char[m_trampolineSz];
+		auto tmpTrampoline = (uint64_t) new unsigned char[m_trampolineSz];
 		if (m_trampoline != NULL) {
-			delete[](unsigned char*)m_trampoline;
+			delete[](unsigned char*) m_trampoline;
 		}
 
 		m_trampoline = tmpTrampoline;
@@ -477,24 +567,30 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 		return false;
 	}
 
-	for(auto& instruction : instsNeedingTranslation){
-		insts_t translation = generateTranslationRoutine(instruction, delta);
+	Log::log("Trampoline address: " + PLH::int_to_hex(m_trampoline), PLH::ErrorLevel::INFO);
 
-		Log::log("Translation:\n" + instsToStr(translation) + "\n", ErrorLevel::INFO);
-
-		PLH::ZydisDisassembler::writeEncoding(translation, *this);
+	for (auto& instruction: instsNeedingTranslation) {
+		uint64_t translation_address;
+		try {
+			const auto inst_offset = instruction.getAddress() - prolStart;
+			const uint64_t resume_address = m_trampoline + inst_offset + instruction.size();
+			translation_address = generateTranslationRoutine(instruction, resume_address);
+		} catch (const std::exception& ex) {
+			Log::log("Failed to generate translation routine: " + std::string(ex.what()) + "\n", ErrorLevel::SEV);
+			return false;
+		}
 
 		// replace the rip-relative instruction with jump to translation
 		auto inst_iterator = std::find(prologue.begin(), prologue.end(), instruction);
-		*inst_iterator = makex86Jmp(instruction.getAddress(), translation[0].getAddress())[0];
-		inst_iterator->setRelativeDisplacement(inst_iterator->getDisplacement().Relative);
+		*inst_iterator = makex86Jmp(instruction.getAddress(), translation_address)[0];
+		inst_iterator->setRelativeDisplacement(inst_iterator->getDisplacement().Relative, true);
 		instsNeedingReloc.push_back(*inst_iterator);
 
-		// nop the garbage bytes if necessary
+		// nop the garbage bytes if necessary. TODO: Use writeNop?
 		auto current_address = (uint8_t*) (inst_iterator->getAddress() + inst_iterator->size());
-		for(int i = 0; i < instruction.size() - 5; i++){
-			auto nop = PLH::Instruction((uint64_t)current_address++, {0}, 0, false, false, {0x90}, "nop", "", PLH::Mode::x64);
-			if(inst_iterator == prologue.end()){
+		for (int i = 0; i < instruction.size() - 5; i++) {
+			auto nop = PLH::Instruction((uint64_t) current_address++, {0}, 0, false, false, {0x90}, "nop", "", PLH::Mode::x64);
+			if (inst_iterator == prologue.end()) {
 				prologue.push_back(nop);
 				inst_iterator = prologue.end();
 			} else {
@@ -518,7 +614,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 	// each jmp tbl entries holder is one slot down from the previous (lambda holds state)
 	const auto makeJmpFn = [=, captureAddress = jmpHolderCurAddr](uint64_t a, PLH::Instruction& inst) mutable {
 		captureAddress -= destHldrSz;
-		assert(captureAddress > (uint64_t)m_trampoline && (captureAddress + destHldrSz) < (m_trampoline + m_trampolineSz));
+		assert(captureAddress > (uint64_t) m_trampoline && (captureAddress + destHldrSz) < (m_trampoline + m_trampolineSz));
 
 		// move inst to trampoline and point instruction to entry
 		const bool isIndirectCall = inst.isCalling() && inst.isIndirect();

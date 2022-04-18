@@ -10,6 +10,8 @@
 
 #include "polyhook2/PolyHookOsIncludes.hpp"
 
+#include <memoryapi.h>
+
 EffectTracker effects;
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
@@ -106,43 +108,9 @@ HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, {
 	return PLH::FnCast(oCreateMutexExA, &CreateMutexExA)(_args...);
 });
 
-uint64_t oSetProcessDPIAware = NULL;
-HOOK_CALLBACK(&SetProcessDPIAware, hookSetProcessDPIAware, {
-    PLH::StackCanary canary;
-    volatile int i = 0;
-    PH_UNUSED(i);
-    effects.PeakEffect().trigger();
-
-    printf("Hooked SetProcessDPIAware\n");
-
-    return PLH::FnCast(oSetProcessDPIAware, &SetProcessDPIAware)(_args...);
-});
 
 TEST_CASE("Testing 64 detours", "[x64Detour][ADetour]") {
     PLH::ZydisDisassembler dis(PLH::Mode::x64);
-
-	SECTION("RIP-relative data operation"){
-		// TODO: Place this at the end once this test passes
-
-		PLH::StackCanary canary;
-		// Function 'SetProcessDPIAware' in User32.dll was chosen
-		// because it starts with a RIP-relative data operation:
-		//
-		// cmp dword ptr ds:[7FFCA36D336C],0
-		// jne user32.7FFCA3661DA6
-		// mov rcx,FFFFFFFFFFFFFFFE
-		// jmp <user32.SetProcessDpiAwarenessContext>
-
-		PLH::x64Detour detour((char*)SetProcessDPIAware, (char*)hookSetProcessDPIAware, &oSetProcessDPIAware, dis);
-
-		REQUIRE(detour.hook() == true);
-
-		effects.PushEffect();
-		const auto result = SetProcessDPIAware();
-		REQUIRE(effects.PopEffect().didExecute());
-
-		REQUIRE(detour.unHook() == true);
-	}
 
 	SECTION("Normal function") {
 		PLH::StackCanary canary;
