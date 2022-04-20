@@ -395,6 +395,7 @@ const static std::map<std::string, std::string> scratch_to_64{ // NOLINT(cert-er
 struct TranslationResult {
 	std::string instruction;
 	std::string scratch_register;
+	std::string memory_register;
 };
 
 TranslationResult translateInstruction(const PLH::Instruction& instruction) {
@@ -429,23 +430,39 @@ TranslationResult translateInstruction(const PLH::Instruction& instruction) {
 			throw std::exception(message.c_str());
 		}
 
+		const auto address_register_string = PLH::string_contains(reg_string, "r15") ? "r14" : "r15";
+
 		return {
 			mnemonic + " " + scratch_register_string + ", " + reg_string,
 			scratch_register_string,
+			address_register_string
 		};
 	}
 
 	throw std::exception("No translation support for such instruction");
 }
 
+std::vector<std::string> generateAbsoluteJump(uint64_t destination) {
+	std::vector<std::string> instructions;
 
-std::string generate_jmp_instruction_string(const uint64_t destination) {
-	std::stringstream stream;
-	stream << "jmp 0x" << std::hex << destination;
-	return stream.str();
+	// Save rax
+	instructions.emplace_back("push rax");
+
+	// Load destination into rax
+	const auto hex_destination = PLH::int_to_hex(destination);
+	instructions.emplace_back("mov rax, " + hex_destination);
+
+	// Restore rax and set up the return address
+	instructions.emplace_back("xchg [rsp], rax");
+
+	// Finally, make the jump
+	instructions.emplace_back("ret");
+
+	return instructions;
 }
 
 /**
+ * @returns address of the first instructions of the translation routine
  * @throws std::exception
  */
 uint64_t PLH::x64Detour::generateTranslationRoutine(
@@ -461,37 +478,49 @@ uint64_t PLH::x64Detour::generateTranslationRoutine(
 	asmjit::x86::Assembler a(&code);
 	asmtk::AsmParser p(&a);
 
-	auto [translated_instruction, scratch_register] = translateInstruction(instruction);
+	auto [translated_instruction, scratch_register, address_register] = translateInstruction(instruction);
+
+	const auto& scratch_register_64 = scratch_to_64.at(scratch_register);
 
 	// Stores vector of instruction strings that comprise translation routine
 	std::vector<std::string> translation;
 
 	// Avoid spoiling the shadow space
-	translation.emplace_back("lea rsp, ss:[rsp - 0x128]");
+	translation.emplace_back("lea rsp, [rsp - 0x80]");
 
 	// Save the scratch register
-	translation.emplace_back("push " + scratch_to_64.at(scratch_register));
+	translation.emplace_back("push " + scratch_register_64);
+
+	// Save the address holder register
+	translation.emplace_back("push " + address_register);
+
+	// Load the destination address into the address holder register
+	const auto destination = int_to_hex(instruction.getDestination());
+	translation.emplace_back("mov " + address_register + ", " + destination);
 
 	// Load the destination content into scratch register
-	const auto destination = int_to_hex(instruction.getDestination());
-	translation.emplace_back("mov " + scratch_register + ", ds:[" + destination + "]");
+	translation.emplace_back("mov " + scratch_register + ", [" + address_register + "]");
 
 	// Replace RIP-relative instruction
 	translation.emplace_back(translated_instruction);
 
 	// Store the scratch register content into the destination, if necessary
 	if (instructions_to_store.count(instruction.getMnemonic())) {
-		translation.emplace_back("mov ds:[" + destination + "], " + scratch_register);
+		translation.emplace_back("mov [" + address_register + "], " + scratch_register_64);
 	}
 
+	// Restore the memory holder register
+	translation.emplace_back("pop " + address_register);
+
 	// Restore the scratch register
-	translation.emplace_back("pop " + scratch_to_64.at(scratch_register));
+	translation.emplace_back("pop " + scratch_register_64);
 
 	// Restore the stack pointer
-	translation.emplace_back("lea rsp, ss:[rsp + 0x128]");
+	translation.emplace_back("lea rsp, [rsp + 0x80]");
 
 	// Jump back to trampoline
-	translation.emplace_back("jmp " + int_to_hex(resume_address));
+	const auto jump_instructions = generateAbsoluteJump(resume_address);
+	translation.insert(translation.end(), jump_instructions.begin(), jump_instructions.end());
 
 	// Join all instructions into one string delimited by newlines
 	std::ostringstream translation_stream;
@@ -532,40 +561,29 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 
 	The relocation could also because of data operations too. But that's specific to the function and can't
 	work again on a retry (same function, duh). Return immediately in that case.**/
-	uint8_t neededEntryCount = 0;
 	insts_t instsNeedingEntry;
 	insts_t instsNeedingReloc;
 	insts_t instsNeedingTranslation;
-	uint8_t retries = 0;
+	insts_t instsNeedingAbsJmps;
 	int64_t delta;
 
-	bool good = false;
-	do {
-		neededEntryCount = std::max((uint8_t) instsNeedingEntry.size(), (uint8_t) 5);
+	uint8_t neededEntryCount = std::max((uint8_t) instsNeedingEntry.size(), (uint8_t) 5);
 
-		// prol + jmp back to prol + N * jmpEntries
-		m_trampolineSz = (uint16_t) (prolSz + (getMinJmpSize() + destHldrSz) +
-									 (getMinJmpSize() + destHldrSz) * neededEntryCount +
-									 7); //extra bytes for dest-holders 8 bytes alignment
+	// prol + jmp back to prol + N * jmpEntries
+	m_trampolineSz = (uint16_t) (prolSz + (getMinJmpSize() + destHldrSz) +
+								 (getMinJmpSize() + destHldrSz) * neededEntryCount +
+								 7); //extra bytes for dest-holders 8 bytes alignment
 
-		// allocate new trampoline before deleting old to increase odds of new mem address
-		auto tmpTrampoline = (uint64_t) new unsigned char[m_trampolineSz];
-		if (m_trampoline != NULL) {
-			delete[](unsigned char*) m_trampoline;
-		}
-
-		m_trampoline = tmpTrampoline;
-		delta = m_trampoline - prolStart;
-
-		if (!buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc, instsNeedingTranslation))
-			continue;
-
-		good = true;
-	} while (retries++ < 5 && !good);
-
-	if (!good) {
-		return false;
+	// allocate new trampoline before deleting old to increase odds of new mem address
+	auto tmpTrampoline = (uint64_t) new unsigned char[m_trampolineSz];
+	if (m_trampoline != NULL) {
+		delete[](unsigned char*) m_trampoline;
 	}
+
+	m_trampoline = tmpTrampoline;
+	delta = m_trampoline - prolStart;
+
+	buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc, instsNeedingTranslation);
 
 	Log::log("Trampoline address: " + PLH::int_to_hex(m_trampoline), PLH::ErrorLevel::INFO);
 
@@ -582,9 +600,15 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 
 		// replace the rip-relative instruction with jump to translation
 		auto inst_iterator = std::find(prologue.begin(), prologue.end(), instruction);
-		*inst_iterator = makex86Jmp(instruction.getAddress(), translation_address)[0];
-		inst_iterator->setRelativeDisplacement(inst_iterator->getDisplacement().Relative, true);
-		instsNeedingReloc.push_back(*inst_iterator);
+
+		// This is a somewhat hacky solution. We store the absolute address,
+		// but set the instruction as relative to fit into the existing entry-table logic
+		Instruction::Displacement disp{};
+		disp.Absolute = translation_address;
+		*inst_iterator = Instruction(instruction.getAddress(), disp, 1, true, false, {0xE9, 0, 0, 0, 0}, "jmp", PLH::int_to_hex(translation_address), Mode::x64);
+		inst_iterator->setHasDisplacement(true);
+		instsNeedingEntry.push_back(*inst_iterator);
+		instsNeedingAbsJmps.push_back(*inst_iterator);
 
 		// nop the garbage bytes if necessary. TODO: Use writeNop?
 		auto current_address = (uint8_t*) (inst_iterator->getAddress() + inst_iterator->size());
@@ -612,13 +636,14 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 	}
 
 	// each jmp tbl entries holder is one slot down from the previous (lambda holds state)
-	const auto makeJmpFn = [=, captureAddress = jmpHolderCurAddr](uint64_t a, PLH::Instruction& inst) mutable {
+	const auto makeJmpFn = [&, captureAddress = jmpHolderCurAddr](uint64_t a, PLH::Instruction& inst) mutable {
 		captureAddress -= destHldrSz;
 		assert(captureAddress > (uint64_t) m_trampoline && (captureAddress + destHldrSz) < (m_trampoline + m_trampolineSz));
 
 		// move inst to trampoline and point instruction to entry
 		const bool isIndirectCall = inst.isCalling() && inst.isIndirect();
-		auto oldDest = inst.getDestination();
+		const bool isAbsJmp = vector_contains(instsNeedingAbsJmps, inst);
+		auto oldDest = isAbsJmp ? inst.getAbsoluteDestination() : inst.getDestination();
 		inst.setAddress(inst.getAddress() + delta);
 		inst.setDestination(isIndirectCall ? captureAddress : a);
 

@@ -128,7 +128,7 @@ bool PLH::Detour::expandProlSelfJmps(insts_t& prol,
 	return true;
 }
 
-bool PLH::Detour::buildRelocationList(
+void PLH::Detour::buildRelocationList(
     insts_t& prologue,
     const uint64_t roundProlSz,
     const int64_t delta,
@@ -143,8 +143,12 @@ bool PLH::Detour::buildRelocationList(
 	const uint64_t prolStart = prologue.front().getAddress();
 
 	for (auto& inst : prologue) {
+		if(!inst.hasDisplacement()){
+			continue; // Skip instructions that don't have relative displacement
+		}
+
 		// types that change control flow
-		if (inst.isBranching() && inst.hasDisplacement() &&
+		if (inst.isBranching() &&
 			(inst.getDestination() < prolStart ||
 			inst.getDestination() > prolStart + roundProlSz)) {
 
@@ -154,8 +158,8 @@ bool PLH::Detour::buildRelocationList(
 				instsNeedingEntry.push_back(inst);
 			}else{
 				// can inst just be re-encoded or do we need a tbl entry
-				const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
-				const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits - 1) - 1.0); // 2^(bitSz-1) give max val, and -1 because signed ex (int8_t [-128, 127] = [-2^7, 2^7 - 1]
+				const auto dispSzBits = (uint8_t)inst.getDispSize() * 8;
+				const auto maxInstDisp = (uint64_t)(std::pow(2, dispSzBits - 1) - 1.0); // 2^(bitSz-1) give max val, and -1 because signed ex (int8_t [-128, 127] = [-2^7, 2^7 - 1]
 				if ((uint64_t)std::llabs(delta) > maxInstDisp) {
 					instsNeedingEntry.push_back(inst);
 				} else {
@@ -165,27 +169,26 @@ bool PLH::Detour::buildRelocationList(
 		}
 
 		// data operations (duplicated because clearer)
-		if (!inst.isBranching() && inst.hasDisplacement()) { // Can this happen on 32-bit?
-			const uint8_t dispSzBits = (uint8_t)inst.getDispSize() * 8;
-			const uint64_t maxInstDisp = (uint64_t)(std::pow(2, dispSzBits - 1) - 1.0);
+		if (!inst.isBranching()) { // Can this happen on 32-bit?
+			const auto dispSzBits = (uint8_t)inst.getDispSize() * 8;
+			const auto maxInstDisp = (uint64_t)(std::pow(2, dispSzBits - 1) - 1.0);
 			const auto absDelta = (uint64_t)std::llabs(delta);
             if (absDelta > maxInstDisp) {
-				/*EX: 48 8d 0d 96 79 07 00    lea rcx, [rip + 0x77996]
-				If instruction is moved beyond displacement field width
-				we can't fix the load. TODO: generate equivalent load
-				with asmjit and insert it at position
-				*/
-				std::string err = "Cannot fixup IP relative data operation, needed disp. beyond max disp range: " + inst.getFullName() +
-					" needed: " + int_to_hex(absDelta) + " raw: " + int_to_hex(delta) +  " max: " + int_to_hex(maxInstDisp);
-				Log::log(err, ErrorLevel::WARN);
-//				 return false;
+				/*
+				 * EX: 48 8d 0d 96 79 07 00    lea rcx, [rip + 0x77996]
+				 * If instruction is moved beyond displacement field width
+				 * we can't fix the load. Hence, we add it to the list of
+				 * instructions that need to be translated to equivalent ones.
+				 */
+//				std::string err = "Cannot fixup IP relative data operation, needed disp. beyond max disp range: " + inst.getFullName() +
+//					" needed: " + int_to_hex(absDelta) + " raw: " + int_to_hex(delta) +  " max: " + int_to_hex(maxInstDisp);
+//				Log::log(err, ErrorLevel::WARN);
 				instsNeedingTranslation.push_back(inst);
 			}else {
 				instsNeedingReloc.push_back(inst);
 			}
 		}
 	}
-	return true;
 }
 
 bool PLH::Detour::unHook() {

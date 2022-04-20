@@ -135,7 +135,7 @@ protected:
 							uint64_t& minProlSz,
 							uint64_t& roundProlSz);
 
-	bool buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t &instsNeedingEntry, PLH::insts_t &instsNeedingReloc, PLH::insts_t& instsNeedingTranslation);
+	void buildRelocationList(insts_t& prologue, const uint64_t roundProlSz, const int64_t delta, PLH::insts_t &instsNeedingEntry, PLH::insts_t &instsNeedingReloc, PLH::insts_t& instsNeedingTranslation);
 
 	template<typename MakeJmpFn>
 	PLH::insts_t relocateTrampoline(insts_t& prologue, uint64_t jmpTblStart, const int64_t delta, MakeJmpFn makeJmp, const PLH::insts_t& instsNeedingReloc, const PLH::insts_t& instsNeedingEntry, const PLH::insts_t& instsNeedingTranslation = {});

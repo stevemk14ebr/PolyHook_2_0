@@ -184,5 +184,16 @@ std::string int_to_hex(T i)
 	return stream.str();
 }
 
+template< typename T >
+inline bool vector_contains(std::vector<T> vec, T element)
+{
+	return std::find(vec.begin(), vec.end(), element) != vec.end();
+}
+
+inline bool string_contains(const std::string& str, const std::string& sub_str)
+{
+	return str.find(sub_str) != std::string::npos;
+}
+
 }
 #endif //POLYHOOK_2_0_MISC_HPP

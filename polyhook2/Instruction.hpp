@@ -45,16 +45,19 @@ public:
 		Init(address, displacement, displacementOffset, isRelative, isIndirect, Arr, mnemonic, opStr, false, false, mode);
 	}
 
+	uint64_t getAbsoluteDestination() const {
+		return m_displacement.Absolute;
+	}
+
+	uint64_t getRelativeDestination() const {
+		return m_address + m_displacement.Relative + size();
+	}
+
 	/**Get the address of where the instruction points if it's a branching instruction
 	* @Notes: Handles eip/rip & immediate branches correctly
 	* **/
 	uint64_t getDestination() const {
-		uint64_t dest = 0;
-		if (isDisplacementRelative()) {
-			dest = m_address + m_displacement.Relative + size();
-		} else {
-			dest = m_displacement.Absolute;
-		}
+		uint64_t dest = isDisplacementRelative() ? getRelativeDestination() : getAbsoluteDestination();
 
 		// ff 25 00 00 00 00 goes from jmp qword ptr [rip + 0] to jmp word ptr [rip + 0] on x64 -> x86
 		if (m_isIndirect) {
@@ -127,6 +130,10 @@ public:
 		return m_hasDisplacement;
 	}
 
+	void setHasDisplacement(bool hasDisplacement) {
+		m_hasDisplacement = hasDisplacement;
+	}
+
 	bool isBranching() const {
 		if (m_isBranching && m_isRelative) {
 			if (!m_hasDisplacement) {
@@ -159,7 +166,7 @@ public:
 		return m_mnemonic + " " + m_opStr;
 	}
 
-	size_t getDispSize() {
+	size_t getDispSize() const {
 		// jmp (e9 eb be ad de) = 5 bytes, 1 disp off, 4 disp sz
 		// 83 3d a5 7e 09 00 00 | cmp dword ptr ds:[0x00007FFD68ED336C], 0x00 = 7 bytes, 2 disp off, 4 disp size, 1 imm sz
 		return (m_hasImmediate ? m_immediateOffset : size()) - getDisplacementOffset();
@@ -397,7 +404,7 @@ inline PLH::insts_t makex64PreferredJump(const uint64_t address, const uint64_t 
 }
 
 /**Write an indirect style 6byte jump. Address is where the jmp instruction will be located, and
- * destHoldershould point to the memory location that *CONTAINS* the address to be jumped to.
+ * destHolder should point to the memory location that *CONTAINS* the address to be jumped to.
  * Destination should be the value that is written into destHolder, and be the address of where
  * the jmp should land.**/
 inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t destination, const uint64_t destHolder) {
