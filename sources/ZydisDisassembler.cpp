@@ -22,17 +22,17 @@ PLH::ZydisDisassembler::ZydisDisassembler(PLH::Mode mode) : m_decoder(new ZydisD
 PLH::ZydisDisassembler::~ZydisDisassembler() {
 	if (m_decoder) {
 		delete m_decoder;
-		m_decoder = 0;
+		m_decoder = nullptr;
 	}
 
 	if (m_formatter) {
 		delete m_formatter;
-		m_formatter = 0;
+		m_formatter = nullptr;
 	}
 }
 
 PLH::insts_t
-PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End, const MemAccessor &accessor) {
+PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End, const MemAccessor& accessor) {
 	insts_t insVec;
 	m_branchMap.clear();
 
@@ -43,7 +43,7 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 	}
 
 	// copy potentially remote memory to local buffer
-	uint8_t* buf = new uint8_t[(uint32_t) size];
+	auto* buf = new uint8_t[(uint32_t) size];
 	accessor.mem_copy((uint64_t) buf, firstInstruction, size);
 
 	ZydisDecodedInstruction insInfo;
@@ -98,7 +98,7 @@ bool PLH::ZydisDisassembler::getOpStr(ZydisDecodedInstruction* pInstruction, uin
 	return false;
 }
 
-void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction &inst, const ZydisDecodedInstruction* zydisInst) const {
+void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const {
 	inst.setBranching(zydisInst->meta.branch_type != ZYDIS_BRANCH_TYPE_NONE);
 	inst.setCalling(zydisInst->mnemonic == ZydisMnemonic::ZYDIS_MNEMONIC_CALL);
 
@@ -115,11 +115,14 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction &inst, const
 		switch (operand->type) {
 			case ZYDIS_OPERAND_TYPE_REGISTER: {
 				inst.setRegister(operand->reg.value);
+				inst.addOperandType(Instruction::OperandType::Register);
 				break;
 			}
 			case ZYDIS_OPERAND_TYPE_UNUSED:
 				break;
 			case ZYDIS_OPERAND_TYPE_MEMORY: { // Relative to RIP/EIP
+				inst.addOperandType(Instruction::OperandType::Displacement);
+
 				if (zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE) {
 					inst.setDisplacementOffset(zydisInst->raw.disp.offset);
 					inst.setRelativeDisplacement(operand->mem.disp.value, true);
@@ -145,6 +148,8 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction &inst, const
 			case ZYDIS_OPERAND_TYPE_POINTER:
 				break;
 			case ZYDIS_OPERAND_TYPE_IMMEDIATE: {
+				inst.addOperandType(Instruction::OperandType::Immediate);
+
 				// is displacement set earlier already?
 				if (!inst.hasDisplacement() && zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE) {
 					inst.setDisplacementOffset(zydisInst->raw.imm->offset);
@@ -153,6 +158,7 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction &inst, const
 				} else {
 					inst.setImmediateOffset(zydisInst->raw.imm->offset);
 					inst.setImmediate(zydisInst->raw.imm->value.s);
+					inst.setImmediateSize(zydisInst->raw.imm->size);
 				}
 				break;
 			}

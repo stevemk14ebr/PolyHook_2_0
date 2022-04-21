@@ -140,7 +140,7 @@ inline bool isMatch(const char* addr, const char* pat, const char* msk)
 	return false;
 }
 
-#define INRANGE(x,a,b)		(x >= a && x <= b) 
+#define INRANGE(x,a,b)		(x >= a && x <= b)
 #define getBits( x )		(INRANGE(x,'0','9') ? (x - '0') : ((x&(~0x20)) - 'A' + 0xa))
 #define getByte( x )		(getBits(x[0]) << 4 | getBits(x[1]))
 
@@ -178,9 +178,9 @@ template< typename T >
 std::string int_to_hex(T i)
 {
 	std::stringstream stream;
-	stream << "0x"
-		<< std::setfill('0') << std::setw(sizeof(T) * 2)
-		<< std::hex << i;
+	stream << "0x" << std::setfill('0') << std::setw(sizeof(T) * 2) << std::hex
+		<< (uint64_t) i; // We cast to the highest possible int because uint8_t will be printed as char
+
 	return stream.str();
 }
 

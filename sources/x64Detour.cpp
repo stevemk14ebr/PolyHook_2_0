@@ -279,11 +279,11 @@ bool PLH::x64Detour::hook() {
 
 	MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
 	if (_detourScheme & detour_scheme_t::VALLOC2 && boundedAllocSupported()) {
-		uint64_t max = (uint64_t) AlignDownwards(calc_2gb_above(m_fnAddress), PLH::getPageSize());
-		uint64_t min = (uint64_t) AlignDownwards(calc_2gb_below(m_fnAddress), PLH::getPageSize());
+		auto max = (uint64_t) AlignDownwards(calc_2gb_above(m_fnAddress), PLH::getPageSize());
+		auto min = (uint64_t) AlignDownwards(calc_2gb_below(m_fnAddress), PLH::getPageSize());
 
 		// each block is m_blocksize (8) at the time of writing. Do not write more than this.
-		uint64_t region = (uint64_t) m_allocator.allocate(min, max);
+		auto region = (uint64_t) m_allocator.allocate(min, max);
 		if (!region) {
 			if (_detourScheme & detour_scheme_t::CODE_CAVE || _detourScheme & detour_scheme_t::INPLACE) {
 				goto trycave;
@@ -330,7 +330,7 @@ bool PLH::x64Detour::hook() {
 	}
 
 	success:
-	m_disasm.writeEncoding(m_hookInsts, *this);
+	PLH::ZydisDisassembler::writeEncoding(m_hookInsts, *this);
 
 	// Nop the space between jmp and end of prologue
 	assert(m_hookSize >= m_nopProlOffset);
@@ -355,7 +355,14 @@ bool PLH::x64Detour::unHook() {
  * of the scratch register into the destination
  */
 const static std::set<std::string> instructions_to_store{ // NOLINT(cert-err58-cpp)
-	"add", "adc" // TODO: Complete with full list
+	"adc", "add", "and", "bsf", "bsr", "btc", "btr", "bts",
+	"cmovb", "cmove", "cmovl", "cmovle", "cmovnb", "cmovnbe", "cmovnl", "cmovnle",
+	"cmovno", "cmovnp", "cmovns", "cmovnz", "cmovo", "cmovp", "cmovs", "cmovz",
+	"cmpxchg", "crc32", "cvtsi2sd", "cvtsi2ss", "dec", "extractps", "inc", "mov",
+	"neg", "not", "or", "pextrb", "pextrd", "pextrq", "rcl", "rcr", "rol", "ror",
+	"sal", "sar", "sbb", "setb", "setbe", "setl", "setle", "setnb", "setnbe", "setnl",
+	"setnle", "setno", "setnp", "setns", "setnz", "seto", "setp", "sets", "setz", "shl",
+	"shld", "shr", "shrd", "sub", "verr", "verw", "xadd", "xchg", "xor"
 };
 
 const static std::map<ZydisRegister, ZydisRegister> a_to_b{ // NOLINT(cert-err58-cpp)
@@ -401,11 +408,32 @@ struct TranslationResult {
 TranslationResult translateInstruction(const PLH::Instruction& instruction) {
 	const auto& mnemonic = instruction.getMnemonic();
 	ZydisRegister scratch_register;
-	std::string scratch_register_string;
+	std::string scratch_register_string, address_register_string, second_operand_string;
 
 	if (instruction.hasImmediate()) { // 2nd operand is immediate
-		// TODO
-		throw std::exception("No translation support for immediate operands yet");
+		const auto inst_contains = [&](const std::string& needle) {
+			return PLH::string_contains(instruction.getFullName(), needle);
+		};
+
+		// We need to pick a register that matches the pointer size.
+		// Only the mov instruction can encode 64-bit immediate, so it is a special case
+		scratch_register_string =
+			inst_contains("qword") ? (instruction.getMnemonic() == "mov" ? "rax" : "eax") :
+			inst_contains("dword") ? "eax" :
+			inst_contains("word") ? "ax" :
+			inst_contains("byte") ? "al" :
+			throw std::exception("Failed to detect pointer size");
+
+		const auto imm_size = instruction.getImmediateSize();
+		const auto immediate_string =
+			imm_size == 64 ? PLH::int_to_hex((uint64_t) instruction.getImmediate()) :
+			imm_size == 32 ? PLH::int_to_hex((uint32_t) instruction.getImmediate()) :
+			imm_size == 16 ? PLH::int_to_hex((uint16_t) instruction.getImmediate()) :
+			imm_size == 8 ? PLH::int_to_hex((uint8_t) instruction.getImmediate()) :
+			throw std::exception(("Unexpected size of immediate: " + std::to_string(imm_size)).c_str());
+
+		address_register_string = "r15";
+		second_operand_string = immediate_string;
 	} else if (instruction.hasRegister()) { // 2nd operand is register
 		const auto reg = instruction.getRegister();
 		const auto regClass = ZydisRegisterGetClass(reg);
@@ -430,16 +458,22 @@ TranslationResult translateInstruction(const PLH::Instruction& instruction) {
 			throw std::exception(message.c_str());
 		}
 
-		const auto address_register_string = PLH::string_contains(reg_string, "r15") ? "r14" : "r15";
-
-		return {
-			mnemonic + " " + scratch_register_string + ", " + reg_string,
-			scratch_register_string,
-			address_register_string
-		};
+		address_register_string = PLH::string_contains(reg_string, "r15") ? "r14" : "r15";
+		second_operand_string = reg_string;
+	} else {
+		throw std::exception("No translation support for such instruction");
 	}
 
-	throw std::exception("No translation support for such instruction");
+	const auto startsWithDisplacement = instruction.getOperandTypes()[0] == PLH::Instruction::OperandType::Displacement;
+
+	const auto operand1 = startsWithDisplacement ? scratch_register_string : second_operand_string;
+	const auto operand2 = startsWithDisplacement ? second_operand_string : scratch_register_string;
+
+	return {
+		mnemonic + " " + operand1 + ", " + operand2,
+		scratch_register_string,
+		address_register_string
+	};
 }
 
 std::vector<std::string> generateAbsoluteJump(uint64_t destination, uint16_t stack_clean_size) {
@@ -599,8 +633,8 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 		// replace the rip-relative instruction with jump to translation
 		auto inst_iterator = std::find(prologue.begin(), prologue.end(), instruction);
 
-		// This is a somewhat hacky solution. We store the absolute address,
-		// but set the instruction as relative to fit into the existing entry-table logic
+		// We store the absolute address, but set the instruction as relative
+		// to fit into the existing entry-table logic
 		Instruction::Displacement disp{};
 		disp.Absolute = translation_address;
 		*inst_iterator = Instruction(instruction.getAddress(), disp, 1, true, false, {0xE9, 0, 0, 0, 0}, "jmp", PLH::int_to_hex(translation_address), Mode::x64);

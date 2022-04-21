@@ -19,6 +19,12 @@ public:
 		uint64_t Absolute;
 	};
 
+	enum class OperandType {
+		Displacement,
+		Register,
+		Immediate,
+	};
+
 	Instruction(uint64_t address,
 				const Displacement& displacement,
 				const uint8_t displacementOffset,
@@ -245,6 +251,14 @@ public:
 		return m_immediate;
 	}
 
+	uint8_t getImmediateSize() const {
+		return m_immediateSize;
+	}
+
+	void setImmediateSize(uint8_t size) {
+		m_immediateSize = size;
+	}
+
 	void setRegister(ZydisRegister reg){
 		m_register = reg;
 	}
@@ -255,6 +269,14 @@ public:
 
 	bool hasRegister() const {
 		return m_register != ZYDIS_REGISTER_NONE;
+	}
+
+	void addOperandType(OperandType type){
+		m_operands.emplace_back(type);
+	}
+
+	const std::vector<OperandType>& getOperandTypes() const {
+		return m_operands;
 	}
 
 private:
@@ -277,6 +299,7 @@ private:
 		m_hasDisplacement = hasDisp;
 		m_hasImmediate = hasImmediate;
 		m_immediate = 0;
+		m_immediateSize = 0;
 		m_register = ZydisRegister::ZYDIS_REGISTER_NONE;
 
 		m_bytes = bytes;
@@ -299,9 +322,11 @@ private:
 
 	uint64_t      m_address;         // Address the instruction is at
 	uint64_t      m_immediate;       // Immediate op
+	uint8_t       m_immediateSize;   // Immediate size, in bits
 	uint8_t       m_dispOffset;      // Offset into the byte array where displacement is encoded
 
-	std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
+	std::vector<uint8_t> m_bytes;    // All the raw bytes of this instruction
+	std::vector<OperandType> m_operands; // Types of all instruction operands
 	std::string          m_mnemonic;
 	std::string          m_opStr;
 
@@ -321,7 +346,7 @@ inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
 		byteStream << std::hex << std::setfill('0') << std::setw(2) << (unsigned)obj.getBytes()[i] << " ";
 
 	os << std::hex << obj.getAddress() << " [" << obj.size() << "]: ";
-	os << std::setfill(' ') << std::setw(30) << std::left << byteStream.str();
+	os << std::setfill(' ') << std::setw(40) << std::left << byteStream.str();
 	os << obj.getFullName();
 
 	if (obj.hasDisplacement() && obj.isDisplacementRelative())
