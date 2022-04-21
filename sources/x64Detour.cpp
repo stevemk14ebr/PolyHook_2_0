@@ -442,7 +442,7 @@ TranslationResult translateInstruction(const PLH::Instruction& instruction) {
 	throw std::exception("No translation support for such instruction");
 }
 
-std::vector<std::string> generateAbsoluteJump(uint64_t destination) {
+std::vector<std::string> generateAbsoluteJump(uint64_t destination, uint16_t stack_clean_size) {
 	std::vector<std::string> instructions;
 
 	// Save rax
@@ -456,7 +456,7 @@ std::vector<std::string> generateAbsoluteJump(uint64_t destination) {
 	instructions.emplace_back("xchg [rsp], rax");
 
 	// Finally, make the jump
-	instructions.emplace_back("ret");
+	instructions.emplace_back("ret " + PLH::int_to_hex(stack_clean_size));
 
 	return instructions;
 }
@@ -515,11 +515,9 @@ uint64_t PLH::x64Detour::generateTranslationRoutine(
 	// Restore the scratch register
 	translation.emplace_back("pop " + scratch_register_64);
 
-	// Restore the stack pointer
-	translation.emplace_back("lea rsp, [rsp + 0x80]");
-
-	// Jump back to trampoline
-	const auto jump_instructions = generateAbsoluteJump(resume_address);
+	// Jump back to trampoline, ret cleans up the lea from earlier
+	// we do it this way to ensure pushing our return address doesn't overwrite shadow space
+	const auto jump_instructions = generateAbsoluteJump(resume_address, 0x80);
 	translation.insert(translation.end(), jump_instructions.begin(), jump_instructions.end());
 
 	// Join all instructions into one string delimited by newlines
@@ -647,7 +645,7 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 		inst.setAddress(inst.getAddress() + delta);
 		inst.setDestination(isIndirectCall ? captureAddress : a);
 
-		// ff 25 indirect call re-written to point at dest-holder. e8 direct call, or jmps of any time point to literal jmp instruction
+		// ff 25 indirect call re-written to point at dest-holder. e8 direct call, or jmps of any kind point to literal jmp instruction
 		return isIndirectCall ? makex64DestHolder(oldDest, captureAddress) : makex64MinimumJump(a, oldDest, captureAddress);
 	};
 
