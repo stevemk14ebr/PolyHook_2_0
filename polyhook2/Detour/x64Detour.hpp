@@ -14,48 +14,69 @@
 #include "polyhook2/RangeAllocator.hpp"
 #include <asmjit/asmjit.h>
 
-using namespace std::placeholders;
-
 namespace PLH {
 
+using std::optional;
+
 class x64Detour : public Detour {
+
 public:
     enum detour_scheme_t : uint8_t {
         CODE_CAVE = 1 << 0, //searching for code-cave to keep fnCallback.
-        INPLACE =  1 << 1,    //use push-ret for fnCallback in-place storage.
-		VALLOC2 = 1 << 2, // use virtualalloc2 to allocate in range. Only on win10 > 1803
-		RECOMMENDED = VALLOC2 | CODE_CAVE,
-	    ALL =  CODE_CAVE | INPLACE | VALLOC2, // first try to allocate, then fallback to code cave if not supported (will not fallback on failure of allocation)
+        INPLACE = 1 << 1,    //use push-ret for fnCallback in-place storage.
+        VALLOC2 = 1 << 2, // use virtualalloc2 to allocate in range. Only on win10 > 1803
+        RECOMMENDED = VALLOC2 | CODE_CAVE,
+        // first try to allocate, then fallback to code cave if not supported.
+        // will not fallback on failure of allocation
+        ALL = CODE_CAVE | INPLACE | VALLOC2,
     };
 
-	x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ZydisDisassembler& dis, const uint8_t maxDepth = c_maxDepth);
+    x64Detour(
+        uint64_t fnAddress,
+        uint64_t fnCallback,
+        uint64_t* userTrampVar,
+        PLH::ZydisDisassembler& dis,
+        uint8_t maxDepth = c_maxDepth
+    );
 
-	x64Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ZydisDisassembler& dis, const uint8_t maxDepth = c_maxDepth);
-	virtual ~x64Detour() override;
-	virtual bool hook() override;
-	virtual bool unHook() override;
+    x64Detour(
+        const char* fnAddress,
+        const char* fnCallback,
+        uint64_t* userTrampVar,
+        PLH::ZydisDisassembler& dis,
+        uint8_t maxDepth = c_maxDepth
+    );
 
-	Mode getArchType() const override;
+    ~x64Detour() override;
 
-	uint8_t getMinJmpSize() const;
+    bool hook() override;
 
-	uint8_t getPrefJmpSize() const;
+    bool unHook() override;
 
-	detour_scheme_t getDetourScheme() const;
-	void setDetourScheme(detour_scheme_t scheme);
+    Mode getArchType() const override;
+
+    uint8_t getMinJmpSize() const;
+
+    uint8_t getPrefJmpSize() const;
+
+    detour_scheme_t getDetourScheme() const;
+
+    void setDetourScheme(detour_scheme_t scheme);
 
 protected:
-	bool makeTrampoline(insts_t& prologue, insts_t& outJmpTable);
+    bool makeTrampoline(insts_t& prologue, insts_t& outJmpTable);
 
-	// assumes we are looking within a +-2GB window
-	template<uint16_t SIZE>
-	std::optional<uint64_t> findNearestCodeCave(uint64_t addr);
-	std::optional<uint64_t> generateTranslationRoutine(const Instruction& instruction, uint64_t resume_address);
+    // assumes we are looking within a +-2GB window
+    template<uint16_t SIZE>
+    optional<uint64_t> findNearestCodeCave(uint64_t address);
 
-	detour_scheme_t _detourScheme { detour_scheme_t::RECOMMENDED }; // this is the most stable configuration.
-	std::optional<uint64_t> m_valloc2_region;
-	RangeAllocator m_allocator;
-	asmjit::JitRuntime m_asmjit_rt;
+    optional<uint64_t> generateTranslationRoutine(const Instruction& instruction, uint64_t resume_address);
+
+    detour_scheme_t _detourScheme = detour_scheme_t::RECOMMENDED; // this is the most stable configuration.
+    optional<uint64_t> m_valloc2_region;
+    RangeAllocator m_allocator;
+    asmjit::JitRuntime m_asmjit_rt;
 };
+
 }
 #endif //POLYHOOK_2_X64DETOUR_HPP

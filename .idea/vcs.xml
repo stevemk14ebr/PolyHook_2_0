@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/asmjit" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/asmtk" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/zydis" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/zydis/dependencies/zycore" vcs="Git" />
+  </component>
+</project>
