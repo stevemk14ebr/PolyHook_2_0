@@ -53,10 +53,10 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunk(const std::string& dllName, const s
 #endif
 
 	IMAGE_THUNK_DATA* pThunk = nullptr;
-	PEB_LDR_DATA* ldr = (PPEB_LDR_DATA)peb->Ldr;
+	auto* ldr = (PPEB_LDR_DATA)peb->Ldr;
 
 	// find loaded module from peb
-	for (LDR_DATA_TABLE_ENTRY* dte = (LDR_DATA_TABLE_ENTRY*)ldr->InLoadOrderModuleList.Flink;
+	for (auto* dte = (LDR_DATA_TABLE_ENTRY*)ldr->InLoadOrderModuleList.Flink;
 		 dte->DllBase != nullptr;
 		 dte = (LDR_DATA_TABLE_ENTRY*)dte->InLoadOrderLinks.Flink) {
 
@@ -72,10 +72,9 @@ IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunk(const std::string& dllName, const s
 			return pThunk;
 	}
 
-	if (pThunk == nullptr) {
-		Log::log("Failed to find thunk for api from requested dll", ErrorLevel::SEV);
-	}
-	return pThunk;
+	Log::log("Failed to find thunk for api from requested dll", ErrorLevel::SEV);
+
+	return nullptr;
 }
 
 IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunkInModule(void* moduleBase, const std::string& dllName, const std::string& apiName) {

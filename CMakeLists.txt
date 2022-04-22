@@ -255,7 +255,7 @@ if(POLYHOOK_FEATURE_DETOURS)
 	if(NOT POLYHOOK_BUILD_DLL)
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8) #64-bit
 			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx64.cpp
-			 ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourRelativex64.cpp)
+			 ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourTranslationx64.cpp)
 		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4) #32-bit
 			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx86.cpp)
 		endif()

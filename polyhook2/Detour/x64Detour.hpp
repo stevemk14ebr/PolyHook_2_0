@@ -50,7 +50,7 @@ protected:
 	// assumes we are looking within a +-2GB window
 	template<uint16_t SIZE>
 	std::optional<uint64_t> findNearestCodeCave(uint64_t addr);
-	uint64_t generateTranslationRoutine(const Instruction& instruction, uint64_t resume_address);
+	std::optional<uint64_t> generateTranslationRoutine(const Instruction& instruction, uint64_t resume_address);
 
 	detour_scheme_t _detourScheme { detour_scheme_t::RECOMMENDED }; // this is the most stable configuration.
 	std::optional<uint64_t> m_valloc2_region;

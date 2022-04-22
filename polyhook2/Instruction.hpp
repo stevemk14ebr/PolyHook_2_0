@@ -279,6 +279,10 @@ public:
 		return m_operands;
 	}
 
+	static inline PLH::Instruction makex64Nop(const uint64_t address, const std::vector<uint8_t>& bytes = {0x90}){
+		return Instruction(address, {0}, 0, false, false, bytes, "nop", "", Mode::x64);
+	}
+
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
@@ -463,7 +467,6 @@ inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destinatio
 
 	return { Instruction(address, disp, 1, true, false, bytes, "jmp", PLH::int_to_hex(destination), Mode::x86) };
 }
-
 
 inline PLH::insts_t makeAgnosticJmp(const uint64_t address, const uint64_t destination) {
 	if constexpr (sizeof(char*) == 4)

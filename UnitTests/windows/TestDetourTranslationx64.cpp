@@ -42,7 +42,7 @@ unsigned char cmpQwordRegR10[] = {
 	0xC3                                      // ret
 };
 
-unsigned char cmpDwordRegA[] = {
+unsigned char cmpRegADword[] = {
 	0x3B, 0x05, 0xFA, 0xFF, 0xFF, 0xFF, // cmp eax, dword ptr ds:[rip - 6]
 	0x90, 0x90, 0x90, 0x90,             // nop x4
 	0xC3                                // ret
@@ -54,7 +54,7 @@ unsigned char cmpWordRegB[] = {
 	0xC3                                      // ret
 };
 
-unsigned char cmpByteRegR8b[] = {
+unsigned char cmpR15bByte[] = {
 	0x44, 0x3A, 0x3D, 0xF9, 0xFF, 0xFF, 0xFF, // cmp r15b, byte ptr ds:[rip - 7]
 	0x90, 0x90, 0x90, 0x90,                   // nop x4
 	0xC3                                      // ret
@@ -82,7 +82,7 @@ uint64_t hookCmpQwordReg() {
 	return PLH::FnCast(oCmpQwordReg, &hookCmpQwordReg)();
 }
 
-TEST_CASE("Testing RIP-relative detours", "[RipDetour][ADetour]") {
+TEST_CASE("Testing Detours with Translations", "[Translation][ADetour]") {
 	PLH::ZydisDisassembler dis(PLH::Mode::x64);
 
 	// Immediate
@@ -158,7 +158,7 @@ TEST_CASE("Testing RIP-relative detours", "[RipDetour][ADetour]") {
 
 	SECTION("cmp dword & reg") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((char*) cmpDwordRegA, (char*) hookCmpQwordReg, &oCmpQwordReg, dis);
+		PLH::x64Detour detour((char*) cmpRegADword, (char*) hookCmpQwordReg, &oCmpQwordReg, dis);
 
 		REQUIRE(detour.hook());
 		REQUIRE(detour.unHook());
@@ -174,7 +174,7 @@ TEST_CASE("Testing RIP-relative detours", "[RipDetour][ADetour]") {
 
 	SECTION("cmp byte & reg") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((char*) cmpByteRegR8b, (char*) hookCmpQwordReg, &oCmpQwordReg, dis);
+		PLH::x64Detour detour((char*) cmpR15bByte, (char*) hookCmpQwordReg, &oCmpQwordReg, dis);
 
 		REQUIRE(detour.hook());
 		REQUIRE(detour.unHook());

@@ -142,7 +142,7 @@ protected:
 
 	/**
 	Insert nops from [Base, Base+size). We _MUST_ insert multi-byte nops so we don't accidentally
-	confused our code cave finder for x64
+	confuse our code cave finder for x64
 	**/
 	void writeNop(uint64_t base, uint32_t size);
 };

@@ -351,8 +351,10 @@ bool PLH::x64Detour::unHook() {
 }
 
 /**
- * Translations of such instruction require storing contents
- * of the scratch register into the destination
+ * Holds a list of instructions that require us to store contents of the scratch register
+ * into the original destination address. For example, in `add [0x...], rbx` after translation
+ * we also need to store it: `add rax, rbx` && `mov [r15], rax`, where as in cmp instruction for
+ * instance there is no such requirement.
  */
 const static std::set<std::string> instructions_to_store{ // NOLINT(cert-err58-cpp)
 	"adc", "add", "and", "bsf", "bsr", "btc", "btr", "bts",
@@ -402,10 +404,61 @@ const static std::map<std::string, std::string> scratch_to_64{ // NOLINT(cert-er
 struct TranslationResult {
 	std::string instruction;
 	std::string scratch_register;
-	std::string memory_register;
+	std::string address_register;
 };
 
-TranslationResult translateInstruction(const PLH::Instruction& instruction) {
+/**
+ * Generates as many nop instructions as necessary to fill the give size
+ */
+PLH::insts_t make_nops(uint64_t address, uint32_t size) {
+	assert(size > 0);
+	int max_nop_size = 9;
+
+	const auto make_nop = [&](const uint8_t nop_size) {
+		assert(nop_size <= max_nop_size);
+
+		switch (nop_size) {
+			case 1:
+				return PLH::Instruction::makex64Nop(address, {0x90});
+			case 2:
+				return PLH::Instruction::makex64Nop(address, {0x66, 0x90});
+			case 3:
+				return PLH::Instruction::makex64Nop(address, {0x0F, 0x1F, 0x00});
+			case 4:
+				return PLH::Instruction::makex64Nop(address, {0x0F, 0x1F, 0x40, 0x00});
+			case 5:
+				return PLH::Instruction::makex64Nop(address, {0x0F, 0x1F, 0x44, 0x00, 0x00});
+			case 6:
+				return PLH::Instruction::makex64Nop(address, {0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00});
+			case 7:
+				return PLH::Instruction::makex64Nop(address, {0x0F, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00});
+			case 8:
+				return PLH::Instruction::makex64Nop(address, {0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00});
+			default:
+				return PLH::Instruction::makex64Nop(address, {0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00});
+		}
+	};
+
+	PLH::insts_t nops;
+
+	auto max_nop_count = (int) (size / max_nop_size);
+	auto remainder_nop_size = (int) (size % max_nop_size);
+
+	for (int i = 0; i < max_nop_count; i++) {
+		nops.emplace_back(make_nop(max_nop_size));
+	}
+
+	nops.emplace_back(make_nop(remainder_nop_size));
+
+	return nops;
+}
+
+
+/**
+ * Generates and equivalent instruction that replaces memory operand with register
+ * of corresponding size.
+ */
+std::optional<TranslationResult> translateInstruction(const PLH::Instruction& instruction) {
 	const auto& mnemonic = instruction.getMnemonic();
 	ZydisRegister scratch_register;
 	std::string scratch_register_string, address_register_string, second_operand_string;
@@ -421,16 +474,24 @@ TranslationResult translateInstruction(const PLH::Instruction& instruction) {
 			inst_contains("qword") ? (instruction.getMnemonic() == "mov" ? "rax" : "eax") :
 			inst_contains("dword") ? "eax" :
 			inst_contains("word") ? "ax" :
-			inst_contains("byte") ? "al" :
-			throw std::exception("Failed to detect pointer size");
+			inst_contains("byte") ? "al" : "";
+
+		if (scratch_register_string.empty()) {
+			PLH::Log::log("Failed to detect pointer size: " + instruction.getFullName(), PLH::ErrorLevel::SEV);
+			return {};
+		}
 
 		const auto imm_size = instruction.getImmediateSize();
 		const auto immediate_string =
 			imm_size == 64 ? PLH::int_to_hex((uint64_t) instruction.getImmediate()) :
 			imm_size == 32 ? PLH::int_to_hex((uint32_t) instruction.getImmediate()) :
 			imm_size == 16 ? PLH::int_to_hex((uint16_t) instruction.getImmediate()) :
-			imm_size == 8 ? PLH::int_to_hex((uint8_t) instruction.getImmediate()) :
-			throw std::exception(("Unexpected size of immediate: " + std::to_string(imm_size)).c_str());
+			imm_size == 8 ? PLH::int_to_hex((uint8_t) instruction.getImmediate()) : "";
+
+		if (immediate_string.empty()) {
+			PLH::Log::log("Unexpected size of immediate: " + std::to_string(imm_size), PLH::ErrorLevel::SEV);
+			return {};
+		}
 
 		address_register_string = "r15";
 		second_operand_string = immediate_string;
@@ -447,21 +508,22 @@ TranslationResult translateInstruction(const PLH::Instruction& instruction) {
 			scratch_register = class_to_reg.at(regClass);
 		} else {
 			// Unexpected register
-			auto message = "Unexpected register: " + reg_string;
-			throw std::exception(message.c_str());
+			PLH::Log::log("Unexpected register: " + reg_string, PLH::ErrorLevel::SEV);
+			return {};
 		}
 
 		scratch_register_string = ZydisRegisterGetString(scratch_register);
 
 		if (!scratch_to_64.count(scratch_register_string)) {
-			auto message = "Unexpected scratch register: " + scratch_register_string;
-			throw std::exception(message.c_str());
+			PLH::Log::log("Unexpected scratch register: " + scratch_register_string, PLH::ErrorLevel::SEV);
+			return {};
 		}
 
 		address_register_string = PLH::string_contains(reg_string, "r15") ? "r14" : "r15";
 		second_operand_string = reg_string;
 	} else {
-		throw std::exception("No translation support for such instruction");
+		PLH::Log::log("No translation support for such instruction", PLH::ErrorLevel::SEV);
+		return {};
 	}
 
 	const auto startsWithDisplacement = instruction.getOperandTypes()[0] == PLH::Instruction::OperandType::Displacement;
@@ -469,11 +531,12 @@ TranslationResult translateInstruction(const PLH::Instruction& instruction) {
 	const auto operand1 = startsWithDisplacement ? scratch_register_string : second_operand_string;
 	const auto operand2 = startsWithDisplacement ? second_operand_string : scratch_register_string;
 
-	return {
-		mnemonic + " " + operand1 + ", " + operand2,
-		scratch_register_string,
-		address_register_string
-	};
+	TranslationResult result;
+	result.instruction = mnemonic + " " + operand1 + ", " + operand2;
+	result.scratch_register = scratch_register_string;
+	result.address_register = address_register_string;
+
+	return {result};
 }
 
 std::vector<std::string> generateAbsoluteJump(uint64_t destination, uint16_t stack_clean_size) {
@@ -483,8 +546,7 @@ std::vector<std::string> generateAbsoluteJump(uint64_t destination, uint16_t sta
 	instructions.emplace_back("push rax");
 
 	// Load destination into rax
-	const auto hex_destination = PLH::int_to_hex(destination);
-	instructions.emplace_back("mov rax, " + hex_destination);
+	instructions.emplace_back("mov rax, " + PLH::int_to_hex(destination));
 
 	// Restore rax and set up the return address
 	instructions.emplace_back("xchg [rsp], rax");
@@ -497,22 +559,25 @@ std::vector<std::string> generateAbsoluteJump(uint64_t destination, uint16_t sta
 
 /**
  * @returns address of the first instructions of the translation routine
- * @throws std::exception
  */
-uint64_t PLH::x64Detour::generateTranslationRoutine(
+std::optional<uint64_t> PLH::x64Detour::generateTranslationRoutine(
 	const PLH::Instruction& instruction,
 	uint64_t resume_address
 ) {
 	// AsmTK parses strings for AsmJit, which generates the binary code.
 	asmjit::CodeHolder code;
 
-	// FIXME: Without providing base address, asmjit will likely fail on relocation
 	code.init(m_asmjit_rt.environment());
 
 	asmjit::x86::Assembler a(&code);
 	asmtk::AsmParser p(&a);
 
-	auto [translated_instruction, scratch_register, address_register] = translateInstruction(instruction);
+	const auto result = translateInstruction(instruction);
+	if (!result) {
+		return {};
+	}
+
+	auto [translated_instruction, scratch_register, address_register] = *result;
 
 	const auto& scratch_register_64 = scratch_to_64.at(scratch_register);
 
@@ -563,20 +628,33 @@ uint64_t PLH::x64Detour::generateTranslationRoutine(
 
 	// Parse the instructions via AsmTK
 	if (auto error = p.parse(translation_string.c_str())) {
-		auto message = std::string("AsmTK error: ") + asmjit::DebugUtils::errorAsString(error);
-		throw std::exception(message.c_str());
+		PLH::Log::log(std::string("AsmTK error: ") + asmjit::DebugUtils::errorAsString(error), PLH::ErrorLevel::SEV);
+		return {};
 	}
 
 	// Generate the binary code via AsmJit
 	uint64_t translation_address = 0;
 	if (auto error = m_asmjit_rt.add(&translation_address, &code)) {
-		auto message = std::string("AsmJit error: ") + asmjit::DebugUtils::errorAsString(error);
-		throw std::exception(message.c_str());
+		PLH::Log::log(std::string("AsmJit error: ") + asmjit::DebugUtils::errorAsString(error), PLH::ErrorLevel::SEV);
+		return {};
 	}
 
 	PLH::Log::log("Translation address: " + int_to_hex(translation_address) + "\n", PLH::ErrorLevel::INFO);
 
-	return translation_address;
+	return {translation_address};
+}
+
+/**
+ * Makes an instruction with stored absolute address, but sets the instruction as relative
+ * to fit into the existing entry-table logic
+ */
+PLH::Instruction makeRelJmpWithAbsDest(const uint64_t address, const uint64_t abs_destination) {
+	PLH::Instruction::Displacement disp{};
+	disp.Absolute = abs_destination;
+	PLH::Instruction instruction(address, disp, 1, true, false, {0xE9, 0, 0, 0, 0}, "jmp", PLH::int_to_hex(abs_destination), PLH::Mode::x64);
+	instruction.setHasDisplacement(true);
+
+	return instruction;
 }
 
 bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
@@ -620,37 +698,33 @@ bool PLH::x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 	Log::log("Trampoline address: " + PLH::int_to_hex(m_trampoline), PLH::ErrorLevel::INFO);
 
 	for (auto& instruction: instsNeedingTranslation) {
-		uint64_t translation_address;
-		try {
-			const auto inst_offset = instruction.getAddress() - prolStart;
-			const uint64_t resume_address = m_trampoline + inst_offset + instruction.size();
-			translation_address = generateTranslationRoutine(instruction, resume_address);
-		} catch (const std::exception& ex) {
-			Log::log("Failed to generate translation routine: " + std::string(ex.what()) + "\n", ErrorLevel::SEV);
+		const auto inst_offset = instruction.getAddress() - prolStart;
+		const uint64_t resume_address = m_trampoline + inst_offset + instruction.size();
+		auto opt_translation_address = generateTranslationRoutine(instruction, resume_address);
+		if (!opt_translation_address) {
 			return false;
 		}
 
 		// replace the rip-relative instruction with jump to translation
 		auto inst_iterator = std::find(prologue.begin(), prologue.end(), instruction);
+		const auto jump = makeRelJmpWithAbsDest(instruction.getAddress(), *opt_translation_address);
+		*inst_iterator = jump;
+		instsNeedingEntry.push_back(jump);
+		instsNeedingAbsJmps.push_back(jump);
 
-		// We store the absolute address, but set the instruction as relative
-		// to fit into the existing entry-table logic
-		Instruction::Displacement disp{};
-		disp.Absolute = translation_address;
-		*inst_iterator = Instruction(instruction.getAddress(), disp, 1, true, false, {0xE9, 0, 0, 0, 0}, "jmp", PLH::int_to_hex(translation_address), Mode::x64);
-		inst_iterator->setHasDisplacement(true);
-		instsNeedingEntry.push_back(*inst_iterator);
-		instsNeedingAbsJmps.push_back(*inst_iterator);
+		// nop the garbage bytes if necessary.
+		const auto nop_size = instruction.size() - jump.size();
+		if (nop_size < 1) {
+			continue;
+		}
 
-		// nop the garbage bytes if necessary. TODO: Use writeNop?
-		auto current_address = (uint8_t*) (inst_iterator->getAddress() + inst_iterator->size());
-		for (int i = 0; i < instruction.size() - 5; i++) {
-			auto nop = PLH::Instruction((uint64_t) current_address++, {0}, 0, false, false, {0x90}, "nop", "", PLH::Mode::x64);
+		const auto nop_base = jump.getAddress() + jump.size();
+		for (const auto& nop: make_nops(nop_base, nop_size)) {
 			if (inst_iterator == prologue.end()) {
 				prologue.push_back(nop);
 				inst_iterator = prologue.end();
 			} else {
-				inst_iterator = prologue.insert(inst_iterator, nop) + 1; // TODO: Is this correct?
+				inst_iterator = prologue.insert(inst_iterator, nop) + 1; // Is this correct?
 			}
 		}
 	}
