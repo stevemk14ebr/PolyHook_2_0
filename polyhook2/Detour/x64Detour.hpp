@@ -31,21 +31,7 @@ public:
         ALL = CODE_CAVE | INPLACE | VALLOC2,
     };
 
-    x64Detour(
-        uint64_t fnAddress,
-        uint64_t fnCallback,
-        uint64_t* userTrampVar,
-        PLH::ZydisDisassembler& dis,
-        uint8_t maxDepth = c_maxDepth
-    );
-
-    x64Detour(
-        const char* fnAddress,
-        const char* fnCallback,
-        uint64_t* userTrampVar,
-        PLH::ZydisDisassembler& dis,
-        uint8_t maxDepth = c_maxDepth
-    );
+    x64Detour(uint64_t fnAddress, uint64_t fnCallback, uint64_t* userTrampVar);
 
     ~x64Detour() override;
 
@@ -55,9 +41,7 @@ public:
 
     Mode getArchType() const override;
 
-    uint8_t getMinJmpSize() const;
-
-    uint8_t getPrefJmpSize() const;
+    static uint8_t getMinJmpSize();
 
     detour_scheme_t getDetourScheme() const;
 
@@ -72,7 +56,7 @@ protected:
 
     optional<uint64_t> generateTranslationRoutine(const Instruction& instruction, uint64_t resume_address);
 
-    detour_scheme_t _detourScheme = detour_scheme_t::RECOMMENDED; // this is the most stable configuration.
+    detour_scheme_t m_detourScheme = detour_scheme_t::RECOMMENDED; // this is the most stable configuration.
     optional<uint64_t> m_valloc2_region;
     RangeAllocator m_allocator;
     asmjit::JitRuntime m_asmjit_rt;

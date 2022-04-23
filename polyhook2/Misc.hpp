@@ -2,12 +2,24 @@
 // Created by steve on 4/6/17.
 //
 
-#ifndef POLYHOOK_2_0_MISC_HPP
-#define POLYHOOK_2_0_MISC_HPP
+#pragma once
 
 #include "polyhook2/PolyHookOs.hpp"
 
 namespace PLH {
+
+/**First param is an address to a function that you want to
+cast to the type of pFnCastTo. Second param must be a pointer
+to function type**/
+template<typename FnCastTo>
+FnCastTo FnCast(uint64_t fnToCast, FnCastTo) {
+    return (FnCastTo) fnToCast;
+}
+
+template<typename FnCastTo>
+FnCastTo FnCast(void* fnToCast, FnCastTo) {
+    return (FnCastTo) fnToCast;
+}
 
 enum class Platform {
 	WIN,
@@ -196,4 +208,3 @@ inline bool string_contains(const std::string& str, const std::string& sub_str)
 }
 
 }
-#endif //POLYHOOK_2_0_MISC_HPP

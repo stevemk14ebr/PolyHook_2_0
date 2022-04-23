@@ -17,21 +17,8 @@ namespace PLH {
 using std::optional;
 using std::string;
 
-x64Detour::x64Detour(
-    const uint64_t fnAddress,
-    const uint64_t fnCallback,
-    uint64_t* userTrampVar,
-    ZydisDisassembler& dis,
-    const uint8_t maxDepth
-) : Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth), m_allocator(8, 100) {}
-
-x64Detour::x64Detour(
-    const char* fnAddress,
-    const char* fnCallback,
-    uint64_t* userTrampVar,
-    ZydisDisassembler& dis,
-    const uint8_t maxDepth
-) : Detour(fnAddress, fnCallback, userTrampVar, dis, maxDepth), m_allocator(8, 100) {}
+x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar) :
+    Detour(fnAddress, fnCallback, userTrampVar, getArchType()), m_allocator(8, 100) {}
 
 x64Detour::~x64Detour() {
     if (m_valloc2_region) {
@@ -44,20 +31,16 @@ Mode x64Detour::getArchType() const {
     return Mode::x64;
 }
 
-uint8_t x64Detour::getMinJmpSize() const {
+uint8_t x64Detour::getMinJmpSize() {
     return 6;
 }
 
-uint8_t x64Detour::getPrefJmpSize() const {
-    return 16;
-}
-
 x64Detour::detour_scheme_t x64Detour::getDetourScheme() const {
-    return _detourScheme;
+    return m_detourScheme;
 }
 
 void x64Detour::setDetourScheme(detour_scheme_t scheme) {
-    _detourScheme = scheme;
+    m_detourScheme = scheme;
 }
 
 template<uint16_t SIZE>
@@ -164,12 +147,13 @@ optional<uint64_t> x64Detour::findNearestCodeCave(uint64_t address) {
     for (uint64_t search = address; (search + chunkSize) < calc_2gb_above(address); search += chunkSize) {
         size_t read = 0;
         if (safe_mem_read(search, (uint64_t) data, chunkSize, read)) {
-            uint32_t contiguousInt3 = 0;
-            uint32_t contiguousNop = 0;
+//            uint32_t contiguousInt3 = 0;
+//            uint32_t contiguousNop = 0;
 
             assert(read <= chunkSize);
-            if (read == 0 || read < SIZE)
+            if (read == 0 || read < SIZE) {
                 continue;
+            }
 
             auto finder = [&](const char* pattern, const uint64_t offset) -> optional<uint64_t> {
                 if (auto found = (uint64_t) findPattern((uint64_t) data, read, pattern)) {
@@ -179,8 +163,9 @@ optional<uint64_t> x64Detour::findNearestCodeCave(uint64_t address) {
             };
 
             for (const char* pat: PATTERNS_OFF1) {
-                if (getPatternSize(pat) - 1 < SIZE)
+                if (getPatternSize(pat) - 1 < SIZE) {
                     continue;
+                }
 
                 if (auto found = finder(pat, 1)) {
                     return found;
@@ -188,8 +173,9 @@ optional<uint64_t> x64Detour::findNearestCodeCave(uint64_t address) {
             }
 
             for (const char* pat: PATTERNS_OFF3) {
-                if (getPatternSize(pat) - 3 < SIZE)
+                if (getPatternSize(pat) - 3 < SIZE) {
                     continue;
+                }
 
                 if (auto found = finder(pat, 3)) {
                     return found;
@@ -200,13 +186,12 @@ optional<uint64_t> x64Detour::findNearestCodeCave(uint64_t address) {
     return {};
 }
 
-namespace {
 
 #pragma pack(push, 1)
 
 struct InplaceDetour {
     uint16_t mov_r10{0xba49};
-    uint64_t target;
+    uint64_t target{0};
     uint16_t push_r10{0x5241};
     uint8_t ret{0xc3};
 };
@@ -227,8 +212,6 @@ insts_t makeInplaceDetour(const uint64_t address, const uint64_t destination) {
     return {Instruction(address, disp, 0, false, false, destBytes, "inplace-detour", "", Mode::x64)};
 }
 
-}// namespace
-
 bool x64Detour::hook() {
     insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
     if (insts.empty()) {
@@ -236,7 +219,7 @@ bool x64Detour::hook() {
         return false;
     }
 
-    if (!followJmp(insts, 0, m_maxDepth)) {
+    if (!followJmp(insts)) {
         Log::log("Prologue jmp resolution failed", ErrorLevel::SEV);
         return false;
     }
@@ -247,7 +230,7 @@ bool x64Detour::hook() {
     // --------------- END RECURSIVE JMP RESOLUTION ---------------------
     Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
-    uint64_t minProlSz = (_detourScheme == detour_scheme_t::INPLACE)
+    uint64_t minProlSz = (m_detourScheme == detour_scheme_t::INPLACE)
                          ? INPLACE_DETOUR_SIZE
                          : getMinJmpSize(); // min size of patches that may split instructions
 
@@ -288,15 +271,15 @@ bool x64Detour::hook() {
     m_hookSize = (uint32_t) roundProlSz;
     m_nopProlOffset = (uint16_t) minProlSz;
 
-    MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
-    if (_detourScheme & detour_scheme_t::VALLOC2 && boundedAllocSupported()) {
+    MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::RWX, *this);
+    if (m_detourScheme & detour_scheme_t::VALLOC2 && boundedAllocSupported()) {
         auto max = (uint64_t) AlignDownwards(calc_2gb_above(m_fnAddress), getPageSize());
         auto min = (uint64_t) AlignDownwards(calc_2gb_below(m_fnAddress), getPageSize());
 
         // each block is m_blocksize (8) at the time of writing. Do not write more than this.
         auto region = (uint64_t) m_allocator.allocate(min, max);
         if (!region) {
-            if (_detourScheme & detour_scheme_t::CODE_CAVE || _detourScheme & detour_scheme_t::INPLACE) {
+            if (m_detourScheme & detour_scheme_t::CODE_CAVE || m_detourScheme & detour_scheme_t::INPLACE) {
                 goto trycave;
             }
 
@@ -305,18 +288,18 @@ bool x64Detour::hook() {
         } else {
             m_valloc2_region = region;
 
-            MemoryProtector holderProt(region, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
+            MemoryProtector holderProt(region, 8, ProtFlag::RWX, *this, false);
             m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, region);
             goto success;
         }
     }
 
     trycave:
-    if (_detourScheme & detour_scheme_t::CODE_CAVE) {
+    if (m_detourScheme & detour_scheme_t::CODE_CAVE) {
         // we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
         auto cave = findNearestCodeCave<8>(m_fnAddress);
         if (!cave) {
-            if (_detourScheme & detour_scheme_t::INPLACE) {
+            if (m_detourScheme & detour_scheme_t::INPLACE) {
                 goto tryinplace;
             }
 
@@ -330,7 +313,7 @@ bool x64Detour::hook() {
     }
 
     tryinplace:
-    if (_detourScheme & detour_scheme_t::INPLACE) {
+    if (m_detourScheme & detour_scheme_t::INPLACE) {
         //inplace scheme. This is more stable than the cave finder since that may potentially find a region of unstable memory.
         // However, this INPLACE scheme may only be done for functions with a large enough prologue, otherwise this will overwrite adjacent bytes
         m_hookInsts = makeInplaceDetour(m_fnAddress, m_fnCallback);
@@ -346,7 +329,8 @@ bool x64Detour::hook() {
     // Nop the space between jmp and end of prologue
     assert(m_hookSize >= m_nopProlOffset);
     m_nopSize = (uint16_t) (m_hookSize - m_nopProlOffset);
-    writeNop(m_fnAddress + m_nopProlOffset, m_nopSize);
+    const auto nops = make_nops(m_fnAddress + m_nopProlOffset, m_nopSize);
+    ZydisDisassembler::writeEncoding(nops, *this);
 
     m_hooked = true;
     return true;
@@ -415,7 +399,7 @@ const static std::map<string, string> scratch_to_64{ // NOLINT(cert-err58-cpp)
 /**
  * Generates as many nop instructions as necessary to fill the give size
  */
-insts_t make_nops(uint64_t address, uint32_t size) {
+/*insts_t make_nops(uint64_t address, uint32_t size) {
     assert(size > 0);
     uint8_t max_nop_size = 9;
 
@@ -447,7 +431,7 @@ insts_t make_nops(uint64_t address, uint32_t size) {
     nops.emplace_back(make_nop(remainder_nop_size));
 
     return nops;
-}
+}*/
 
 struct TranslationResult {
     string instruction;
@@ -718,13 +702,13 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
         instsNeedingAbsJmps.push_back(jump);
 
         // nop the garbage bytes if necessary.
-        const uint32_t nop_size = (int32_t) (instruction.size() - jump.size());
+        const auto nop_size = (uint16_t) (instruction.size() - jump.size());
         if (nop_size < 1) {
             continue;
         }
 
         const auto nop_base = jump.getAddress() + jump.size();
-        for (const auto& nop: make_nops(nop_base, (uint32_t) nop_size)) {
+        for (const auto& nop: make_nops(nop_base, nop_size)) {
             if (inst_iterator == prologue.end()) {
                 prologue.push_back(nop);
                 inst_iterator = prologue.end();
@@ -767,9 +751,7 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
     };
 
     const uint64_t jmpTblStart = jmpToProlAddr + getMinJmpSize();
-    outJmpTable = relocateTrampoline(
-        prologue, jmpTblStart, delta, makeJmpFn, instsNeedingReloc, instsNeedingEntry, instsNeedingTranslation
-    );
+    outJmpTable = relocateTrampoline(prologue, jmpTblStart, delta, makeJmpFn, instsNeedingReloc, instsNeedingEntry);
 
     return true;
 }
