@@ -76,8 +76,10 @@ endif()
 # ASMTK
 #
 
-if(NOT POLYHOOK_USE_EXTERNAL_ASMTK)
-    set(ASMJIT_EMBED TRUE)
+if(POLYHOOK_FEATURE_DETOURS AND NOT POLYHOOK_USE_EXTERNAL_ASMTK)
+	if(NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
+    	set(ASMJIT_EMBED TRUE)
+    endif()
 
 	if(POLYHOOK_BUILD_SHARED_ASMTK)
 		set(ASMTK_STATIC OFF CACHE BOOL "")
@@ -231,7 +233,7 @@ endif()
 
 if (POLYHOOK_USE_EXTERNAL_ASMTK)
     find_library(ASMTK_LIBRARY NAMES asmtk)
-    find_path(ASMJIT_INCLUDE_DIR NAMES asmtk/asmtk.h)
+    find_path(ASMTK_INCLUDE_DIR NAMES asmtk/asmtk.h)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${ASMTK_LIBRARY})
     target_include_directories(${PROJECT_NAME} PRIVATE ${ASMTK_INCLUDE_DIR})
 else()

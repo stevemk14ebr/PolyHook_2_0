@@ -395,44 +395,6 @@ const static std::map<string, string> scratch_to_64{ // NOLINT(cert-err58-cpp)
     {"al",  "rax"},
 };
 
-
-/**
- * Generates as many nop instructions as necessary to fill the give size
- */
-/*insts_t make_nops(uint64_t address, uint32_t size) {
-    assert(size > 0);
-    uint8_t max_nop_size = 9;
-
-    const auto make_nop = [&](const uint8_t nop_size) {
-        assert(nop_size <= max_nop_size);
-
-        switch (nop_size) {
-            case 1: return Instruction::makex64Nop(address, {0x90});
-            case 2: return Instruction::makex64Nop(address, {0x66, 0x90});
-            case 3: return Instruction::makex64Nop(address, {0x0F, 0x1F, 0x00});
-            case 4: return Instruction::makex64Nop(address, {0x0F, 0x1F, 0x40, 0x00});
-            case 5: return Instruction::makex64Nop(address, {0x0F, 0x1F, 0x44, 0x00, 0x00});
-            case 6: return Instruction::makex64Nop(address, {0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00});
-            case 7: return Instruction::makex64Nop(address, {0x0F, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00});
-            case 8: return Instruction::makex64Nop(address, {0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00});
-            default: return Instruction::makex64Nop(address, {0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00});
-        }
-    };
-
-    insts_t nops;
-
-    auto max_nop_count = (int) (size / max_nop_size);
-    auto remainder_nop_size = (uint8_t) (size % max_nop_size);
-
-    for (int i = 0; i < max_nop_count; i++) {
-        nops.emplace_back(make_nop(max_nop_size));
-    }
-
-    nops.emplace_back(make_nop(remainder_nop_size));
-
-    return nops;
-}*/
-
 struct TranslationResult {
     string instruction;
     string scratch_register;
