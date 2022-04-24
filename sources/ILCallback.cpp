@@ -1,23 +1,23 @@
 #include "polyhook2/Detour/ILCallback.hpp"
 #include "polyhook2/MemProtector.hpp"
 
-asmjit::CallConv::Id PLH::ILCallback::getCallConv(const std::string& conv) {
+asmjit::CallConvId PLH::ILCallback::getCallConv(const std::string& conv) {
 	if (conv == "cdecl") {
-		return asmjit::CallConv::kIdHostCDecl;
+		return asmjit::CallConvId::kCDecl;
 	}else if (conv == "stdcall") {
-		return asmjit::CallConv::kIdHostStdCall;
+		return asmjit::CallConvId::kStdCall;
 	}else if (conv == "fastcall") {
-		return asmjit::CallConv::kIdHostFastCall;
+		return asmjit::CallConvId::kFastCall;
 	} 
-	return asmjit::CallConv::kIdHost;
+	return asmjit::CallConvId::kHost;
 }
 
-#define TYPEID_MATCH_STR_IF(var, T) if (var == #T) { return asmjit::Type::IdOfT<T>::kTypeId; }
-#define TYPEID_MATCH_STR_ELSEIF(var, T)  else if (var == #T) { return asmjit::Type::IdOfT<T>::kTypeId; }
+#define TYPEID_MATCH_STR_IF(var, T) if (var == #T) { return asmjit::TypeId(asmjit::TypeUtils::TypeIdOfT<T>::kTypeId); }
+#define TYPEID_MATCH_STR_ELSEIF(var, T)  else if (var == #T) { return asmjit::TypeId(asmjit::TypeUtils::TypeIdOfT<T>::kTypeId); }
 
-uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
-	if (type.find("*") != std::string::npos) {
-		return asmjit::Type::kIdUIntPtr;
+asmjit::TypeId PLH::ILCallback::getTypeId(const std::string& type) {
+	if (type.find('*') != std::string::npos) {
+		return asmjit::TypeId::kUIntPtr;
 	}
 
 	TYPEID_MATCH_STR_IF(type, signed char)
@@ -51,15 +51,15 @@ uint8_t PLH::ILCallback::getTypeId(const std::string& type) {
 	TYPEID_MATCH_STR_ELSEIF(type, bool)
 	TYPEID_MATCH_STR_ELSEIF(type, void)
 	else if (type == "intptr_t") {
-		return asmjit::Type::kIdIntPtr;
+		return asmjit::TypeId::kIntPtr;
 	}else if (type == "uintptr_t") {
-		return asmjit::Type::kIdUIntPtr;
+		return asmjit::TypeId::kUIntPtr;
 	} 
 
-	return asmjit::Type::kIdVoid;
+	return asmjit::TypeId::kVoid;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asmjit::Environment::Arch arch, const PLH::ILCallback::tUserCallback callback) {;
+uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asmjit::Arch arch, const PLH::ILCallback::tUserCallback callback) {;
 	/*AsmJit is smart enough to track register allocations and will forward
 	  the proper registers the right values and fixup any it dirtied earlier.
 	  This can only be done if it knows the signature, and ABI, so we give it 
@@ -77,7 +77,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	  physical registers may be inserted as nodes.
 	*/
 	asmjit::CodeHolder code;        
-	auto env = asmjit::hostEnvironment();
+	auto env = asmjit::Environment::host();
 	env.setArch(arch);
 	code.init(env);
 	
@@ -86,9 +86,9 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	asmjit::FuncNode* func = cc.addFunc(sig);              
 
 	asmjit::StringLogger log;
-	uint32_t kFormatFlags = asmjit::FormatOptions::kFlagMachineCode | asmjit::FormatOptions::kFlagExplainImms | asmjit::FormatOptions::kFlagRegCasts 
-		| asmjit::FormatOptions::kFlagAnnotations | asmjit::FormatOptions::kFlagDebugPasses | asmjit::FormatOptions::kFlagDebugRA
-		| asmjit::FormatOptions::kFlagHexImms | asmjit::FormatOptions::kFlagHexOffsets | asmjit::FormatOptions::kFlagPositions;
+	auto kFormatFlags =
+		  asmjit::FormatFlags::kMachineCode | asmjit::FormatFlags::kExplainImms | asmjit::FormatFlags::kRegCasts
+		| asmjit::FormatFlags::kHexImms     | asmjit::FormatFlags::kHexOffsets  | asmjit::FormatFlags::kPositions;
 	
 	log.addFlags(kFormatFlags);
 	code.setLogger(&log);
@@ -99,7 +99,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	// map argument slots to registers, following abi.
 	std::vector<asmjit::x86::Reg> argRegisters;
 	for (uint8_t argIdx = 0; argIdx < sig.argCount(); argIdx++) {
-		const uint8_t argType = sig.args()[argIdx];
+		const auto argType = sig.args()[argIdx];
 
 		asmjit::x86::Reg arg;
 		if (isGeneralReg(argType)) {
@@ -111,7 +111,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 			return 0;
 		}
 
-		cc.setArg(argIdx, arg);
+		func->setArg(argIdx, arg);
 		argRegisters.push_back(arg);
 	}
   
@@ -133,7 +133,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	cc.mov(i, 0);
 	//// mov from arguments registers into the stack structure
 	for (uint8_t argIdx = 0; argIdx < sig.argCount(); argIdx++) {
-		const uint8_t argType = sig.args()[argIdx];
+		const auto argType = sig.args()[argIdx];
 
 		// have to cast back to explicit register types to gen right mov type
 		if (isGeneralReg(argType)) {
@@ -154,7 +154,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	cc.lea(argStruct, argsStack);
 
 	// fill reg to pass struct arg count to callback
-	asmjit::x86::Gp argCountParam = cc.newU8();
+	asmjit::x86::Gp argCountParam = cc.newUInt8();
 	cc.mov(argCountParam, (uint8_t)sig.argCount());
 
 	// create buffer for ret val
@@ -176,7 +176,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	// mov from arguments stack structure into regs
 	cc.mov(i, 0); // reset idx
 	for (uint8_t arg_idx = 0; arg_idx < sig.argCount(); arg_idx++) {
-		const uint8_t argType = sig.args()[arg_idx];
+		const auto argType = sig.args()[arg_idx];
 
 		if (isGeneralReg(argType)) {
 			cc.mov(argRegisters.at(arg_idx).as<asmjit::x86::Gp>(), argsStackIdx);
@@ -205,7 +205,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	if (sig.hasRet()) {
 		asmjit::x86::Mem retStackIdx(retStack);
 		retStackIdx.setSize(sizeof(uint64_t));
-		if (isGeneralReg((uint8_t)sig.ret())) {
+		if (isGeneralReg(sig.ret())) {
 			asmjit::x86::Gp tmp2 = cc.newUIntPtr();
 			cc.mov(tmp2, retStackIdx);
 			cc.ret(tmp2);
@@ -249,9 +249,9 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	return m_callbackBuf;
 }
 
-uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const asmjit::Environment::Arch arch, const tUserCallback callback, std::string callConv/* = ""*/) {
+uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const asmjit::Arch arch, const tUserCallback callback, std::string callConv/* = ""*/) {
 	asmjit::FuncSignature sig = {};
-	std::vector<uint8_t> args;
+	std::vector<asmjit::TypeId> args;
 	for (const std::string& s : paramTypes) {
 		args.push_back(getTypeId(s));
 	}
@@ -263,28 +263,28 @@ uint64_t* PLH::ILCallback::getTrampolineHolder() {
 	return &m_trampolinePtr;
 }
 
-bool PLH::ILCallback::isGeneralReg(const uint8_t typeId) const {
+bool PLH::ILCallback::isGeneralReg(const asmjit::TypeId typeId) const {
 	switch (typeId) {
-	case asmjit::Type::kIdI8:
-	case asmjit::Type::kIdU8:
-	case asmjit::Type::kIdI16:
-	case asmjit::Type::kIdU16:
-	case asmjit::Type::kIdI32:
-	case asmjit::Type::kIdU32:
-	case asmjit::Type::kIdI64:
-	case asmjit::Type::kIdU64:
-	case asmjit::Type::kIdIntPtr:
-	case asmjit::Type::kIdUIntPtr:
+	case asmjit::TypeId::kInt8:
+	case asmjit::TypeId::kUInt8:
+	case asmjit::TypeId::kInt16:
+	case asmjit::TypeId::kUInt16:
+	case asmjit::TypeId::kInt32:
+	case asmjit::TypeId::kUInt32:
+	case asmjit::TypeId::kInt64:
+	case asmjit::TypeId::kUInt64:
+	case asmjit::TypeId::kIntPtr:
+	case asmjit::TypeId::kUIntPtr:
 		return true;
 	default:
 		return false;
 	}
 }
 
-bool PLH::ILCallback::isXmmReg(const uint8_t typeId) const {
+bool PLH::ILCallback::isXmmReg(const asmjit::TypeId typeId) const {
 	switch (typeId) {
-	case  asmjit::Type::kIdF32:
-	case asmjit::Type::kIdF64:
+	case  asmjit::TypeId::kFloat32:
+	case asmjit::TypeId::kFloat64:
 		return true;
 	default:
 		return false;

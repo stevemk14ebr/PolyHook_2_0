@@ -19,11 +19,13 @@ endif()
 #
 option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" OFF)
 
-option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook as shared libary" OFF)
-option(POLYHOOK_BUILD_SHARED_ASMJIT "Build polyhook as shared libary" OFF)
-option(POLYHOOK_BUILD_SHARED_ZYDIS "Build polyhook as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook2 as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_ASMJIT "Build asmjit as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_ASMTK "Build asmtk as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_ZYDIS "Build zydis as shared libary" OFF)
 
 option(POLYHOOK_USE_EXTERNAL_ASMJIT "Use external asmjit libary" OFF)
+option(POLYHOOK_USE_EXTERNAL_ASMTK "Use external asmtk libary" OFF)
 option(POLYHOOK_USE_EXTERNAL_ZYDIS "Use external zydis libary" OFF)
 
 if(MSVC)
@@ -69,6 +71,33 @@ if(POLYHOOK_FEATURE_INLINENTD AND NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
 		endif()
 	endif()
 endif()
+
+#
+# ASMTK
+#
+
+if(POLYHOOK_FEATURE_DETOURS AND NOT POLYHOOK_USE_EXTERNAL_ASMTK)
+	if(NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
+    	set(ASMJIT_EMBED TRUE)
+    endif()
+
+	if(POLYHOOK_BUILD_SHARED_ASMTK)
+		set(ASMTK_STATIC OFF CACHE BOOL "")
+	else()
+		set(ASMTK_STATIC ON CACHE BOOL "")
+	endif()
+
+	add_subdirectory(asmtk)
+	if(MSVC)
+		if(POLYHOOK_BUILD_STATIC_RUNTIME)
+			set_target_properties(asmtk PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+		else()
+			set_target_properties(asmtk PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+		endif()
+	endif()
+
+endif()
+
 
 #
 # Zydis
@@ -195,9 +224,20 @@ if(POLYHOOK_DISASM_ZYDIS)
 		target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/zydis/dependencies/zycore/include>)
 		target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/zydis>)
 	endif()
-	
+
 	target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/sources/ZydisDisassembler.cpp")
 	install(FILES ${PROJECT_SOURCE_DIR}/polyhook2/ZydisDisassembler.hpp DESTINATION include/polyhook2)
+endif()
+
+# AsmTk
+
+if (POLYHOOK_USE_EXTERNAL_ASMTK)
+    find_library(ASMTK_LIBRARY NAMES asmtk)
+    find_path(ASMTK_INCLUDE_DIR NAMES asmtk/asmtk.h)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${ASMTK_LIBRARY})
+    target_include_directories(${PROJECT_NAME} PRIVATE ${ASMTK_INCLUDE_DIR})
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:asmtk>)
 endif()
 
 #Feature/Detours
@@ -216,7 +256,8 @@ if(POLYHOOK_FEATURE_DETOURS)
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8) #64-bit
-			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx64.cpp)
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx64.cpp
+			 ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourTranslationx64.cpp)
 		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4) #32-bit
 			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx86.cpp)
 		endif()
@@ -294,7 +335,7 @@ endif()
 
 #Feature/Virtuals
 if(POLYHOOK_FEATURE_VIRTUALS)
-	set(POLYHOOK_VIRTUAL_HEADERS 
+	set(POLYHOOK_VIRTUAL_HEADERS
 		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VTableSwapHook.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VFuncSwapHook.hpp)
 	install(FILES ${POLYHOOK_VIRTUAL_HEADERS} DESTINATION include/polyhook2/Virtuals)

@@ -9,6 +9,7 @@
 namespace PLH {
 	class UID {
 	public:
+		UID();
 		UID(long val);
 		static std::atomic_long& singleton();
 

@@ -8,19 +8,18 @@
 #include "polyhook2/Instruction.hpp"
 #include "polyhook2/MemAccessor.hpp"
 
-#define unreferenced(P) (P)
-
 namespace PLH {
 typedef std::unordered_map<uint64_t, insts_t> branch_map_t;
 
 class ZydisDisassembler {
 public:
-	ZydisDisassembler(PLH::Mode mode);
+	explicit ZydisDisassembler(PLH::Mode mode);
 
 	virtual ~ZydisDisassembler();
 
 	std::vector<PLH::Instruction> disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end, const MemAccessor& accessor);
 
+    // TODO: Move to accessor
 	static void writeEncoding(const PLH::insts_t& instructions, const MemAccessor& accessor) {
 		for (const auto& inst : instructions)
 			writeEncoding(inst, accessor);

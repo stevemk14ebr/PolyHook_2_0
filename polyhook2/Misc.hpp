@@ -2,12 +2,24 @@
 // Created by steve on 4/6/17.
 //
 
-#ifndef POLYHOOK_2_0_MISC_HPP
-#define POLYHOOK_2_0_MISC_HPP
+#pragma once
 
 #include "polyhook2/PolyHookOs.hpp"
 
 namespace PLH {
+
+/**First param is an address to a function that you want to
+cast to the type of pFnCastTo. Second param must be a pointer
+to function type**/
+template<typename FnCastTo>
+FnCastTo FnCast(uint64_t fnToCast, FnCastTo) {
+    return (FnCastTo) fnToCast;
+}
+
+template<typename FnCastTo>
+FnCastTo FnCast(void* fnToCast, FnCastTo) {
+    return (FnCastTo) fnToCast;
+}
 
 enum class Platform {
 	WIN,
@@ -140,7 +152,7 @@ inline bool isMatch(const char* addr, const char* pat, const char* msk)
 	return false;
 }
 
-#define INRANGE(x,a,b)		(x >= a && x <= b) 
+#define INRANGE(x,a,b)		(x >= a && x <= b)
 #define getBits( x )		(INRANGE(x,'0','9') ? (x - '0') : ((x&(~0x20)) - 'A' + 0xa))
 #define getByte( x )		(getBits(x[0]) << 4 | getBits(x[1]))
 
@@ -178,11 +190,21 @@ template< typename T >
 std::string int_to_hex(T i)
 {
 	std::stringstream stream;
-	stream << "0x"
-		<< std::setfill('0') << std::setw(sizeof(T) * 2)
-		<< std::hex << i;
+	stream << "0x" << std::setfill('0') << std::setw(sizeof(T) * 2) << std::hex
+		<< (uint64_t) i; // We cast to the highest possible int because uint8_t will be printed as char
+
 	return stream.str();
 }
 
+template< typename T >
+inline bool vector_contains(std::vector<T> vec, T element)
+{
+	return std::find(vec.begin(), vec.end(), element) != vec.end();
 }
-#endif //POLYHOOK_2_0_MISC_HPP
+
+inline bool string_contains(const std::string& str, const std::string& sub_str)
+{
+	return str.find(sub_str) != std::string::npos;
+}
+
+}
