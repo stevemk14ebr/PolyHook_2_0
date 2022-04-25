@@ -20,19 +20,17 @@ endif()
 option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" OFF)
 
 option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook2 as shared libary" OFF)
-option(POLYHOOK_BUILD_SHARED_ASMJIT "Build asmjit as shared libary" OFF)
 option(POLYHOOK_BUILD_SHARED_ASMTK "Build asmtk as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_ASMJIT "Build asmjit as shared libary" ${POLYHOOK_BUILD_SHARED_ASMTK})
 option(POLYHOOK_BUILD_SHARED_ZYDIS "Build zydis as shared libary" OFF)
 
-option(POLYHOOK_USE_EXTERNAL_ASMJIT "Use external asmjit libary" OFF)
 option(POLYHOOK_USE_EXTERNAL_ASMTK "Use external asmtk libary" OFF)
+option(POLYHOOK_USE_EXTERNAL_ASMJIT "Use external asmjit libary" ${POLYHOOK_USE_EXTERNAL_ASMTK})
 option(POLYHOOK_USE_EXTERNAL_ZYDIS "Use external zydis libary" OFF)
 
 if(MSVC)
 	option(POLYHOOK_BUILD_STATIC_RUNTIME "Use static runtime" ON)
 endif()
-
-option(POLYHOOK_DISASM_ZYDIS "Enable Zydis support." ON)
 
 if(WIN32)
     option(POLYHOOK_FEATURE_EXCEPTION "Implement all exception hooking functionality" ON)
@@ -45,14 +43,19 @@ option(POLYHOOK_FEATURE_DETOURS "Implement detour functionality" ON)
 option(POLYHOOK_FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" ON)
 option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 
-#force zydis build for tests
-if(NOT POLYHOOK_BUILD_DLL)
-	set(POLYHOOK_DISASM_ZYDIS ON)
-endif()
-
 #
 # ASMTK
 #
+
+function(add_asmjit_properties)
+    if(MSVC)
+        if(ASMJIT_STATIC)
+            set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        else()
+            set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+        endif()
+    endif()
+endfunction()
 
 if(POLYHOOK_FEATURE_DETOURS AND NOT POLYHOOK_USE_EXTERNAL_ASMTK)
 	if(NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
@@ -66,6 +69,8 @@ if(POLYHOOK_FEATURE_DETOURS AND NOT POLYHOOK_USE_EXTERNAL_ASMTK)
 	endif()
 
 	add_subdirectory(asmtk)
+    add_asmjit_properties()
+
 	if(MSVC)
 		if(POLYHOOK_BUILD_STATIC_RUNTIME)
 			set_target_properties(asmtk PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -81,23 +86,16 @@ endif()
 #
 
 if(POLYHOOK_FEATURE_INLINENTD AND NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
-
-    if(POLYHOOK_BUILD_SHARED_ASMJIT)
-        set(ASMJIT_STATIC OFF CACHE BOOL "")
-    else()
-        set(ASMJIT_STATIC ON CACHE BOOL "")
-    endif()
-
+    # Avoid including asmjit again if it was already included
     if(NOT TARGET asmjit)
-		add_subdirectory(asmjit)
-    endif()
-
-    if(MSVC)
-        if(POLYHOOK_BUILD_STATIC_RUNTIME)
-            set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        if(POLYHOOK_BUILD_SHARED_ASMJIT)
+            set(ASMJIT_STATIC OFF CACHE BOOL "")
         else()
-            set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+            set(ASMJIT_STATIC ON CACHE BOOL "")
         endif()
+
+		add_subdirectory(asmjit)
+        add_asmjit_properties()
     endif()
 endif()
 
@@ -105,7 +103,7 @@ endif()
 # Zydis
 #
 
-if(POLYHOOK_DISASM_ZYDIS AND NOT POLYHOOK_USE_EXTERNAL_ZYDIS)
+if(NOT POLYHOOK_USE_EXTERNAL_ZYDIS)
     set(ZYDIS_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_ZYDIS} CACHE BOOL "")
 	set(ZYCORE_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_ZYDIS} CACHE BOOL "")
 	set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
@@ -210,30 +208,41 @@ if(NOT POLYHOOK_BUILD_DLL)
 endif()
 
 #DisAsm/Zydis
-if(POLYHOOK_DISASM_ZYDIS)
-	if (POLYHOOK_USE_EXTERNAL_ZYDIS)
-		find_library(ZYDIS_LIBRARY NAMES zydis)
-		find_library(ZYCORE_LIBRARY NAMES zycore)
-		find_path(ZYDIS_INCLUDE_DIR NAMES zydis/zydis.h)
-		find_path(ZYCORE_INCLUDE_DIR NAMES zycore/zycore.h)
-		target_link_libraries(${PROJECT_NAME} PUBLIC ${ZYDIS_LIBRARY})
-		target_link_libraries(${PROJECT_NAME} PUBLIC ${ZYCORE_LIBRARY})
-		target_include_directories(${PROJECT_NAME} PUBLIC ${ZYDIS_INCLUDE_DIR})
-		target_include_directories(${PROJECT_NAME} PUBLIC ${ZYCORE_INCLUDE_DIR})
-	else()
-		target_link_libraries(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:Zydis>)
-		target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/zydis/include>)
-		target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/zydis/dependencies/zycore/include>)
-		target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/zydis>)
-	endif()
-
-	target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/sources/ZydisDisassembler.cpp")
-	install(FILES ${PROJECT_SOURCE_DIR}/polyhook2/ZydisDisassembler.hpp DESTINATION include/polyhook2)
+if (POLYHOOK_USE_EXTERNAL_ZYDIS)
+    find_library(ZYDIS_LIBRARY NAMES zydis)
+    find_library(ZYCORE_LIBRARY NAMES zycore)
+    find_path(ZYDIS_INCLUDE_DIR NAMES zydis/zydis.h)
+    find_path(ZYCORE_INCLUDE_DIR NAMES zycore/zycore.h)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${ZYDIS_LIBRARY})
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${ZYCORE_LIBRARY})
+    target_include_directories(${PROJECT_NAME} PUBLIC ${ZYDIS_INCLUDE_DIR})
+    target_include_directories(${PROJECT_NAME} PUBLIC ${ZYCORE_INCLUDE_DIR})
+else()
+    target_link_libraries(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:Zydis>)
+    target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/zydis/include>)
+    target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/zydis/dependencies/zycore/include>)
+    target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/zydis>)
 endif()
 
+target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/sources/ZydisDisassembler.cpp")
+install(FILES ${PROJECT_SOURCE_DIR}/polyhook2/ZydisDisassembler.hpp DESTINATION include/polyhook2)
+
+function(link_asmjit)
+    if (POLYHOOK_USE_EXTERNAL_ASMJIT)
+        find_library(ASMJIT_LIBRARY NAMES asmjit)
+        find_path(ASMJIT_INCLUDE_DIR NAMES asmjit/asmjit.h)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${ASMJIT_LIBRARY})
+        target_include_directories(${PROJECT_NAME} PUBLIC ${ASMJIT_INCLUDE_DIR})
+    else()
+        target_link_libraries(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:asmjit>)
+        target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${ASMJIT_SRC}>")
+    endif()
+endfunction()
 
 #Feature/Detours
 if(POLYHOOK_FEATURE_DETOURS)
+    link_asmjit()
+
     if (POLYHOOK_USE_EXTERNAL_ASMTK)
         find_library(ASMTK_LIBRARY NAMES asmtk)
         find_path(ASMTK_INCLUDE_DIR NAMES asmtk/asmtk.h)
@@ -241,21 +250,14 @@ if(POLYHOOK_FEATURE_DETOURS)
         target_include_directories(${PROJECT_NAME} PUBLIC ${ASMTK_INCLUDE_DIR})
     else()
         target_link_libraries(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:asmtk>)
-    endif()
-
-    if (POLYHOOK_USE_EXTERNAL_ASMJIT)
-        find_library(ASMJIT_LIBRARY NAMES asmjit)
-        find_path(ASMJIT_INCLUDE_DIR NAMES asmjit/asmjit.h)
-        target_link_libraries(${PROJECT_NAME} PUBLIC ${ASMJIT_LIBRARY})
-        target_include_directories(${PROJECT_NAME} PUBLIC ${ASMJIT_INCLUDE_DIR})
-    else()
-        target_link_libraries(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:asmjit>)
+        target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${ASMTK_SRC}>")
     endif()
 
 	set(POLYHOOK_DETOUR_HEADERS
 		${PROJECT_SOURCE_DIR}/polyhook2/Detour/ADetour.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x64Detour.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x86Detour.hpp)
+
 	install(FILES ${POLYHOOK_DETOUR_HEADERS} DESTINATION include/polyhook2/Detour)
 
 	target_sources(${PROJECT_NAME} PRIVATE
@@ -274,41 +276,9 @@ if(POLYHOOK_FEATURE_DETOURS)
 	endif()
 endif()
 
-#Feature/Exception
-if(POLYHOOK_FEATURE_EXCEPTION)
-	set(POLYHOOK_EXCEPTION_HEADERS
-		${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/AVehHook.hpp
-		${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/BreakPointHook.hpp
-		${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/HWBreakPointHook.hpp)
-	install(FILES ${POLYHOOK_EXCEPTION_HEADERS} DESTINATION include/polyhook2/Exceptions)
-
-	target_sources(${PROJECT_NAME} PRIVATE
-		${PROJECT_SOURCE_DIR}/sources/AVehHook.cpp
-		${PROJECT_SOURCE_DIR}/sources/BreakPointHook.cpp
-		${PROJECT_SOURCE_DIR}/sources/HWBreakPointHook.cpp)
-
-	# only build tests if making exe
-	if(NOT POLYHOOK_BUILD_DLL)
-		target_sources(${PROJECT_NAME} PRIVATE
-			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestBreakpointHook.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestHWBreakpointHook.cpp)
-	endif()
-endif()
-
-
 #Feature/Inlinentd
-if(asmjit)
-    # Avoid linking asmjit twice
-    if(NOT POLYHOOK_FEATURE_DETOURS OR POLYHOOK_USE_EXTERNAL_ASMTK)
-        if (POLYHOOK_USE_EXTERNAL_ASMJIT)
-            find_library(ASMJIT_LIBRARY NAMES asmjit)
-            find_path(ASMJIT_INCLUDE_DIR NAMES asmjit/asmjit.h)
-            target_link_libraries(${PROJECT_NAME} PRIVATE ${ASMJIT_LIBRARY})
-            target_include_directories(${PROJECT_NAME} PUBLIC ${ASMJIT_INCLUDE_DIR})
-        else()
-            target_link_libraries(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:asmjit>)
-        endif()
-    endif()
+if(POLYHOOK_FEATURE_INLINENTD)
+    link_asmjit()
 
 	install(FILES ${PROJECT_SOURCE_DIR}/polyhook2/Detour/ILCallback.hpp DESTINATION include/polyhook2/Detour)
 
@@ -324,6 +294,26 @@ if(asmjit)
 	endif()
 endif()
 
+#Feature/Exception
+if(POLYHOOK_FEATURE_EXCEPTION)
+    set(POLYHOOK_EXCEPTION_HEADERS
+        ${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/AVehHook.hpp
+        ${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/BreakPointHook.hpp
+        ${PROJECT_SOURCE_DIR}/polyhook2/Exceptions/HWBreakPointHook.hpp)
+    install(FILES ${POLYHOOK_EXCEPTION_HEADERS} DESTINATION include/polyhook2/Exceptions)
+
+    target_sources(${PROJECT_NAME} PRIVATE
+        ${PROJECT_SOURCE_DIR}/sources/AVehHook.cpp
+        ${PROJECT_SOURCE_DIR}/sources/BreakPointHook.cpp
+        ${PROJECT_SOURCE_DIR}/sources/HWBreakPointHook.cpp)
+
+    # only build tests if making exe
+    if(NOT POLYHOOK_BUILD_DLL)
+        target_sources(${PROJECT_NAME} PRIVATE
+            ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestBreakpointHook.cpp
+            ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestHWBreakpointHook.cpp)
+    endif()
+endif()
 
 #Feature/PE
 if(POLYHOOK_FEATURE_PE)
