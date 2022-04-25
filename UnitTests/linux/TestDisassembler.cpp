@@ -2,7 +2,6 @@
 // Created by steve on 3/22/17.
 //
 #include "Catch.hpp"
-#include "polyhook2/CapstoneDisassembler.hpp"
 #include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/Tests/StackCanary.hpp"
 #include "polyhook2/MemAccessor.hpp"
@@ -30,6 +29,8 @@ std::vector<uint8_t> x64ASM2 = {
 	0x48, 0x8B, 0x05, 0x10, 0x00, 0x00, 0x00,  // mov    rax,QWORD PTR[rip + 0x10]  
     0x48, 0x8B, 0x90, 0x55, 0x02, 0x00, 0x00  // mov    rdx,QWORD PTR[rax + 0x255]
 };
+
+std::vector<uint8_t> x64ASM3 = { 0x83, 0x3d, 0xa5, 0x7e, 0x09, 0x00, 0x01 };
 
 // page 590 for jmp types, page 40 for mod/rm table:
 // https://www-ssl.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf
@@ -133,7 +134,7 @@ TEST_CASE("Test Instruction UUID generator", "[Instruction],[UID]") {
 	}
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ZydisDisassembler]", PLH::ZydisDisassembler) {
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x64);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x64ASM.front(), (uint64_t)&x64ASM.front(),
@@ -244,7 +245,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x64", "[ADisassembler],[CapstoneDisassemb
 	}
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]", PLH::ZydisDisassembler) {
 #ifdef POLYHOOK2_ARCH_X64
 	// this test is not suitable for x64 due to ff 25 not being re-written
 	return;
@@ -275,7 +276,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ADisassembler],[CapstoneDisa
 	REQUIRE(Instructions.at(0).hasDisplacement());
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ZydisDisassembler]", PLH::ZydisDisassembler) {
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x86);
 	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
@@ -380,24 +381,32 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86", "[ADisassembler],[CapstoneDisassemb
 	}
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers x64 Two", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+TEMPLATE_TEST_CASE("Test Disassemblers x64 Two", "[ZydisDisassembler]", PLH::ZydisDisassembler) {
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x64);
 	PLH::insts_t Instructions = disasm.disassemble((uint64_t)&x64ASM2.front(), (uint64_t)&x64ASM2.front(),
 		(uint64_t)&x64ASM2.front() + x64ASM2.size(), PLH::MemAccessor());
 
 	SECTION("Verify relative displacements") {
-		REQUIRE(Instructions.at(0).m_isRelative);
-		REQUIRE(Instructions.at(0).m_hasDisplacement);
-		REQUIRE(Instructions.at(0).m_isIndirect == false);
+		REQUIRE(Instructions.at(0).isDisplacementRelative());
+		REQUIRE(Instructions.at(0).hasDisplacement());
+		REQUIRE(Instructions.at(0).isIndirect() == false);
 		REQUIRE(Instructions.at(0).getDestination() == Instructions.at(0).getAddress() + Instructions.at(0).size() + 0x10);
 
-		REQUIRE(Instructions.at(1).m_isRelative == false);
-		REQUIRE(Instructions.at(1).m_isIndirect == false);
+		REQUIRE(Instructions.at(1).isDisplacementRelative() == false);
+		REQUIRE(Instructions.at(1).isIndirect() == false);
+	}
+
+	Instructions = disasm.disassemble((uint64_t)&x64ASM3.front(), (uint64_t)&x64ASM3.front(),
+		(uint64_t)&x64ASM3.front() + x64ASM3.size(), PLH::MemAccessor());
+	SECTION("Verify displacements with immediates") {
+		REQUIRE(Instructions.at(0).isDisplacementRelative());
+		REQUIRE(Instructions.at(0).getDispSize() == 4);
+		REQUIRE(Instructions.at(0).getDisplacement().Relative == 0x0000000000097ea5);
 	}
 }
 
-TEMPLATE_TEST_CASE("Test Disassemblers NOPS", "[ADisassembler],[CapstoneDisassembler],[ZydisDisassembler]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+TEMPLATE_TEST_CASE("Test Disassemblers NOPS", "[ZydisDisassembler]", PLH::ZydisDisassembler) {
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x64);
 	PLH::insts_t Instructions = disasm.disassemble((uint64_t)&x86x64Nops.front(), (uint64_t)&x86x64Nops.front(),
@@ -422,38 +431,3 @@ TEMPLATE_TEST_CASE("Test Disassemblers NOPS", "[ADisassembler],[CapstoneDisassem
 	}
 }
 
-// unreachable code
-#pragma warning(disable: 4702)
-TEST_CASE("Compare x86 Decompilers", "[ADisassembler],[ZydisDisassembler][CapstoneDisassembler]") {
-	PLH::StackCanary canaryg;
-	// Use capstone as reference
-	PLH::CapstoneDisassembler disasmRef(PLH::Mode::x86);
-	auto                      InstructionsRef = disasmRef.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-		(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
-
-	PLH::ZydisDisassembler disasm(PLH::Mode::x86);
-	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM.front(), (uint64_t)&x86ASM.front(),
-		(uint64_t)&x86ASM.front() + x86ASM.size(), PLH::MemAccessor());
-
-	SECTION("Check Integrity") {
-		PLH::StackCanary canary;
-		REQUIRE(Instructions.size() == 7);
-		std::cout << Instructions << std::endl;
-
-		for (const auto &p : disasm.getBranchMap()) {
-			std::cout << std::hex << "dest: " << p.first << " -> " << std::dec << p.second << std::endl;
-		}
-
-		for (size_t i = 0; i < Instructions.size(); i++) {
-			INFO("Index: " << i << " Mnemonic:"
-			<< Instructions[i].getMnemonic());
-
-			REQUIRE(filterJXX(Instructions[i].getMnemonic()) == filterJXX(InstructionsRef[i].getMnemonic()));
-			REQUIRE(Instructions[i].size() == InstructionsRef[i].size());
-			REQUIRE(Instructions[i].isBranching() == InstructionsRef[i].isBranching());
-
-			REQUIRE(Instructions[i].getAddress() == InstructionsRef[i].getAddress());
-			REQUIRE(Instructions[i].getDestination() == InstructionsRef[i].getDestination());
-		}
-	}
-}

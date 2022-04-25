@@ -50,21 +50,21 @@ namespace PLH {
 		/* Construct a callback given the raw signature at runtime. 'Callback' param is the C stub to transfer to,
 		where parameters can be modified through a structure which is written back to the parameter slots depending
 		on calling convention.*/
-		uint64_t getJitFunc(const asmjit::FuncSignature& sig, const asmjit::Environment::Arch arch, const tUserCallback callback);
+		uint64_t getJitFunc(const asmjit::FuncSignature& sig, const asmjit::Arch arch, const tUserCallback callback);
 
 		/* Construct a callback given the typedef as a string. Types are any valid C/C++ data type (basic types), and pointers to
 		anything are just a uintptr_t. Calling convention is defaulted to whatever is typical for the compiler you use, you can override with
 		stdcall, fastcall, or cdecl (cdecl is default on x86). On x64 those map to the same thing.*/
-		uint64_t getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const asmjit::Environment::Arch arch, const tUserCallback callback, std::string callConv = "");
+		uint64_t getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const asmjit::Arch arch, const tUserCallback callback, std::string callConv = "");
 		uint64_t* getTrampolineHolder();
 	private:
 		// does a given type fit in a general purpose register (i.e. is it integer type)
-		bool isGeneralReg(const uint8_t typeId) const;
+		bool isGeneralReg(const asmjit::TypeId typeId) const;
 		// float, double, simd128
-		bool isXmmReg(const uint8_t typeId) const;
+		bool isXmmReg(const asmjit::TypeId typeId) const;
 
-		asmjit::CallConv::Id getCallConv(const std::string& conv);
-		uint8_t getTypeId(const std::string& type);
+		asmjit::CallConvId PLH::ILCallback::getCallConv(const std::string& conv);
+		asmjit::TypeId PLH::ILCallback::getTypeId(const std::string& type);
 
 		uint64_t m_callbackBuf;
 		asmjit::x86::Mem argsStack;

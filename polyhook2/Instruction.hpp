@@ -8,12 +8,21 @@
 #include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/UID.hpp"
 #include "polyhook2/Enums.hpp"
+#include "polyhook2/Misc.hpp"
+#include <type_traits>
+
 namespace PLH {
 class Instruction {
 public:
 	union Displacement {
 		int64_t  Relative;
 		uint64_t Absolute;
+	};
+
+	enum class OperandType {
+		Displacement,
+		Register,
+		Immediate,
 	};
 
 	Instruction(uint64_t address,
@@ -24,9 +33,8 @@ public:
 				const std::vector<uint8_t>& bytes,
 				const std::string& mnemonic,
 				const std::string& opStr,
-				Mode mode) : m_uid(UID::singleton()) {
-
-		Init(address, displacement, displacementOffset, isRelative, isIndirect, bytes, mnemonic, opStr, false, m_uid, mode);
+				Mode mode) {
+		Init(address, displacement, displacementOffset, isRelative, isIndirect, bytes, mnemonic, opStr, false, false, mode);
 	}
 
 	Instruction(uint64_t address,
@@ -38,28 +46,24 @@ public:
 				const size_t arrLen,
 				const std::string& mnemonic,
 				const std::string& opStr,
-				Mode mode) : m_uid(UID::singleton()) {
-
+				Mode mode) {
 		std::vector<uint8_t> Arr(bytes, bytes + arrLen);
-		Init(address, displacement, displacementOffset, isRelative, isIndirect, Arr, mnemonic, opStr, false, m_uid, mode);
+		Init(address, displacement, displacementOffset, isRelative, isIndirect, Arr, mnemonic, opStr, false, false, mode);
 	}
 
-	Instruction& operator=(const Instruction& rhs) {
-		Init(rhs.m_address, rhs.m_displacement, rhs.m_dispOffset, rhs.m_isRelative, rhs.m_isIndirect,
-			 rhs.m_bytes, rhs.m_mnemonic, rhs.m_opStr, rhs.m_hasDisplacement, rhs.m_uid, rhs.m_mode);
-		return *this;
+	uint64_t getAbsoluteDestination() const {
+		return m_displacement.Absolute;
+	}
+
+	uint64_t getRelativeDestination() const {
+		return m_address + m_displacement.Relative + size();
 	}
 
 	/**Get the address of where the instruction points if it's a branching instruction
 	* @Notes: Handles eip/rip & immediate branches correctly
 	* **/
 	uint64_t getDestination() const {
-		uint64_t dest = 0;
-		if (isDisplacementRelative()) {
-			dest = m_address + m_displacement.Relative + size();
-		} else {
-			dest = m_displacement.Absolute;
-		}
+		uint64_t dest = isDisplacementRelative() ? getRelativeDestination() : getAbsoluteDestination();
 
 		// ff 25 00 00 00 00 goes from jmp qword ptr [rip + 0] to jmp word ptr [rip + 0] on x64 -> x86
 		if (m_isIndirect) {
@@ -132,6 +136,10 @@ public:
 		return m_hasDisplacement;
 	}
 
+	void setHasDisplacement(bool hasDisplacement) {
+		m_hasDisplacement = hasDisplacement;
+	}
+
 	bool isBranching() const {
 		if (m_isBranching && m_isRelative) {
 			if (!m_hasDisplacement) {
@@ -164,16 +172,17 @@ public:
 		return m_mnemonic + " " + m_opStr;
 	}
 
-	size_t getDispSize() {
+	size_t getDispSize() const {
 		// jmp (e9 eb be ad de) = 5 bytes, 1 disp off, 4 disp sz
-		return size() - getDisplacementOffset();
+		// 83 3d a5 7e 09 00 00 | cmp dword ptr ds:[0x00007FFD68ED336C], 0x00 = 7 bytes, 2 disp off, 4 disp size, 1 imm sz
+		return (m_hasImmediate ? m_immediateOffset : size()) - getDisplacementOffset();
 	}
 
 	size_t size() const {
 		return m_bytes.size();
 	}
 
-	void setRelativeDisplacement(const int64_t displacement) {
+	void setRelativeDisplacement(const int64_t displacement, const bool ip_relative = false) {
 		/**Update our class' book-keeping of this stuff and then modify the byte array.
 		 * This doesn't actually write the changes to the executeable code, it writes to our
 		 * copy of the bytes**/
@@ -181,7 +190,7 @@ public:
 		m_isRelative = true;
 		m_hasDisplacement = true;
 
-		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
+		const uint32_t dispSz = ip_relative ? 4 : (uint32_t)(size() - getDisplacementOffset());
 		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
 			PolyHook2DebugBreak();
 			return;
@@ -209,6 +218,11 @@ public:
 		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, dispSz);
 	}
 
+	void setImmediateOffset(const uint8_t immediateOffset ){
+        m_hasImmediate = true;
+	    m_immediateOffset = immediateOffset;
+	}
+
 	long getUID() const {
 		return m_uid.val;
 	}
@@ -224,11 +238,51 @@ public:
 		m_isIndirect = isIndirect;
 	}
 
-	bool         m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
-	bool         m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
-	bool		 m_isBranching;     // Does this instrunction jmp/call or otherwise change control flow
-	bool         m_isIndirect;      // Does this instruction get it's destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
-	bool         m_isCalling;       // Does this instruction is of a CALL type.
+	void setImmediate(uint64_t immediate){
+		m_hasImmediate = true;
+		m_immediate = immediate;
+	}
+
+	bool hasImmediate() const {
+		return m_hasImmediate;
+	}
+
+	uint64_t getImmediate() const {
+		return m_immediate;
+	}
+
+	uint8_t getImmediateSize() const {
+		return m_immediateSize;
+	}
+
+	void setImmediateSize(uint8_t size) {
+		m_immediateSize = size;
+	}
+
+	void setRegister(ZydisRegister reg){
+		m_register = reg;
+	}
+
+	ZydisRegister getRegister() const {
+		return m_register;
+	}
+
+	bool hasRegister() const {
+		return m_register != ZYDIS_REGISTER_NONE;
+	}
+
+	void addOperandType(OperandType type){
+		m_operands.emplace_back(type);
+	}
+
+	const std::vector<OperandType>& getOperandTypes() const {
+		return m_operands;
+	}
+
+	static inline PLH::Instruction makex64Nop(const uint64_t address, const std::vector<uint8_t>& bytes = {0x90}){
+		return Instruction(address, {0}, 0, false, false, bytes, "nop", "", Mode::x64);
+	}
+
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
@@ -239,7 +293,7 @@ private:
 			  const std::string& mnemonic,
 			  const std::string& opStr,
 			  const bool hasDisp,
-			  const UID id,
+			  const bool hasImmediate,
 			  Mode mode) {
 		m_address = address;
 		m_displacement = displacement;
@@ -247,32 +301,48 @@ private:
 		m_isRelative = isRelative;
 		m_isIndirect = isIndirect;
 		m_hasDisplacement = hasDisp;
+		m_hasImmediate = hasImmediate;
+		m_immediate = 0;
+		m_immediateSize = 0;
+		m_register = ZydisRegister::ZYDIS_REGISTER_NONE;
 
 		m_bytes = bytes;
 		m_mnemonic = mnemonic;
 		m_opStr = opStr;
 
-		m_uid = id;
+		m_uid = UID(UID::singleton());
 		m_mode = mode;
 	}
 
-	uint64_t     m_address;         // Address the instruction is at
-	Displacement m_displacement;    // Where an instruction points too (valid for jmp + call types)
-	uint8_t      m_dispOffset;      // Offset into the byte array where displacement is encoded
+	ZydisRegister m_register;        // Register operand when displacement is present
+	bool          m_isIndirect;      // Does this instruction get its destination via an indirect mem read (ff 25 ... jmp [jmp_dest]) (only filled for jmps / calls)
+	bool          m_isCalling;       // Does this instruction is of a CALL type.
+	bool		  m_isBranching;     // Does this instruction jmp/call or otherwise change control flow
+	bool          m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
+	bool          m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
+    bool          m_hasImmediate;    // Does this instruction have the immediate field filled?
+    uint8_t       m_immediateOffset; // Offset into the byte array where immediate is encoded
+	Displacement  m_displacement;    // Where an instruction points too (valid for jmp + call types, and RIP relative MEM types)
 
-	std::vector<uint8_t> m_bytes; //All the raw bytes of this instruction
-	std::string          m_mnemonic; //If you don't know what these two are then gtfo of this source code :)
+	uint64_t      m_address;         // Address the instruction is at
+	uint64_t      m_immediate;       // Immediate op
+	uint8_t       m_immediateSize;   // Immediate size, in bits
+	uint8_t       m_dispOffset;      // Offset into the byte array where displacement is encoded
+
+	std::vector<uint8_t> m_bytes;    // All the raw bytes of this instruction
+	std::vector<OperandType> m_operands; // Types of all instruction operands
+	std::string          m_mnemonic;
 	std::string          m_opStr;
 
 	Mode m_mode;
 
 	UID m_uid;
 };
+static_assert(std::is_nothrow_move_constructible<Instruction>::value, "PLH::Instruction should be noexcept move constructible");
 
 inline bool operator==(const Instruction& lhs, const Instruction& rhs) {
 	return lhs.getUID() == rhs.getUID();
 }
-
 
 inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
 	std::stringstream byteStream;
@@ -280,7 +350,7 @@ inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
 		byteStream << std::hex << std::setfill('0') << std::setw(2) << (unsigned)obj.getBytes()[i] << " ";
 
 	os << std::hex << obj.getAddress() << " [" << obj.size() << "]: ";
-	os << std::setfill(' ') << std::setw(30) << std::left << byteStream.str();
+	os << std::setfill(' ') << std::setw(40) << std::left << byteStream.str();
 	os << obj.getFullName();
 
 	if (obj.hasDisplacement() && obj.isDisplacementRelative())
@@ -358,13 +428,12 @@ inline PLH::insts_t makex64PreferredJump(const uint64_t address, const uint64_t 
 	std::vector<uint8_t> retBytes = { 0xC3 };
 	Instruction ret(curInstAddress, zeroDisp, 0, false, false,
 		retBytes, "ret", "", Mode::x64);
-	curInstAddress += ret.size();
 
 	return { pushRax, movRax, xchgRspRax, ret };
 }
 
 /**Write an indirect style 6byte jump. Address is where the jmp instruction will be located, and
- * destHoldershould point to the memory location that *CONTAINS* the address to be jumped to.
+ * destHolder should point to the memory location that *CONTAINS* the address to be jumped to.
  * Destination should be the value that is written into destHolder, and be the address of where
  * the jmp should land.**/
 inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t destination, const uint64_t destHolder) {
@@ -396,12 +465,8 @@ inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destinatio
 	bytes[0] = 0xE9;
 	memcpy(&bytes[1], &disp.Relative, 4);
 
-	std::stringstream ss;
-	ss << std::hex << destination;
-
-	return { Instruction(address, disp, 1, true, false, bytes, "jmp", ss.str(), Mode::x86) };
+	return { Instruction(address, disp, 1, true, false, bytes, "jmp", PLH::int_to_hex(destination), Mode::x86) };
 }
-
 
 inline PLH::insts_t makeAgnosticJmp(const uint64_t address, const uint64_t destination) {
 	if constexpr (sizeof(char*) == 4)

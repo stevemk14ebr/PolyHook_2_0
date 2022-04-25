@@ -3,7 +3,6 @@
 //
 #include <Catch.hpp>
 #include "polyhook2/Detour/x64Detour.hpp"
-#include "polyhook2/CapstoneDisassembler.hpp"
 #include "polyhook2/ZydisDisassembler.hpp"
 
 #include "polyhook2/Tests/StackCanary.hpp"
@@ -99,7 +98,7 @@ HOOK_CALLBACK(&malloc, h_hookMalloc, {
 	return PLH::FnCast(hookMallocTramp, &malloc)(_args...);
 });
 
-TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::CapstoneDisassembler, PLH::ZydisDisassembler) {
+TEMPLATE_TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]", PLH::ZydisDisassembler) {
 	TestType dis(PLH::Mode::x64);
 
 

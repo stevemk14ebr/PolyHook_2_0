@@ -7,7 +7,7 @@
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/Misc.hpp"
 #include "polyhook2/PE/PEB.hpp"
-#include "polyhook2/ADisassembler.hpp"
+#include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/RangeAllocator.hpp"
 
 #define RVA2VA(type, base, rva) (type)((ULONG_PTR) base + rva)

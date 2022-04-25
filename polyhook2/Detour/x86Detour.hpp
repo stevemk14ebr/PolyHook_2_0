@@ -1,15 +1,13 @@
 //
 // Created by steve on 7/4/17.
 //
-
-#ifndef POLYHOOK_2_X86DETOUR_HPP
-#define POLYHOOK_2_X86DETOUR_HPP
+#pragma once
 
 #include "polyhook2/PolyHookOs.hpp"
 #include "polyhook2/Detour/ADetour.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/Instruction.hpp"
-#include "polyhook2/ADisassembler.hpp"
+#include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/MemProtector.hpp"
 
@@ -19,17 +17,16 @@ namespace PLH {
 
 class x86Detour : public Detour {
 public:
-	x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth = c_maxDepth);
+    x86Detour(uint64_t fnAddress, uint64_t fnCallback, uint64_t* userTrampVar);
 
-	x86Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PLH::ADisassembler& dis, const uint8_t maxDepth = c_maxDepth);
-	virtual ~x86Detour() = default;
-	virtual bool hook() override;
+    virtual ~x86Detour() = default;
 
-	Mode getArchType() const override;
+    virtual bool hook() override;
 
-	uint8_t getJmpSize() const;
+    Mode getArchType() const override;
+
 protected:
-	bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
+    bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
 };
+
 }
-#endif //POLYHOOK_2_X86DETOUR_HPP

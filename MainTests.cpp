@@ -13,7 +13,7 @@ int main(int argc, char* const argv[]) {
 	PLH::Log::registerLogger(logger);
 	int result = Catch::Session().run(argc, argv);
 
-	getchar();
+//	getchar();
 	return result;
 }
 

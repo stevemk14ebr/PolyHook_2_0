@@ -17,23 +17,21 @@ endif()
 #
 # Options
 #
-option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" ON)
+option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" OFF)
 
-option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook as shared libary" OFF)
-option(POLYHOOK_BUILD_SHARED_ASMJIT "Build polyhook as shared libary" OFF)
-option(POLYHOOK_BUILD_SHARED_CAPSTONE "Build capstone as shared libary" OFF)
-option(POLYHOOK_BUILD_SHARED_ZYDIS "Build polyhook as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook2 as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_ASMJIT "Build asmjit as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_ASMTK "Build asmtk as shared libary" OFF)
+option(POLYHOOK_BUILD_SHARED_ZYDIS "Build zydis as shared libary" OFF)
 
 option(POLYHOOK_USE_EXTERNAL_ASMJIT "Use external asmjit libary" OFF)
-option(POLYHOOK_USE_EXTERNAL_CAPSTONE "Use external capstone libary" OFF)
+option(POLYHOOK_USE_EXTERNAL_ASMTK "Use external asmtk libary" OFF)
 option(POLYHOOK_USE_EXTERNAL_ZYDIS "Use external zydis libary" OFF)
 
 if(MSVC)
 	option(POLYHOOK_BUILD_STATIC_RUNTIME "Use static runtime" ON)
 endif()
 
-option(POLYHOOK_DISASM_CAPSTONE "Enable capstone support" ON)
-option(POLYHOOK_DISASM_CAPSTONE_FULL "Build all features of capstone." OFF)
 option(POLYHOOK_DISASM_ZYDIS "Enable Zydis support." ON)
 
 if(WIN32)
@@ -47,9 +45,8 @@ option(POLYHOOK_FEATURE_DETOURS "Implement detour functionality" ON)
 option(POLYHOOK_FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" ON)
 option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
 
-#force capstone and zydis build for tests
+#force zydis build for tests
 if(NOT POLYHOOK_BUILD_DLL)
-	set(POLYHOOK_DISASM_CAPSTONE ON)
 	set(POLYHOOK_DISASM_ZYDIS ON)
 endif()
 
@@ -76,49 +73,30 @@ if(POLYHOOK_FEATURE_INLINENTD AND NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
 endif()
 
 #
-# Capstone
+# ASMTK
 #
 
-if(POLYHOOK_DISASM_CAPSTONE AND NOT POLYHOOK_USE_EXTERNAL_CAPSTONE)
-	set(CAPSTONE_BUILD_STATIC_RUNTIME ${POLYHOOK_BUILD_STATIC_RUNTIME} CACHE BOOL "")
-	if(POLYHOOK_BUILD_SHARED_CAPSTONE)
-		set(CAPSTONE_BUILD_SHARED ON CACHE BOOL "")
-		set(CAPSTONE_BUILD_STATIC OFF CACHE BOOL "")
-		set(CAPSTONE_LIBRARY_NAME "capstone-shared")
+if(POLYHOOK_FEATURE_DETOURS AND NOT POLYHOOK_USE_EXTERNAL_ASMTK)
+	if(NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
+    	set(ASMJIT_EMBED TRUE)
+    endif()
+
+	if(POLYHOOK_BUILD_SHARED_ASMTK)
+		set(ASMTK_STATIC OFF CACHE BOOL "")
 	else()
-		set(CAPSTONE_BUILD_SHARED OFF CACHE BOOL "")
-		set(CAPSTONE_BUILD_STATIC ON CACHE BOOL "")
-		set(CAPSTONE_LIBRARY_NAME "capstone-static")
-	endif()
-	set(CAPSTONE_BUILD_TESTS OFF CACHE BOOL "")
-	set(CAPSTONE_BUILD_CSTOOL OFF CACHE BOOL "")
-	if(NOT ${POLYHOOK_DISASM_CAPSTONE_FULL})
-		set(CAPSTONE_ARM_SUPPORT OFF CACHE BOOL "ARM support") 
-		set(CAPSTONE_ARM64_SUPPORT OFF CACHE BOOL "ARM64 support") 
-		set(CAPSTONE_M680X_SUPPORT OFF CACHE BOOL "M680X support") 
-		set(CAPSTONE_M68K_SUPPORT OFF CACHE BOOL "M68K support") 
-		set(CAPSTONE_MIPS_SUPPORT OFF CACHE BOOL "MIPS support") 
-		set(CAPSTONE_PPC_SUPPORT OFF CACHE BOOL "PPC support") 
-		set(CAPSTONE_SPARC_SUPPORT OFF CACHE BOOL "SPARC support")
-		set(CAPSTONE_SYSZ_SUPPORT OFF CACHE BOOL "SYSZ support")
-		set(CAPSTONE_XCORE_SUPPORT OFF CACHE BOOL "XCORE support")
-		set(CAPSTONE_TMS320C64X_SUPPORT OFF CACHE BOOL "TMS320C64X support")
-		set(CAPSTONE_M680X_SUPPORT OFF CACHE BOOL "M680X support")
-		set(CAPSTONE_EVM_SUPPORT OFF CACHE BOOL "EVM support")
+		set(ASMTK_STATIC ON CACHE BOOL "")
 	endif()
 
-	add_subdirectory(capstone)
-
+	add_subdirectory(asmtk)
 	if(MSVC)
 		if(POLYHOOK_BUILD_STATIC_RUNTIME)
-			set_target_properties(${CAPSTONE_LIBRARY_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+			set_target_properties(asmtk PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 		else()
-			set_target_properties(${CAPSTONE_LIBRARY_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+			set_target_properties(asmtk PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 		endif()
 	endif()
 
 endif()
-
 
 
 #
@@ -190,7 +168,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 #Core
-set(POLYHOOK_CORE_HEADERS ${PROJECT_SOURCE_DIR}/polyhook2/ADisassembler.hpp
+set(POLYHOOK_CORE_HEADERS
         ${PROJECT_SOURCE_DIR}/polyhook2/Enums.hpp
         ${PROJECT_SOURCE_DIR}/polyhook2/IHook.hpp
         ${PROJECT_SOURCE_DIR}/polyhook2/Instruction.hpp
@@ -229,22 +207,6 @@ if(NOT POLYHOOK_BUILD_DLL)
 	)
 endif()
 
-#DisAsm/Capstone
-if(POLYHOOK_DISASM_CAPSTONE)
-	if (POLYHOOK_USE_EXTERNAL_CAPSTONE)
-		find_library(CAPSTONE_LIBRARY NAMES capstone_dll capstone)
-		find_path(CAPSTONE_INCLUDE_DIR NAMES capstone/capstone.h)
-		target_link_libraries(${PROJECT_NAME} PRIVATE ${CAPSTONE_LIBRARY})
-		target_include_directories(${PROJECT_NAME} PRIVATE ${CAPSTONE_INCLUDE_DIR})
-	else()
-		target_link_libraries(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${CAPSTONE_LIBRARY_NAME}>)
-		target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/capstone/include>)
-		install(TARGETS ${CAPSTONE_LIBRARY_NAME} EXPORT exporthack)
-	endif()
-	target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/sources/CapstoneDisassembler.cpp")
-	install(FILES ${PROJECT_SOURCE_DIR}/polyhook2/CapstoneDisassembler.hpp DESTINATION include/polyhook2)
-endif()
-
 #DisAsm/Zydis
 if(POLYHOOK_DISASM_ZYDIS)
 	if (POLYHOOK_USE_EXTERNAL_ZYDIS)
@@ -262,9 +224,20 @@ if(POLYHOOK_DISASM_ZYDIS)
 		target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/zydis/dependencies/zycore/include>)
 		target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/zydis>)
 	endif()
-	
+
 	target_sources(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/sources/ZydisDisassembler.cpp")
 	install(FILES ${PROJECT_SOURCE_DIR}/polyhook2/ZydisDisassembler.hpp DESTINATION include/polyhook2)
+endif()
+
+# AsmTk
+
+if (POLYHOOK_USE_EXTERNAL_ASMTK)
+    find_library(ASMTK_LIBRARY NAMES asmtk)
+    find_path(ASMTK_INCLUDE_DIR NAMES asmtk/asmtk.h)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${ASMTK_LIBRARY})
+    target_include_directories(${PROJECT_NAME} PRIVATE ${ASMTK_INCLUDE_DIR})
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:asmtk>)
 endif()
 
 #Feature/Detours
@@ -283,7 +256,8 @@ if(POLYHOOK_FEATURE_DETOURS)
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8) #64-bit
-			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx64.cpp)
+			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx64.cpp
+			 ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourTranslationx64.cpp)
 		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4) #32-bit
 			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx86.cpp)
 		endif()
@@ -361,7 +335,7 @@ endif()
 
 #Feature/Virtuals
 if(POLYHOOK_FEATURE_VIRTUALS)
-	set(POLYHOOK_VIRTUAL_HEADERS 
+	set(POLYHOOK_VIRTUAL_HEADERS
 		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VTableSwapHook.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Virtuals/VFuncSwapHook.hpp)
 	install(FILES ${POLYHOOK_VIRTUAL_HEADERS} DESTINATION include/polyhook2/Virtuals)

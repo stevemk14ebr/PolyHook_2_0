@@ -6,7 +6,7 @@
 #define POLYHOOK_2_0_IHOOK_HPP
 
 #include "polyhook2/PolyHookOs.hpp"
-#include "polyhook2/ADisassembler.hpp"
+#include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/MemAccessor.hpp"
 
@@ -60,7 +60,7 @@ public:
 
 protected:
 	bool m_debugSet;
-	bool m_hooked;
+	bool m_hooked = false;
 };
 
 //Thanks @_can1357 for help with this.
@@ -134,8 +134,9 @@ Creates a hook callback function pointer that matches the type of a given functi
 will be a pointer to the function, and the variables _args... and name_t will be created to represent the original
 arguments of the function and the type of the callback respectively.
 **/
-#define HOOK_CALLBACK(pType, name, body) typedef PLH::callback_type_t<decltype(pType)> name##_t; \
-PLH::callback_type_t<decltype(pType)> name = PLH::make_callback(pType, [](auto... _args) body )
+#define HOOK_CALLBACK(pType, name, body) \
+    typedef PLH::callback_type_t<decltype(pType)> name##_t; \
+    PLH::callback_type_t<decltype(pType)> (name) = PLH::make_callback(pType, [](auto... _args) body) // NOLINT(bugprone-macro-parentheses)
 
 /**
 When using the HOOK_CALLBACK macro this helper utility can be used to retreive one of the original

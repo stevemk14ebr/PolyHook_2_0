@@ -31,7 +31,7 @@ Detour(const char* fnAddress, const char* fnCallback, uint64_t* userTrampVar, PL
 * fnAddress: The memory address of the function to hook.
 * fnCallback: The memory address of the hook callback
 * userTrampVar: A pointer to a ```uint64_t``` (_MUST_ be uint64_t), this store a function pointer to the trampoline created during hooking.
-* dis: An instance of either ```ZydisDisassembler``` or ```CapstoneDisassembler```. Must stay in scope for the duration the ```Detour``` is alive.
+* dis: An instance of either ```ZydisDisassembler```. Must stay in scope for the duration the ```Detour``` is alive.
 
 fnAddress is a function pointer. The library will inspect the assembly at this memory location and first determine if the provided function pointer is indirect and attempt to resolve the location of the true assembly body. For example in x64 release mode the vast majority of the time function pointers point to ```jmp``` instructions which go through multiple levels before finally hitting the implementation body. This occurs due to IAT resolution, linker optimizations, and other compiler internal layout reasons. If a function is already hooked with say an ```e9xxxxxxxx jmp <xxxxxxxx>``` Polyhook will follow the jmp and hook the handler that already exists. Complicated jmp types like ```mov rbx, xxxxxxxx; jmp rbx``` are not followed as the library does not track intermediate register or stack operations, only indirect memory or direct jmps are followed. If you have cases with indirection via registers like this you can handle this manually by resolving these sorts of prologues in user logic and then passing the real, final, function address to polyhook.
 

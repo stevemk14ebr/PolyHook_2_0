@@ -1,4 +1,5 @@
 #include "polyhook2/Virtuals/VFuncSwapHook.hpp"
+#include "polyhook2/ErrorLog.hpp"
 
 PLH::VFuncSwapHook::VFuncSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap)
     : VFuncSwapHook((uint64_t)Class, redirectMap, userOrigMap)
@@ -21,7 +22,7 @@ bool PLH::VFuncSwapHook::hook() {
 	if (m_vFuncCount <= 0)
 		return false;
 
-	MemoryProtector prot2((uint64_t)&m_vtable[0], sizeof(uintptr_t) * m_vFuncCount, ProtFlag::R | ProtFlag::W, *this);
+	MemoryProtector prot2((uint64_t)&m_vtable[0], sizeof(uintptr_t) * (uint64_t)m_vFuncCount, ProtFlag::R | ProtFlag::W, *this);
 	for (const auto& p : m_redirectMap) {
 		assert(p.first < m_vFuncCount);
 		if (p.first >= m_vFuncCount)
@@ -45,7 +46,7 @@ bool PLH::VFuncSwapHook::unHook() {
 		return false;
 	}
 
-	MemoryProtector prot2((uint64_t)&m_vtable[0], sizeof(uintptr_t) * m_vFuncCount, ProtFlag::R | ProtFlag::W, *this);
+	MemoryProtector prot2((uint64_t)&m_vtable[0], sizeof(uintptr_t) * (uint64_t)m_vFuncCount, ProtFlag::R | ProtFlag::W, *this);
 	for (const auto& p : m_origVFuncs) {
 		assert(p.first < m_vFuncCount);
 		if (p.first >= m_vFuncCount)
