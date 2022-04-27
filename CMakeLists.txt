@@ -64,9 +64,11 @@ if(POLYHOOK_FEATURE_DETOURS AND NOT POLYHOOK_USE_EXTERNAL_ASMTK)
 
 	if(POLYHOOK_BUILD_SHARED_ASMTK)
 		set(ASMTK_STATIC OFF CACHE BOOL "")
-	else()
+        set(ASMJIT_STATIC OFF CACHE BOOL "")
+    else()
 		set(ASMTK_STATIC ON CACHE BOOL "")
-	endif()
+        set(ASMJIT_STATIC ON CACHE BOOL "")
+    endif()
 
 	add_subdirectory(asmtk)
     add_asmjit_properties()
