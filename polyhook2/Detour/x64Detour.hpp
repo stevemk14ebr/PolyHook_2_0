@@ -22,13 +22,14 @@ class x64Detour : public Detour {
 
 public:
     enum detour_scheme_t : uint8_t {
-        CODE_CAVE = 1 << 0, //searching for code-cave to keep fnCallback.
-        INPLACE = 1 << 1,    //use push-ret for fnCallback in-place storage.
-        VALLOC2 = 1 << 2, // use virtualalloc2 to allocate in range. Only on win10 > 1803
-        RECOMMENDED = VALLOC2 | CODE_CAVE,
+        VALLOC2 = 1 << 0, // use virtualalloc2 to allocate in range. Only on win10 > 1803
+        INPLACE = 1 << 1,    // use push-ret for fnCallback in-place storage.
+        CODE_CAVE = 1 << 2, //searching for code-cave to keep fnCallback.
+        INPLACE_SHORT = 1 << 3, // spoils rax register
+        RECOMMENDED = VALLOC2 | INPLACE | CODE_CAVE,
         // first try to allocate, then fallback to code cave if not supported.
         // will not fallback on failure of allocation
-        ALL = CODE_CAVE | INPLACE | VALLOC2,
+        ALL = RECOMMENDED | INPLACE_SHORT,
     };
 
     x64Detour(uint64_t fnAddress, uint64_t fnCallback, uint64_t* userTrampVar);
@@ -48,6 +49,11 @@ public:
     void setDetourScheme(detour_scheme_t scheme);
 
 protected:
+    detour_scheme_t m_detourScheme = detour_scheme_t::RECOMMENDED; // this is the most stable configuration.
+    optional<uint64_t> m_valloc2_region;
+    RangeAllocator m_allocator;
+    asmjit::JitRuntime m_asmjit_rt;
+
     bool makeTrampoline(insts_t& prologue, insts_t& outJmpTable);
 
     // assumes we are looking within a +-2GB window
@@ -56,10 +62,9 @@ protected:
 
     optional<uint64_t> generateTranslationRoutine(const Instruction& instruction, uint64_t resume_address);
 
-    detour_scheme_t m_detourScheme = detour_scheme_t::RECOMMENDED; // this is the most stable configuration.
-    optional<uint64_t> m_valloc2_region;
-    RangeAllocator m_allocator;
-    asmjit::JitRuntime m_asmjit_rt;
+    bool make_inplace_trampoline(uint64_t base_address, const std::function<void(asmjit::x86::Assembler&)>& builder);
+
+    bool allocate_trampoline();
 };
 
 }

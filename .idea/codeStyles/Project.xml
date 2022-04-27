@@ -12,6 +12,9 @@
       <option name="SPACE_BEFORE_REFERENCE_IN_DECLARATION" value="false" />
       <option name="SPACE_AFTER_REFERENCE_IN_DECLARATION" value="true" />
     </Objective-C>
+    <editorconfig>
+      <option name="ENABLED" value="false" />
+    </editorconfig>
     <codeStyleSettings language="CMake">
       <option name="SPACE_BEFORE_IF_PARENTHESES" value="false" />
     </codeStyleSettings>

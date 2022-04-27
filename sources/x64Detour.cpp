@@ -17,6 +17,8 @@ namespace PLH {
 using std::optional;
 using std::string;
 
+using namespace asmjit;
+
 x64Detour::x64Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar) :
     Detour(fnAddress, fnCallback, userTrampVar, getArchType()), m_allocator(8, 100) {}
 
@@ -186,30 +188,103 @@ optional<uint64_t> x64Detour::findNearestCodeCave(uint64_t address) {
     return {};
 }
 
+bool x64Detour::make_inplace_trampoline(
+    uint64_t base_address,
+    const std::function<void(asmjit::x86::Assembler&)>& builder
+) {
+    CodeHolder code;
+    code.init(m_asmjit_rt.environment(), base_address);
+    x86::Assembler a(&code);
 
-#pragma pack(push, 1)
+    builder(a);
 
-struct InplaceDetour {
-    uint16_t mov_r10{0xba49};
-    uint64_t target{0};
-    uint16_t push_r10{0x5241};
-    uint8_t ret{0xc3};
-};
+    uint64_t trampoline_address;
+    auto error = m_asmjit_rt.add(&trampoline_address, &code);
 
-#pragma pack(pop)
+    if (!error) {
+        const auto trampoline_end = trampoline_address + code.codeSize();
+        m_hookInsts = m_disasm.disassemble(trampoline_address, trampoline_address, trampoline_end, *this);
+        // Fix the addresses
+        auto current_address = base_address;
+        for (auto& inst: m_hookInsts) {
+            inst.setAddress(current_address);
+            current_address += inst.size();
+        }
+        return true;
+    }
 
-constexpr auto INPLACE_DETOUR_SIZE = sizeof(InplaceDetour);
+    const auto message = std::string("Failed to generate in-place trampoline: ")
+                         + asmjit::DebugUtils::errorAsString(error);
+    PLH::Log::log(message, PLH::ErrorLevel::SEV);
+    return false;
+}
 
-insts_t makeInplaceDetour(const uint64_t address, const uint64_t destination) {
-    Instruction::Displacement disp{0};
+bool x64Detour::allocate_trampoline() {
+    // Insert valloc description
+    if (m_detourScheme & detour_scheme_t::VALLOC2 && boundedAllocSupported()) {
+        auto max = (uint64_t) AlignDownwards(calc_2gb_above(m_fnAddress), getPageSize());
+        auto min = (uint64_t) AlignDownwards(calc_2gb_below(m_fnAddress), getPageSize());
 
-    InplaceDetour dt;
-    dt.target = destination;
+        // each block is m_blocksize (8) at the time of writing. Do not write more than this.
+        auto region = (uint64_t) m_allocator.allocate(min, max);
+        if (region) {
+            m_valloc2_region = region;
 
-    std::vector<uint8_t> destBytes;
-    destBytes.resize(INPLACE_DETOUR_SIZE);
-    memcpy(destBytes.data(), &dt, INPLACE_DETOUR_SIZE);
-    return {Instruction(address, disp, 0, false, false, destBytes, "inplace-detour", "", Mode::x64)};
+            MemoryProtector region_protector(region, 8, ProtFlag::RWX, *this, false);
+            m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, region);
+            return true;
+        } else {
+            Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
+        }
+    }
+
+    // The In-place scheme may only be done for functions with a large enough prologue,
+    // otherwise this will overwrite adjacent bytes. The default in-place scheme is non-spoiling,
+    // but larger, which reduces chances of success.
+    if (m_detourScheme & detour_scheme_t::INPLACE) {
+        const auto success = make_inplace_trampoline(m_fnAddress, [&](auto& a) {
+            a.lea(x86::rsp, x86::ptr(x86::rsp, -0x80));
+            a.push(x86::rax);
+            a.mov(x86::rax, m_fnCallback);
+            a.xchg(x86::ptr(x86::rsp), x86::rax);
+            a.ret(0x80);
+        });
+
+        if (success) {
+            return true;
+        }
+    }
+
+    // Code cave is our last recommended approach since it may potentially find a region of unstable memory.
+    // We're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
+    if (m_detourScheme & detour_scheme_t::CODE_CAVE) {
+        auto cave = findNearestCodeCave<8>(m_fnAddress);
+        if (cave) {
+            MemoryProtector cave_protector(*cave, 8, ProtFlag::RWX, *this, false);
+            m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+            return true;
+        } else {
+            Log::log("No code caves found near function", ErrorLevel::SEV);
+        }
+    }
+
+    // This short in-place scheme works almost like the default in-place scheme, except that it doesn't
+    // try to not spoil shadow space. It doesn't mean that it will necessarily spoil it, though.
+    if (m_detourScheme & detour_scheme_t::INPLACE_SHORT) {
+        const auto success = make_inplace_trampoline(m_fnAddress, [&](auto& a) {
+            a.mov(x86::rax, m_fnCallback);
+            a.push(x86::rax);
+            a.ret();
+        });
+
+        if (success) {
+            return true;
+        }
+    }
+
+    Log::log("None of the allowed hooking schemes have succeeded", ErrorLevel::SEV);
+
+    return false;
 }
 
 bool x64Detour::hook() {
@@ -230,9 +305,10 @@ bool x64Detour::hook() {
     // --------------- END RECURSIVE JMP RESOLUTION ---------------------
     Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
-    uint64_t minProlSz = (m_detourScheme == detour_scheme_t::INPLACE)
-                         ? INPLACE_DETOUR_SIZE
-                         : getMinJmpSize(); // min size of patches that may split instructions
+    // min size of patches that may split instructions
+    uint64_t minProlSz = (m_detourScheme == detour_scheme_t::INPLACE) ? 23 :
+                         (m_detourScheme == detour_scheme_t::INPLACE_SHORT) ? 12 :
+                         getMinJmpSize();
 
     uint64_t roundProlSz = minProlSz;  // nearest size to min that doesn't split any instructions
 
@@ -272,58 +348,11 @@ bool x64Detour::hook() {
     m_nopProlOffset = (uint16_t) minProlSz;
 
     MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::RWX, *this);
-    if (m_detourScheme & detour_scheme_t::VALLOC2 && boundedAllocSupported()) {
-        auto max = (uint64_t) AlignDownwards(calc_2gb_above(m_fnAddress), getPageSize());
-        auto min = (uint64_t) AlignDownwards(calc_2gb_below(m_fnAddress), getPageSize());
 
-        // each block is m_blocksize (8) at the time of writing. Do not write more than this.
-        auto region = (uint64_t) m_allocator.allocate(min, max);
-        if (!region) {
-            if (m_detourScheme & detour_scheme_t::CODE_CAVE || m_detourScheme & detour_scheme_t::INPLACE) {
-                goto trycave;
-            }
-
-            Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
-            return false;
-        } else {
-            m_valloc2_region = region;
-
-            MemoryProtector holderProt(region, 8, ProtFlag::RWX, *this, false);
-            m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, region);
-            goto success;
-        }
-    }
-
-    trycave:
-    if (m_detourScheme & detour_scheme_t::CODE_CAVE) {
-        // we're really space constrained, try to do some stupid hacks like checking for 0xCC's near us
-        auto cave = findNearestCodeCave<8>(m_fnAddress);
-        if (!cave) {
-            if (m_detourScheme & detour_scheme_t::INPLACE) {
-                goto tryinplace;
-            }
-
-            Log::log("No code caves found near function", ErrorLevel::SEV);
-            return false;
-        } else {
-            MemoryProtector holderProt(*cave, 8, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
-            m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
-            goto success;
-        }
-    }
-
-    tryinplace:
-    if (m_detourScheme & detour_scheme_t::INPLACE) {
-        //inplace scheme. This is more stable than the cave finder since that may potentially find a region of unstable memory.
-        // However, this INPLACE scheme may only be done for functions with a large enough prologue, otherwise this will overwrite adjacent bytes
-        m_hookInsts = makeInplaceDetour(m_fnAddress, m_fnCallback);
-        goto success;
-    } else {
-        Log::log("No allowed hooking scheme succeeded", ErrorLevel::SEV);
+    if (!allocate_trampoline()) {
         return false;
     }
 
-    success:
     ZydisDisassembler::writeEncoding(m_hookInsts, *this);
 
     // Nop the space between jmp and end of prologue
@@ -512,11 +541,10 @@ std::vector<string> generateAbsoluteJump(uint64_t destination, uint16_t stack_cl
  */
 optional<uint64_t> x64Detour::generateTranslationRoutine(const Instruction& instruction, uint64_t resume_address) {
     // AsmTK parses strings for AsmJit, which generates the binary code.
-    asmjit::CodeHolder code;
-
+    CodeHolder code;
     code.init(m_asmjit_rt.environment());
 
-    asmjit::x86::Assembler assembler(&code);
+    x86::Assembler assembler(&code);
     asmtk::AsmParser parser(&assembler);
 
     const auto result = translate_instruction(instruction);
@@ -575,14 +603,14 @@ optional<uint64_t> x64Detour::generateTranslationRoutine(const Instruction& inst
 
     // Parse the instructions via AsmTK
     if (auto error = parser.parse(translation_string.c_str())) {
-        Log::log(string("AsmTK error: ") + asmjit::DebugUtils::errorAsString(error), ErrorLevel::SEV);
+        Log::log(string("AsmTK error: ") + DebugUtils::errorAsString(error), ErrorLevel::SEV);
         return {};
     }
 
     // Generate the binary code via AsmJit
     uint64_t translation_address = 0;
     if (auto error = m_asmjit_rt.add(&translation_address, &code)) {
-        Log::log(string("AsmJit error: ") + asmjit::DebugUtils::errorAsString(error), ErrorLevel::SEV);
+        Log::log(string("AsmJit error: ") + DebugUtils::errorAsString(error), ErrorLevel::SEV);
         return {};
     }
 

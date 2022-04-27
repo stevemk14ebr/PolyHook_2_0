@@ -31,12 +31,16 @@ PLH::ZydisDisassembler::~ZydisDisassembler() {
 	}
 }
 
-PLH::insts_t
-PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End, const MemAccessor& accessor) {
+PLH::insts_t PLH::ZydisDisassembler::disassemble(
+    uint64_t firstInstruction,
+    uint64_t start,
+    uint64_t end,
+    const MemAccessor& accessor
+) {
 	insts_t insVec;
 	m_branchMap.clear();
 
-	uint64_t size = End - start;
+	uint64_t size = end - start;
 	assert(size > 0);
 	if (size <= 0) {
 		return insVec;
