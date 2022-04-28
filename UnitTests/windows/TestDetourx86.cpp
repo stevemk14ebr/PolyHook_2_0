@@ -6,6 +6,9 @@
 
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 
+#include <WinSock2.h>
+#pragma comment(lib, "Ws2_32.lib")
+
 /**These tests can spontaneously fail if the compiler desides to optimize away
 the handler or inline the function. NOINLINE attempts to fix the latter, the former
 is out of our control but typically returning volatile things, volatile locals, and a
@@ -139,9 +142,7 @@ void hkRecv(SOCKET s, char* buf, int len, int flags) {
     PLH::FnCast(g_hook_recv_tramp, &hkRecv)(s, buf, len, flags);
 }
 
-TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::ZydisDisassembler) {
-    TestType dis(PLH::Mode::x86);
-
+TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
     SECTION("Normal function") {
         PLH::x86Detour detour((uint64_t) &hookMe1, (uint64_t) h_hookMe1, &hookMe1Tramp);
         REQUIRE(detour.hook() == true);
@@ -224,7 +225,7 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::ZydisDis
 
     SECTION("hook recv") {
         auto recv_addr = reinterpret_cast<uint64_t>(GetProcAddress(GetModuleHandleA("ws2_32.dll"), "recv"));
-        PLH::x86Detour detour((uint64_t) &malloc, (uint64_t) h_hookMalloc, &recv_addr);
+        PLH::x86Detour detour((uint64_t) &recv, (uint64_t) hkRecv, &recv_addr);
         effects.PushEffect(); // catch does some allocations, push effect first so peak works
         REQUIRE(detour.hook() == true);
     }

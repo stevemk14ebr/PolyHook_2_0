@@ -75,6 +75,7 @@ bool x86Detour::hook() {
     MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::RWX, *this);
 
     m_hookInsts = makex86Jmp(m_fnAddress, m_fnCallback);
+    Log::log("Hook instructions:\n" + instsToStr(m_hookInsts) + "\n", ErrorLevel::INFO);
     ZydisDisassembler::writeEncoding(m_hookInsts, *this);
 
     // Nop the space between jmp and end of prologue
