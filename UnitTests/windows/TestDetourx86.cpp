@@ -6,9 +6,6 @@
 
 #include "polyhook2/Tests/TestEffectTracker.hpp"
 
-#include <WinSock2.h>
-#pragma comment(lib, "Ws2_32.lib")
-
 /**These tests can spontaneously fail if the compiler desides to optimize away
 the handler or inline the function. NOINLINE attempts to fix the latter, the former
 is out of our control but typically returning volatile things, volatile locals, and a
@@ -68,6 +65,16 @@ a:  90                      nop
 b:  7f f4                   jg     0x1
 */
 unsigned char hookMe3[] = {0x55, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x90, 0x90, 0x7F, 0xF4};
+
+
+uint8_t hookMe4[] = {
+    0x55,                   // push ebp
+    0x8B, 0xEC,             // mov ebp, esp
+    0x56,                   // push esi
+    0x8B, 0x75, 0x08,       // mov esi, [ebp+8]
+    0xF6, 0x46, 0x30, 0x02, // test byte ptr ds:[esi+0x30], 0x2
+    0xC3                    // ret
+};
 
 NOINLINE void PH_ATTR_NAKED hookMeLoop() {
 #ifdef _MSC_VER
@@ -136,6 +143,8 @@ HOOK_CALLBACK(&malloc, h_hookMalloc, { // NOLINT(cert-err58-cpp)
 
 #include <WinSock2.h>
 
+#pragma comment(lib, "Ws2_32.lib")
+
 uint64_t g_hook_recv_tramp = NULL;
 
 void hkRecv(SOCKET s, char* buf, int len, int flags) {
@@ -175,7 +184,11 @@ TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
 
     SECTION("Jmp into prologue w/ src out of range") {
         PLH::x86Detour detour((uint64_t) &hookMe3, (uint64_t) &h_nullstub, &nullTramp);
-        //hookMe1Tramp = detour.getTrampoline();
+        REQUIRE(detour.hook() == true);
+        REQUIRE(detour.unHook() == true);
+    }
+        SECTION("Test instruction in prologue") {
+        PLH::x86Detour detour((uint64_t) &hookMe4, (uint64_t) &h_nullstub, &nullTramp);
         REQUIRE(detour.hook() == true);
         REQUIRE(detour.unHook() == true);
     }

@@ -60,8 +60,9 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 		uint64_t address = start + offset;
 
 		std::string opstr;
-		if (!getOpStr(&insInfo, address, &opstr))
+		if (!getOpStr(&insInfo, address, &opstr)){
 			break;
+        }
 
 		Instruction inst(address,
 						 displacement,
@@ -75,8 +76,9 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 						 m_mode);
 
 		setDisplacementFields(inst, &insInfo);
-		if (endHit && !isPadBytes(inst))
+		if (endHit && !isPadBytes(inst)) {
 			break;
+        }
 
 		insVec.push_back(inst);
 
