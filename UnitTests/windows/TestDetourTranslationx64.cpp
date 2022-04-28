@@ -1,6 +1,5 @@
 #include <Catch.hpp>
 #include "polyhook2/Detour/x64Detour.hpp"
-#include "polyhook2/ZydisDisassembler.hpp"
 
 #include "polyhook2/Tests/StackCanary.hpp"
 #include "polyhook2/Tests/TestEffectTracker.hpp"

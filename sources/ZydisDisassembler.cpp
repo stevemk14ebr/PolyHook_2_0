@@ -31,12 +31,16 @@ PLH::ZydisDisassembler::~ZydisDisassembler() {
 	}
 }
 
-PLH::insts_t
-PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, uint64_t End, const MemAccessor& accessor) {
+PLH::insts_t PLH::ZydisDisassembler::disassemble(
+    uint64_t firstInstruction,
+    uint64_t start,
+    uint64_t end,
+    const MemAccessor& accessor
+) {
 	insts_t insVec;
 	m_branchMap.clear();
 
-	uint64_t size = End - start;
+	uint64_t size = end - start;
 	assert(size > 0);
 	if (size <= 0) {
 		return insVec;
@@ -56,8 +60,9 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 		uint64_t address = start + offset;
 
 		std::string opstr;
-		if (!getOpStr(&insInfo, address, &opstr))
+		if (!getOpStr(&insInfo, address, &opstr)){
 			break;
+        }
 
 		Instruction inst(address,
 						 displacement,
@@ -71,8 +76,9 @@ PLH::ZydisDisassembler::disassemble(uint64_t firstInstruction, uint64_t start, u
 						 m_mode);
 
 		setDisplacementFields(inst, &insInfo);
-		if (endHit && !isPadBytes(inst))
+		if (endHit && !isPadBytes(inst)) {
 			break;
+        }
 
 		insVec.push_back(inst);
 

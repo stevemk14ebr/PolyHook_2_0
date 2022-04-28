@@ -66,6 +66,16 @@ b:  7f f4                   jg     0x1
 */
 unsigned char hookMe3[] = {0x55, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x89, 0xE5, 0x90, 0x90, 0x7F, 0xF4};
 
+
+uint8_t hookMe4[] = {
+    0x55,                   // push ebp
+    0x8B, 0xEC,             // mov ebp, esp
+    0x56,                   // push esi
+    0x8B, 0x75, 0x08,       // mov esi, [ebp+8]
+    0xF6, 0x46, 0x30, 0x02, // test byte ptr ds:[esi+0x30], 0x2
+    0xC3                    // ret
+};
+
 NOINLINE void PH_ATTR_NAKED hookMeLoop() {
 #ifdef _MSC_VER
     __asm {
@@ -133,15 +143,15 @@ HOOK_CALLBACK(&malloc, h_hookMalloc, { // NOLINT(cert-err58-cpp)
 
 #include <WinSock2.h>
 
+#pragma comment(lib, "Ws2_32.lib")
+
 uint64_t g_hook_recv_tramp = NULL;
 
 void hkRecv(SOCKET s, char* buf, int len, int flags) {
     PLH::FnCast(g_hook_recv_tramp, &hkRecv)(s, buf, len, flags);
 }
 
-TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::ZydisDisassembler) {
-    TestType dis(PLH::Mode::x86);
-
+TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
     SECTION("Normal function") {
         PLH::x86Detour detour((uint64_t) &hookMe1, (uint64_t) h_hookMe1, &hookMe1Tramp);
         REQUIRE(detour.hook() == true);
@@ -174,7 +184,11 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::ZydisDis
 
     SECTION("Jmp into prologue w/ src out of range") {
         PLH::x86Detour detour((uint64_t) &hookMe3, (uint64_t) &h_nullstub, &nullTramp);
-        //hookMe1Tramp = detour.getTrampoline();
+        REQUIRE(detour.hook() == true);
+        REQUIRE(detour.unHook() == true);
+    }
+        SECTION("Test instruction in prologue") {
+        PLH::x86Detour detour((uint64_t) &hookMe4, (uint64_t) &h_nullstub, &nullTramp);
         REQUIRE(detour.hook() == true);
         REQUIRE(detour.unHook() == true);
     }
@@ -224,7 +238,7 @@ TEMPLATE_TEST_CASE("Testing x86 detours", "[x86Detour],[ADetour]", PLH::ZydisDis
 
     SECTION("hook recv") {
         auto recv_addr = reinterpret_cast<uint64_t>(GetProcAddress(GetModuleHandleA("ws2_32.dll"), "recv"));
-        PLH::x86Detour detour((uint64_t) &malloc, (uint64_t) h_hookMalloc, &recv_addr);
+        PLH::x86Detour detour((uint64_t) &recv, (uint64_t) hkRecv, &recv_addr);
         effects.PushEffect(); // catch does some allocations, push effect first so peak works
         REQUIRE(detour.hook() == true);
     }
