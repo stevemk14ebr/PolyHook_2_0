@@ -502,10 +502,8 @@ optional<TranslationResult> translate_instruction(const Instruction& instruction
         return {};
     }
 
-    const auto startsWithDisplacement = instruction.getOperandTypes()[0] == Instruction::OperandType::Displacement;
-
-    const auto operand1 = startsWithDisplacement ? scratch_register_string : second_operand_string;
-    const auto operand2 = startsWithDisplacement ? second_operand_string : scratch_register_string;
+    const auto operand1 = instruction.startsWithDisplacement() ? scratch_register_string : second_operand_string;
+    const auto operand2 = instruction.startsWithDisplacement() ? second_operand_string : scratch_register_string;
 
     TranslationResult result;
     result.instruction = mnemonic + " " + operand1 + ", " + operand2;
@@ -579,7 +577,7 @@ optional<uint64_t> x64Detour::generateTranslationRoutine(const Instruction& inst
     translation.emplace_back(translated_instruction);
 
     // Store the scratch register content into the destination, if necessary
-    if (instructions_to_store.count(instruction.getMnemonic())) {
+    if (instruction.startsWithDisplacement() && instructions_to_store.count(instruction.getMnemonic())) {
         translation.emplace_back("mov [" + address_register + "], " + scratch_register_64);
     }
 

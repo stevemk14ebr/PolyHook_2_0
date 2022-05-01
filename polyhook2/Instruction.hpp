@@ -283,6 +283,14 @@ public:
 		return Instruction(address, {0}, 0, false, false, bytes, "nop", "", Mode::x64);
 	}
 
+    bool startsWithDisplacement() const {
+        if(getOperandTypes().empty()){
+            return false;
+        }
+
+        return getOperandTypes()[0] == Instruction::OperandType::Displacement;
+    }
+
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
