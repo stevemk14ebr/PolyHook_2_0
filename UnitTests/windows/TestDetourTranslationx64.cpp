@@ -59,6 +59,8 @@ unsigned char cmpR15bByte[] = {
     0xC3                                      // ret
 };
 
+// TODO: Translation + INPLACE scheme
+
 uint64_t oCmpQwordImm = NULL;
 
 uint64_t hookCmpQwordImm() {
