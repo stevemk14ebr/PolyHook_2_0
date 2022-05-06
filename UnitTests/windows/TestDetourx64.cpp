@@ -111,7 +111,7 @@ HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, { // NOLINT(cert-err58-cpp)
 });
 
 
-TEST_CASE("Testing 64 detours", "[x64Detour][ADetour]") {
+TEST_CASE("Testing x64 detours", "[x64Detour][ADetour]") {
     SECTION("Normal function") {
         PLH::StackCanary canary;
         PLH::x64Detour detour((uint64_t) &hookMe1, (uint64_t) h_hookMe1, &hookMe1Tramp);
@@ -192,9 +192,8 @@ TEST_CASE("Testing 64 detours", "[x64Detour][ADetour]") {
         PLH::StackCanary canary;
         PLH::x64Detour detour((uint64_t) &malloc, (uint64_t) h_hookMalloc, &hookMallocTramp);
         effects.PushEffect(); // catch does some allocations, push effect first so peak works
-        bool result = detour.hook();
 
-        REQUIRE(result == true);
+        REQUIRE(detour.hook());
 
         void* pMem = malloc(16);
         free(pMem);

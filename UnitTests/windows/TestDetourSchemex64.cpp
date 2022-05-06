@@ -9,7 +9,7 @@
 EffectTracker schemeEffects;
 
 TEST_CASE("Testing detour schemes", "[DetourScheme][ADetour]") {
-    typedef int (* IntFn)();
+    typedef uint64_t (* IntFn)();
 
     asmjit::JitRuntime rt;
 
@@ -31,7 +31,43 @@ TEST_CASE("Testing detour schemes", "[DetourScheme][ADetour]") {
         return fn;
     };
 
-    SECTION("Validate in-place detour scheme in large function") {
+    SECTION("Validate valloc2 scheme in function with translation and back-references") {
+        PLH::StackCanary canary;
+
+        auto valloc_function = make_func([](asmjit::x86::Assembler& a) {
+            auto SetRax = a.newLabel();
+            auto Exit = a.newLabel();
+
+            a.cmp(asmjit::x86::qword_ptr(asmjit::x86::rip, -11), 0x12345678);
+
+            a.bind(SetRax);
+            a.cmp(asmjit::x86::rax, 0x1337);
+            a.je(Exit);
+            a.mov(asmjit::x86::rax, 0x1337);
+            a.jmp(SetRax);
+
+            a.bind(Exit);
+            a.ret();
+        });
+
+        static uint64_t tramp_valloc_function;
+        IntFn hook_valloc_function = []() {
+            PLH::StackCanary canary;
+            schemeEffects.PeakEffect().trigger();
+            printf("hook_valloc_function called");
+            return ((IntFn) (tramp_valloc_function))();
+        };
+
+        PLH::x64Detour detour((uint64_t) valloc_function, (uint64_t) hook_valloc_function, &tramp_valloc_function);
+        detour.setDetourScheme(PLH::x64Detour::detour_scheme_t::VALLOC2);
+        REQUIRE(detour.hook());
+        schemeEffects.PushEffect();
+        REQUIRE(valloc_function() == 0x1337);
+        REQUIRE(schemeEffects.PopEffect().didExecute());
+        REQUIRE(detour.unHook());
+    }
+
+    SECTION("Validate in-place scheme in large function") {
         PLH::StackCanary canary;
 
         auto large_function = make_func([](auto& a) {
@@ -59,7 +95,7 @@ TEST_CASE("Testing detour schemes", "[DetourScheme][ADetour]") {
         REQUIRE(detour.unHook());
     }
 
-    SECTION("Validate in-place detour scheme in medium function") {
+    SECTION("Validate in-place scheme in medium function") {
         PLH::StackCanary canary;
 
         auto medium_function = make_func([](auto& a) {
@@ -89,7 +125,33 @@ TEST_CASE("Testing detour schemes", "[DetourScheme][ADetour]") {
         REQUIRE(detour2.unHook());
     }
 
-    SECTION("Validate code-cave detour scheme in small function") {
+    SECTION("Validate in-place scheme in function with translation") {
+        PLH::StackCanary canary;
+
+        auto rip_function = make_func([](asmjit::x86::Assembler& a) {
+            a.cmp(asmjit::x86::qword_ptr(asmjit::x86::rip, -11), 0x12345678);
+            a.mov(asmjit::x86::rax, 0x1337);
+            a.ret();
+        });
+
+        static uint64_t tramp_rip_function;
+        IntFn hook_rip_function = []() {
+            PLH::StackCanary canary;
+            schemeEffects.PeakEffect().trigger();
+            printf("hook_rip_function called");
+            return ((IntFn) (tramp_rip_function))();
+        };
+
+        PLH::x64Detour detour((uint64_t) rip_function, (uint64_t) hook_rip_function, &tramp_rip_function);
+        detour.setDetourScheme(PLH::x64Detour::detour_scheme_t::INPLACE_SHORT);
+        REQUIRE(detour.hook());
+        schemeEffects.PushEffect();
+        REQUIRE(rip_function() == 0x1337);
+        REQUIRE(schemeEffects.PopEffect().didExecute());
+        REQUIRE(detour.unHook());
+    }
+
+    SECTION("Validate code-cave scheme in small function") {
         PLH::StackCanary canary;
 
         auto small_function = make_func([](auto& a) {
@@ -119,31 +181,5 @@ TEST_CASE("Testing detour schemes", "[DetourScheme][ADetour]") {
         // small_function();
         // REQUIRE(schemeEffects.PopEffect().didExecute());
         // REQUIRE(detour2.unHook());
-    }
-
-    SECTION("Validate in-place detour scheme in function with translation") {
-        PLH::StackCanary canary;
-
-        auto rip_function = make_func([](auto& a) {
-            a.cmp(asmjit::x86::qword_ptr(asmjit::x86::rip, -11), 0x12345678);
-            a.mov(asmjit::x86::rax, 0x1337);
-            a.ret();
-        });
-
-        static uint64_t tramp_rip_function;
-        IntFn hook_rip_function = []() {
-            PLH::StackCanary canary;
-            schemeEffects.PeakEffect().trigger();
-            printf("hook_rip_function called");
-            return ((IntFn) (tramp_rip_function))();
-        };
-
-        PLH::x64Detour detour((uint64_t) rip_function, (uint64_t) hook_rip_function, &tramp_rip_function);
-        detour.setDetourScheme(PLH::x64Detour::detour_scheme_t::INPLACE_SHORT);
-        REQUIRE(detour.hook());
-        schemeEffects.PushEffect();
-        rip_function();
-        REQUIRE(schemeEffects.PopEffect().didExecute());
-        REQUIRE(detour.unHook());
     }
 }

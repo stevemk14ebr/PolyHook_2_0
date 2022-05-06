@@ -81,10 +81,11 @@ public:
 			return;
 
 		if (isDisplacementRelative()) {
-			int64_t newRelativeDisp = calculateRelativeDisplacement<int64_t>(
+			auto newRelativeDisp = calculateRelativeDisplacement<int64_t>(
 				getAddress(),
 				dest,
-				(uint8_t)size());
+				(uint8_t)size()
+			);
 
 			setRelativeDisplacement(newRelativeDisp);
 			return;
@@ -172,32 +173,29 @@ public:
 		return m_mnemonic + " " + m_opStr;
 	}
 
+    /** Displacement size in bytes **/
+    void setDisplacementSize(uint8_t size){
+        m_dispSize = size;
+    }
+
 	size_t getDispSize() const {
-		// jmp (e9 eb be ad de) = 5 bytes, 1 disp off, 4 disp sz
-		// 83 3d a5 7e 09 00 00 | cmp dword ptr ds:[0x00007FFD68ED336C], 0x00 = 7 bytes, 2 disp off, 4 disp size, 1 imm sz
-		return (m_hasImmediate ? m_immediateOffset : size()) - getDisplacementOffset();
+		return m_dispSize;
 	}
 
 	size_t size() const {
 		return m_bytes.size();
 	}
 
-	void setRelativeDisplacement(const int64_t displacement, const bool ip_relative = false) {
+	void setRelativeDisplacement(const int64_t displacement) {
 		/**Update our class' book-keeping of this stuff and then modify the byte array.
-		 * This doesn't actually write the changes to the executeable code, it writes to our
+		 * This doesn't actually write the changes to the executable code, it writes to our
 		 * copy of the bytes**/
 		m_displacement.Relative = displacement;
 		m_isRelative = true;
 		m_hasDisplacement = true;
 
-		const uint32_t dispSz = ip_relative ? 4 : (uint32_t)(size() - getDisplacementOffset());
-		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Relative)) {
-			PolyHook2DebugBreak();
-			return;
-		}
-
-		assert((uint32_t)getDisplacementOffset() + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Relative));
-		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Relative, dispSz);
+		assert(m_dispOffset + m_dispSize <= m_bytes.size() && m_dispSize <= sizeof(m_displacement.Relative));
+		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Relative, m_dispSize);
 	}
 
 	void setAbsoluteDisplacement(const uint64_t displacement) {
@@ -208,7 +206,7 @@ public:
 		m_isRelative = false;
 		m_hasDisplacement = true;
 
-		const uint32_t dispSz = (uint32_t)(size() - getDisplacementOffset());
+		const auto dispSz = (uint32_t)(size() - getDisplacementOffset());
 		if (((uint32_t)getDisplacementOffset()) + dispSz > m_bytes.size() || dispSz > sizeof(m_displacement.Absolute)) {
 			PolyHook2DebugBreak();
 			return;
@@ -216,11 +214,6 @@ public:
 
 		assert(((uint32_t)getDisplacementOffset()) + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Absolute));
 		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, dispSz);
-	}
-
-	void setImmediateOffset(const uint8_t immediateOffset ){
-        m_hasImmediate = true;
-	    m_immediateOffset = immediateOffset;
 	}
 
 	long getUID() const {
@@ -279,10 +272,6 @@ public:
 		return m_operands;
 	}
 
-	static inline PLH::Instruction makex64Nop(const uint64_t address, const std::vector<uint8_t>& bytes = {0x90}){
-		return Instruction(address, {0}, 0, false, false, bytes, "nop", "", Mode::x64);
-	}
-
     bool startsWithDisplacement() const {
         if(getOperandTypes().empty()){
             return false;
@@ -306,6 +295,7 @@ private:
 		m_address = address;
 		m_displacement = displacement;
 		m_dispOffset = displacementOffset;
+		m_dispSize = 0;
 		m_isRelative = isRelative;
 		m_isIndirect = isIndirect;
 		m_hasDisplacement = hasDisp;
@@ -329,13 +319,13 @@ private:
 	bool          m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
 	bool          m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
     bool          m_hasImmediate;    // Does this instruction have the immediate field filled?
-    uint8_t       m_immediateOffset; // Offset into the byte array where immediate is encoded
 	Displacement  m_displacement;    // Where an instruction points too (valid for jmp + call types, and RIP relative MEM types)
 
 	uint64_t      m_address;         // Address the instruction is at
 	uint64_t      m_immediate;       // Immediate op
 	uint8_t       m_immediateSize;   // Immediate size, in bits
 	uint8_t       m_dispOffset;      // Offset into the byte array where displacement is encoded
+	uint8_t       m_dispSize;        // Size of the displacement, in bytes
 
 	std::vector<uint8_t> m_bytes;    // All the raw bytes of this instruction
 	std::vector<OperandType> m_operands; // Types of all instruction operands
@@ -445,7 +435,7 @@ inline PLH::insts_t makex64PreferredJump(const uint64_t address, const uint64_t 
  * Destination should be the value that is written into destHolder, and be the address of where
  * the jmp should land.**/
 inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t destination, const uint64_t destHolder) {
-	PLH::Instruction::Displacement disp = { 0 };
+	PLH::Instruction::Displacement disp{ 0 };
 	disp.Relative = PLH::Instruction::calculateRelativeDisplacement<int32_t>(address, destHolder, 6);
 
 	std::vector<uint8_t> destBytes;
@@ -466,7 +456,7 @@ inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t de
 }
 
 inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destination) {
-	Instruction::Displacement disp;
+	Instruction::Displacement disp{ 0 };
 	disp.Relative = Instruction::calculateRelativeDisplacement<int32_t>(address, destination, 5);
 
 	std::vector<uint8_t> bytes(5);

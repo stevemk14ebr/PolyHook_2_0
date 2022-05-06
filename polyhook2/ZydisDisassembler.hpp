@@ -94,7 +94,7 @@ public:
 			// search back, check if new instruction points to older ones (one to one)
 			auto destInst = std::find_if(insVec.begin(), insVec.end(), [&](const Instruction& oldIns) {
 				return oldIns.getAddress() == inst.getDestination();
-				});
+			});
 
 			if (destInst != insVec.end()) {
 				updateBranchMap(destInst->getAddress(), inst);
@@ -119,7 +119,7 @@ protected:
 	void setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const;
 
 	typename branch_map_t::mapped_type& updateBranchMap(uint64_t key, const Instruction& new_val) {
-		branch_map_t::iterator it = m_branchMap.find(key);
+		auto it = m_branchMap.find(key);
 		if (it != m_branchMap.end()) {
 			it->second.push_back(new_val);
 		} else {

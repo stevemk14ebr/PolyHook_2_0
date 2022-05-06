@@ -38,7 +38,7 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
     const MemAccessor& accessor
 ) {
 	insts_t insVec;
-	m_branchMap.clear();
+//	m_branchMap.clear();
 
 	uint64_t size = end - start;
 	assert(size > 0);
@@ -131,7 +131,8 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 
 				if (zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE) {
 					inst.setDisplacementOffset(zydisInst->raw.disp.offset);
-					inst.setRelativeDisplacement(operand->mem.disp.value, true);
+					inst.setDisplacementSize((uint8_t)(zydisInst->raw.disp.size / 8));
+					inst.setRelativeDisplacement(operand->mem.disp.value);
 				}
 
 				if ((zydisInst->mnemonic == ZydisMnemonic::ZYDIS_MNEMONIC_JMP && inst.size() >= 2 && inst.getBytes().at(0) == 0xff && inst.getBytes().at(1) == 0x25) ||
@@ -162,7 +163,6 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 					inst.setRelativeDisplacement(zydisInst->raw.imm->value.s);
 					return;
 				} else {
-					inst.setImmediateOffset(zydisInst->raw.imm->offset);
 					inst.setImmediate(zydisInst->raw.imm->value.s);
 					inst.setImmediateSize(zydisInst->raw.imm->size);
 				}
