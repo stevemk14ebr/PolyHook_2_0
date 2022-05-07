@@ -54,7 +54,7 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 	uint64_t offset = 0;
 	bool endHit = false;
 	while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*) (buf + offset), (ZyanUSize) (size - offset), &insInfo))) {
-		Instruction::Displacement displacement = {};
+        Instruction::Displacement displacement = {};
 		displacement.Absolute = 0;
 
 		uint64_t address = start + offset;
@@ -84,8 +84,9 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 
 		// searches instruction vector and updates references
 		addToBranchMap(insVec, inst);
-		if (isFuncEnd(inst))
+		if (isFuncEnd(inst, start == address)){
 			endHit = true;
+        }
 
 		offset += insInfo.length;
 	}
@@ -112,11 +113,10 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 		const ZydisDecodedOperand* const operand = &zydisInst->operands[i];
 
 		// skip implicit operands (r/w effects)
-		if (
-			operand->visibility == ZYDIS_OPERAND_VISIBILITY_HIDDEN ||
-			operand->visibility == ZYDIS_OPERAND_VISIBILITY_INVALID
-			)
+		if (operand->visibility == ZYDIS_OPERAND_VISIBILITY_HIDDEN ||
+			operand->visibility == ZYDIS_OPERAND_VISIBILITY_INVALID) {
 			continue;
+        }
 
 		switch (operand->type) {
 			case ZYDIS_OPERAND_TYPE_REGISTER: {
@@ -160,12 +160,14 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 				// is displacement set earlier already?
 				if (!inst.hasDisplacement() && zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE) {
 					inst.setDisplacementOffset(zydisInst->raw.imm->offset);
-					inst.setRelativeDisplacement(zydisInst->raw.imm->value.s);
+                    inst.setDisplacementSize((uint8_t)(zydisInst->raw.imm->size / 8));
+                    inst.setRelativeDisplacement(zydisInst->raw.imm->value.s);
 					return;
-				} else {
-					inst.setImmediate(zydisInst->raw.imm->value.s);
-					inst.setImmediateSize(zydisInst->raw.imm->size);
 				}
+
+				inst.setImmediate(zydisInst->raw.imm->value.s);
+				inst.setImmediateSize(zydisInst->raw.imm->size);
+
 				break;
 			}
 		}

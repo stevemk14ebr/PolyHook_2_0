@@ -350,18 +350,20 @@ bool x64Detour::hook() {
     if (!makeTrampoline(prologue, jmpTblOpt)) {
         return false;
     }
+    Log::log("m_trampoline: " + int_to_hex(m_trampoline) + "\n", ErrorLevel::INFO);
+    Log::log("m_trampolineSz: " + int_to_hex(m_trampolineSz) + "\n", ErrorLevel::INFO);
 
     auto tramp_instructions = m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz, *this);
-    Log::log("Trampoline:\n" + instsToStr(tramp_instructions) + "\n\n", ErrorLevel::INFO);
+    Log::log("Trampoline:\n" + instsToStr(tramp_instructions) + "\n", ErrorLevel::INFO);
     if (!jmpTblOpt.empty()) {
-        Log::log("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n\n", ErrorLevel::INFO);
+        Log::log("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
     }
 
     *m_userTrampVar = m_trampoline;
     m_hookSize = (uint32_t) roundProlSz;
     m_nopProlOffset = (uint16_t) minProlSz;
 
-    Log::log("Hook instructions: \n" + instsToStr(m_hookInsts) + "\n\n", ErrorLevel::INFO);
+    Log::log("Hook instructions: \n" + instsToStr(m_hookInsts) + "\n", ErrorLevel::INFO);
     MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::RWX, *this);
     ZydisDisassembler::writeEncoding(m_hookInsts, *this);
 
@@ -640,6 +642,7 @@ Instruction makeRelJmpWithAbsDest(const uint64_t address, const uint64_t abs_des
     Instruction instruction(
         address, disp, 1, true, false, {0xE9, 0, 0, 0, 0}, "jmp", int_to_hex(abs_destination), Mode::x64
     );
+    instruction.setDisplacementSize(4);
     instruction.setHasDisplacement(true);
 
     return instruction;
@@ -683,6 +686,15 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
     delta = m_trampoline - prolStart;
 
     buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc, instsNeedingTranslation);
+    if(!instsNeedingEntry.empty()) {
+        Log::log("Instructions needing entry:\n" + instsToStr(instsNeedingEntry) + "\n", ErrorLevel::INFO);
+    }
+    if(!instsNeedingReloc.empty()) {
+        Log::log("Instructions needing relocation:\n" + instsToStr(instsNeedingReloc) + "\n", ErrorLevel::INFO);
+    }
+    if(!instsNeedingTranslation.empty()) {
+        Log::log("Instructions needing translation:\n" + instsToStr(instsNeedingTranslation) + "\n", ErrorLevel::INFO);
+    }
 
     Log::log("Trampoline address: " + int_to_hex(m_trampoline), ErrorLevel::INFO);
 

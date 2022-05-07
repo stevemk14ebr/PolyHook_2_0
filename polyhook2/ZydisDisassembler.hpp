@@ -57,7 +57,7 @@ public:
 		return false;
 	}
 
-	static bool isFuncEnd(const PLH::Instruction& instruction) {
+	static bool isFuncEnd(const PLH::Instruction& instruction, const bool firstFunc = false) {
 		// TODO: more?
 		/*
 		* 0xABABABAB : Used by Microsoft's HeapAlloc() to mark "no man's land" guard bytes after allocated heap memory
@@ -73,10 +73,11 @@ public:
 		* 0xFEEEFEEE : Used by Microsoft's HeapFree() to mark freed heap memory
 		*/
 		std::string mnemonic = instruction.getMnemonic();
-		auto byts = instruction.getBytes();
-		return (instruction.size() == 1 && byts[0] == 0xCC) ||
-			(instruction.size() >= 2 && byts[0] == 0xf3 && byts[1] == 0xc3) ||
-			mnemonic == "ret" || mnemonic == "jmp" || mnemonic.find("iret") == 0;
+		auto bytes = instruction.getBytes();
+		return (instruction.size() == 1 && bytes[0] == 0xCC) ||
+			(instruction.size() >= 2 && bytes[0] == 0xf3 && bytes[1] == 0xc3) ||
+            (mnemonic == "jmp" && !firstFunc) || // Jump to tranlslation
+			mnemonic == "ret" || mnemonic.find("iret") == 0;
 	}
 
 	static bool isPadBytes(const PLH::Instruction& instruction) {
