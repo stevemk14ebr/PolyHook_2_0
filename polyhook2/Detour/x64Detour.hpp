@@ -53,6 +53,7 @@ protected:
     optional<uint64_t> m_valloc2_region;
     RangeAllocator m_allocator;
     asmjit::JitRuntime m_asmjit_rt;
+    detour_scheme_t m_chosen_scheme = detour_scheme_t::VALLOC2;
 
     bool makeTrampoline(insts_t& prologue, insts_t& outJmpTable);
 
@@ -64,7 +65,7 @@ protected:
 
     bool make_inplace_trampoline(uint64_t base_address, const std::function<void(asmjit::x86::Assembler&)>& builder);
 
-    bool allocate_trampoline();
+    bool allocate_jump_to_callback();
 };
 
 }

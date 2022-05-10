@@ -57,7 +57,7 @@ public:
 		return false;
 	}
 
-	static bool isFuncEnd(const PLH::Instruction& instruction) {
+	static bool isFuncEnd(const PLH::Instruction& instruction, const bool firstFunc = false) {
 		// TODO: more?
 		/*
 		* 0xABABABAB : Used by Microsoft's HeapAlloc() to mark "no man's land" guard bytes after allocated heap memory
@@ -73,10 +73,11 @@ public:
 		* 0xFEEEFEEE : Used by Microsoft's HeapFree() to mark freed heap memory
 		*/
 		std::string mnemonic = instruction.getMnemonic();
-		auto byts = instruction.getBytes();
-		return (instruction.size() == 1 && byts[0] == 0xCC) ||
-			(instruction.size() >= 2 && byts[0] == 0xf3 && byts[1] == 0xc3) ||
-			mnemonic == "ret" || mnemonic == "jmp" || mnemonic.find("iret") == 0;
+		auto bytes = instruction.getBytes();
+		return (instruction.size() == 1 && bytes[0] == 0xCC) ||
+			(instruction.size() >= 2 && bytes[0] == 0xf3 && bytes[1] == 0xc3) ||
+            (mnemonic == "jmp" && !firstFunc) || // Jump to tranlslation
+			mnemonic == "ret" || mnemonic.find("iret") == 0;
 	}
 
 	static bool isPadBytes(const PLH::Instruction& instruction) {
@@ -94,7 +95,7 @@ public:
 			// search back, check if new instruction points to older ones (one to one)
 			auto destInst = std::find_if(insVec.begin(), insVec.end(), [&](const Instruction& oldIns) {
 				return oldIns.getAddress() == inst.getDestination();
-				});
+			});
 
 			if (destInst != insVec.end()) {
 				updateBranchMap(destInst->getAddress(), inst);
@@ -119,7 +120,7 @@ protected:
 	void setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const;
 
 	typename branch_map_t::mapped_type& updateBranchMap(uint64_t key, const Instruction& new_val) {
-		branch_map_t::iterator it = m_branchMap.find(key);
+		auto it = m_branchMap.find(key);
 		if (it != m_branchMap.end()) {
 			it->second.push_back(new_val);
 		} else {

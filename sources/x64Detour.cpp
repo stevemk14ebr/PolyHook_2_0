@@ -201,25 +201,25 @@ bool x64Detour::make_inplace_trampoline(
     uint64_t trampoline_address;
     auto error = m_asmjit_rt.add(&trampoline_address, &code);
 
-    if (!error) {
-        const auto trampoline_end = trampoline_address + code.codeSize();
-        m_hookInsts = m_disasm.disassemble(trampoline_address, trampoline_address, trampoline_end, *this);
-        // Fix the addresses
-        auto current_address = base_address;
-        for (auto& inst: m_hookInsts) {
-            inst.setAddress(current_address);
-            current_address += inst.size();
-        }
-        return true;
+    if (error) {
+        const auto message = std::string("Failed to generate in-place trampoline: ")
+                             + asmjit::DebugUtils::errorAsString(error);
+        PLH::Log::log(message, PLH::ErrorLevel::SEV);
+        return false;
     }
 
-    const auto message = std::string("Failed to generate in-place trampoline: ")
-                         + asmjit::DebugUtils::errorAsString(error);
-    PLH::Log::log(message, PLH::ErrorLevel::SEV);
-    return false;
+    const auto trampoline_end = trampoline_address + code.codeSize();
+    m_hookInsts = m_disasm.disassemble(trampoline_address, trampoline_address, trampoline_end, *this);
+    // Fix the addresses
+    auto current_address = base_address;
+    for (auto& inst: m_hookInsts) {
+        inst.setAddress(current_address);
+        current_address += inst.size();
+    }
+    return true;
 }
 
-bool x64Detour::allocate_trampoline() {
+bool x64Detour::allocate_jump_to_callback() {
     // Insert valloc description
     if (m_detourScheme & detour_scheme_t::VALLOC2 && boundedAllocSupported()) {
         auto max = (uint64_t) AlignDownwards(calc_2gb_above(m_fnAddress), getPageSize());
@@ -232,10 +232,11 @@ bool x64Detour::allocate_trampoline() {
 
             MemoryProtector region_protector(region, 8, ProtFlag::RWX, *this, false);
             m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, region);
+            m_chosen_scheme = detour_scheme_t::VALLOC2;
             return true;
-        } else {
-            Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
         }
+
+        Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
     }
 
     // The In-place scheme may only be done for functions with a large enough prologue,
@@ -251,6 +252,7 @@ bool x64Detour::allocate_trampoline() {
         });
 
         if (success) {
+            m_chosen_scheme = detour_scheme_t::INPLACE;
             return true;
         }
     }
@@ -262,10 +264,11 @@ bool x64Detour::allocate_trampoline() {
         if (cave) {
             MemoryProtector cave_protector(*cave, 8, ProtFlag::RWX, *this, false);
             m_hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
+            m_chosen_scheme = detour_scheme_t::CODE_CAVE;
             return true;
-        } else {
-            Log::log("No code caves found near function", ErrorLevel::SEV);
         }
+
+        Log::log("No code caves found near function", ErrorLevel::SEV);
     }
 
     // This short in-place scheme works almost like the default in-place scheme, except that it doesn't
@@ -278,17 +281,23 @@ bool x64Detour::allocate_trampoline() {
         });
 
         if (success) {
+            m_chosen_scheme = detour_scheme_t::INPLACE_SHORT;
             return true;
         }
     }
 
     Log::log("None of the allowed hooking schemes have succeeded", ErrorLevel::SEV);
 
+    if (m_hookInsts.empty()) {
+        Log::log("Invalid state: hook instructions are empty", ErrorLevel::SEV);
+    }
+
     return false;
 }
 
 bool x64Detour::hook() {
     insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
+
     if (insts.empty()) {
         Log::log("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
         return false;
@@ -302,13 +311,18 @@ bool x64Detour::hook() {
     // update given fn address to resolved one
     m_fnAddress = insts.front().getAddress();
 
-    // --------------- END RECURSIVE JMP RESOLUTION ---------------------
     Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
+    if (!allocate_jump_to_callback()) {
+        return false;
+    }
+
     // min size of patches that may split instructions
-    uint64_t minProlSz = (m_detourScheme == detour_scheme_t::INPLACE) ? 23 :
-                         (m_detourScheme == detour_scheme_t::INPLACE_SHORT) ? 12 :
-                         getMinJmpSize();
+    // For valloc & code cave, we insert the jump, hence we take only size of the 1st instruction.
+    // For detours, we calculate the size of the generated code.
+    uint64_t minProlSz = (m_chosen_scheme == VALLOC2 || m_chosen_scheme == CODE_CAVE) ? m_hookInsts.begin()->size() :
+                         m_hookInsts.rbegin()->getAddress() + m_hookInsts.rbegin()->size() -
+                         m_hookInsts.begin()->getAddress();
 
     uint64_t roundProlSz = minProlSz;  // nearest size to min that doesn't split any instructions
 
@@ -336,24 +350,25 @@ bool x64Detour::hook() {
     if (!makeTrampoline(prologue, jmpTblOpt)) {
         return false;
     }
+    Log::log("m_trampoline: " + int_to_hex(m_trampoline) + "\n", ErrorLevel::INFO);
+    Log::log("m_trampolineSz: " + int_to_hex(m_trampolineSz) + "\n", ErrorLevel::INFO);
 
     auto tramp_instructions = m_disasm.disassemble(m_trampoline, m_trampoline, m_trampoline + m_trampolineSz, *this);
-    Log::log("Trampoline:\n" + instsToStr(tramp_instructions) + "\n\n", ErrorLevel::INFO);
+    Log::log("Trampoline:\n" + instsToStr(tramp_instructions) + "\n", ErrorLevel::INFO);
     if (!jmpTblOpt.empty()) {
-        Log::log("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n\n", ErrorLevel::INFO);
+        Log::log("Trampoline Jmp Tbl:\n" + instsToStr(jmpTblOpt) + "\n", ErrorLevel::INFO);
     }
 
     *m_userTrampVar = m_trampoline;
     m_hookSize = (uint32_t) roundProlSz;
     m_nopProlOffset = (uint16_t) minProlSz;
 
+    Log::log("Hook instructions: \n" + instsToStr(m_hookInsts) + "\n", ErrorLevel::INFO);
     MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::RWX, *this);
-
-    if (!allocate_trampoline()) {
-        return false;
-    }
-
     ZydisDisassembler::writeEncoding(m_hookInsts, *this);
+
+    Log::log("Hook size: " + std::to_string(m_hookSize) + "\n", ErrorLevel::INFO);
+    Log::log("Prologue offset: " + std::to_string(m_nopProlOffset) + "\n", ErrorLevel::INFO);
 
     // Nop the space between jmp and end of prologue
     assert(m_hookSize >= m_nopProlOffset);
@@ -502,10 +517,8 @@ optional<TranslationResult> translate_instruction(const Instruction& instruction
         return {};
     }
 
-    const auto startsWithDisplacement = instruction.getOperandTypes()[0] == Instruction::OperandType::Displacement;
-
-    const auto operand1 = startsWithDisplacement ? scratch_register_string : second_operand_string;
-    const auto operand2 = startsWithDisplacement ? second_operand_string : scratch_register_string;
+    const auto operand1 = instruction.startsWithDisplacement() ? scratch_register_string : second_operand_string;
+    const auto operand2 = instruction.startsWithDisplacement() ? second_operand_string : scratch_register_string;
 
     TranslationResult result;
     result.instruction = mnemonic + " " + operand1 + ", " + operand2;
@@ -579,7 +592,7 @@ optional<uint64_t> x64Detour::generateTranslationRoutine(const Instruction& inst
     translation.emplace_back(translated_instruction);
 
     // Store the scratch register content into the destination, if necessary
-    if (instructions_to_store.count(instruction.getMnemonic())) {
+    if (instruction.startsWithDisplacement() && instructions_to_store.count(instruction.getMnemonic())) {
         translation.emplace_back("mov [" + address_register + "], " + scratch_register_64);
     }
 
@@ -629,6 +642,7 @@ Instruction makeRelJmpWithAbsDest(const uint64_t address, const uint64_t abs_des
     Instruction instruction(
         address, disp, 1, true, false, {0xE9, 0, 0, 0, 0}, "jmp", int_to_hex(abs_destination), Mode::x64
     );
+    instruction.setDisplacementSize(4);
     instruction.setHasDisplacement(true);
 
     return instruction;
@@ -672,6 +686,15 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
     delta = m_trampoline - prolStart;
 
     buildRelocationList(prologue, prolSz, delta, instsNeedingEntry, instsNeedingReloc, instsNeedingTranslation);
+    if(!instsNeedingEntry.empty()) {
+        Log::log("Instructions needing entry:\n" + instsToStr(instsNeedingEntry) + "\n", ErrorLevel::INFO);
+    }
+    if(!instsNeedingReloc.empty()) {
+        Log::log("Instructions needing relocation:\n" + instsToStr(instsNeedingReloc) + "\n", ErrorLevel::INFO);
+    }
+    if(!instsNeedingTranslation.empty()) {
+        Log::log("Instructions needing translation:\n" + instsToStr(instsNeedingTranslation) + "\n", ErrorLevel::INFO);
+    }
 
     Log::log("Trampoline address: " + int_to_hex(m_trampoline), ErrorLevel::INFO);
 

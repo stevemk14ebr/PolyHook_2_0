@@ -152,7 +152,7 @@ void Detour::buildRelocationList(
                 /*
                  * EX: 48 8d 0d 96 79 07 00    lea rcx, [rip + 0x77996]
                  * If instruction is moved beyond displacement field width
-                 * we can't fix the load. Hence, we add it to the list of
+                 * we can't fix the displacement. Hence, we add it to the list of
                  * instructions that need to be translated to equivalent ones.
                  */
                 instsNeedingTranslation.push_back(inst);
