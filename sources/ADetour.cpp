@@ -209,24 +209,25 @@ insts_t Detour::make_nops(uint64_t base_address, uint16_t size) const {
 
     static const uint8_t max_nop_size = 9;
 
-    const auto make_nop_inst = [&](const std::vector<uint8_t>& bytes) {
-        return Instruction(base_address, {0}, 0, false, false, bytes, "nop", "", getArchType());
+    const auto make_nop_inst = [&](const uint64_t address, const std::vector<uint8_t>& bytes) {
+        return Instruction(address, {0}, 0, false, false, bytes, "nop", "", getArchType());
     };
 
-    const auto make_nop = [&](const uint8_t nop_size) {
+    // lambda updates the address for each created instruction
+    const auto make_nop = [&](const uint64_t address, const uint8_t nop_size) {
         assert(nop_size <= max_nop_size);
 
         // https://stackoverflow.com/questions/25545470/long-multi-byte-nops-commonly-understood-macros-or-other-notation
         switch (nop_size) {
-            case 1: return make_nop_inst({0x90});
-            case 2: return make_nop_inst({0x66, 0x90});
-            case 3: return make_nop_inst({0x0F, 0x1F, 0x00});
-            case 4: return make_nop_inst({0x0F, 0x1F, 0x40, 0x00});
-            case 5: return make_nop_inst({0x0F, 0x1F, 0x44, 0x00, 0x00});
-            case 6: return make_nop_inst({0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00});
-            case 7: return make_nop_inst({0x0F, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00});
-            case 8: return make_nop_inst({0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00});
-            default:return make_nop_inst({0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00});
+            case 1: return make_nop_inst(address, {0x90});
+            case 2: return make_nop_inst(address, {0x66, 0x90});
+            case 3: return make_nop_inst(address, {0x0F, 0x1F, 0x00});
+            case 4: return make_nop_inst(address, {0x0F, 0x1F, 0x40, 0x00});
+            case 5: return make_nop_inst(address, {0x0F, 0x1F, 0x44, 0x00, 0x00});
+            case 6: return make_nop_inst(address, {0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00});
+            case 7: return make_nop_inst(address, {0x0F, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00});
+            case 8: return make_nop_inst(address, {0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00});
+            default:return make_nop_inst(address, {0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00});
         }
     };
 
@@ -235,11 +236,16 @@ insts_t Detour::make_nops(uint64_t base_address, uint16_t size) const {
     auto max_nop_count = (int) (size / max_nop_size);
     auto remainder_nop_size = (uint8_t) (size % max_nop_size);
 
+    auto address = base_address;
     for (int i = 0; i < max_nop_count; i++) {
-        nops.emplace_back(make_nop(max_nop_size));
+        nops.emplace_back(make_nop(address, max_nop_size));
+        address += nops.back().size();
     }
 
-    nops.emplace_back(make_nop(remainder_nop_size));
+    if (remainder_nop_size) {
+        nops.emplace_back(make_nop(address, remainder_nop_size));
+        address += nops.back().size();
+    }
 
     return nops;
 }

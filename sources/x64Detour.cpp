@@ -721,12 +721,14 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
         }
 
         const auto nop_base = jump.getAddress() + jump.size();
-        for (const auto& nop: make_nops(nop_base, nop_size)) {
+        const auto nops = make_nops(nop_base, nop_size);
+        for (const auto& nop: nops) {
             if (inst_iterator == prologue.end()) {
                 prologue.push_back(nop);
                 inst_iterator = prologue.end();
             } else {
-                inst_iterator = prologue.insert(inst_iterator, nop) + 1; // Is this correct?
+                // insert after current instruction
+                inst_iterator = prologue.insert(inst_iterator + 1, nop);
             }
         }
     }
