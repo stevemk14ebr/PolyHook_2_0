@@ -721,7 +721,7 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
         }
 
         const auto nop_base = jump.getAddress() + jump.size();
-        for (const auto& nop: make_nops(nop_base, nop_size)) {
+        for (auto&& nop : make_nops(nop_base, nop_size)) {
             if (inst_iterator == prologue.end()) {
                 prologue.push_back(nop);
                 inst_iterator = prologue.end();
