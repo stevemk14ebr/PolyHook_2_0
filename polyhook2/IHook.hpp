@@ -101,6 +101,10 @@ struct callback_type<Ret(CCFROM Class::*)(Args...), void> \
 
 #ifdef POLYHOOK2_OS_WINDOWS
 
+#ifdef FASTCALL
+#undef FASTCALL
+#endif
+
 #define FASTCALL __fastcall
 
 #else
