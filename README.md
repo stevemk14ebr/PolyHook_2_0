@@ -59,7 +59,9 @@ I've setup an example project to show how to use this as a static library. You s
       - Branches into overwritten section are resolved to the new moved location
       - Jmps from moved prologue back to original section are resolved through a jmp table
       - Relocations inside the moved section are resolved (not using relocation table, disassembles using engine)
-    - x64 trampoline is not restricted to +- 2GB, can be anywhere, avoids shadow space + no registers spoiled.
+      - Non relocatable instructions are re-written by dynamic binary re-writing and replaced with semantically equivalent instructions
+    - x64 trampoline is not restricted to +- 2GB, can be anywhere, avoids shadow space + no registers spoiled (depending on detour scheme).
+      - Overwriting code caves and padding bytes may be set as a primary strategy instead, or as a fallback scheme
     - If inline hook fails at an intermediate step the original function will not be malformed. All writes are batched until after we know later steps succeed.
     - Cross-Architecture hooking is _fully_ supported. Including the overriding of memory acccess routines to allow read/write of 64bit memory from 32bit process. You can hook 64bit from 32bit process if you're clever enough to write the shellcode required for the callbacks.
     - Effecient reHook-ing logic is implemented. This can be used to combat third parties overwriting prologues back to original bytes. This is optimized into a few simple memcpy's rather than re-executing the entire logic in hook().
