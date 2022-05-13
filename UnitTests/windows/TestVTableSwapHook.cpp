@@ -39,9 +39,8 @@ TEST_CASE("VTableSwap tests", "[VTableSwap]") {
 	SECTION("Verify vtable redirected") {
 		PLH::StackCanary canary;
 		PLH::VFuncMap redirect = {{(uint16_t)1, (uint64_t)hkVirtNoParams}};
-		PLH::VTableSwapHook hook((char*)ClassToHook.get(), redirect);
+		PLH::VTableSwapHook hook((char*)ClassToHook.get(), redirect, &origVFuncs);
 		REQUIRE(hook.hook());
-		origVFuncs = hook.getOriginals();
 		REQUIRE(origVFuncs.size() == 1);
 
 		vTblSwapEffects.PushEffect();
@@ -53,9 +52,8 @@ TEST_CASE("VTableSwap tests", "[VTableSwap]") {
 	SECTION("Verify multiple vtable redirected") {
 		PLH::StackCanary canary;
 		PLH::VFuncMap redirect = {{(uint16_t)1, (uint64_t)hkVirtNoParams},{(uint16_t)2, (uint64_t)hkVirtNoParams}};
-		PLH::VTableSwapHook hook((char*)ClassToHook.get(), redirect);
+		PLH::VTableSwapHook hook((char*)ClassToHook.get(), redirect, &origVFuncs);
 		REQUIRE(hook.hook());
-		origVFuncs = hook.getOriginals();
 		REQUIRE(origVFuncs.size() == 2);
 
 		vTblSwapEffects.PushEffect();

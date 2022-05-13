@@ -17,7 +17,7 @@ endif()
 #
 # Options
 #
-option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" OFF)
+option(POLYHOOK_BUILD_DLL "Build dll & lib instead of tests" ON)
 
 option(POLYHOOK_BUILD_SHARED_LIB "Build polyhook2 as shared libary" OFF)
 option(POLYHOOK_BUILD_SHARED_ASMTK "Build asmtk as shared libary" OFF)
@@ -355,7 +355,7 @@ if(POLYHOOK_FEATURE_VIRTUALS)
 	if(NOT POLYHOOK_BUILD_DLL)
 		target_sources(${PROJECT_NAME} PRIVATE
 			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestVTableSwapHook.cpp
-			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestVTableSwapHook2.cpp
+			
 			${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestVFuncSwapHook.cpp)
 	endif()
 endif()

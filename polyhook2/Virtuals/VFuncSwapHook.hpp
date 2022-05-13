@@ -9,6 +9,7 @@
 namespace PLH {
 typedef std::map<uint16_t, uint64_t> VFuncMap;
 
+
 class VFuncSwapHook : public PLH::IHook {
 public:
 	VFuncSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* origVFuncs);

@@ -1,24 +1,25 @@
 #include "polyhook2/Virtuals/VTableSwapHook.hpp"
 #include "polyhook2/ErrorLog.hpp"
 
-PLH::VTableSwapHook::VTableSwapHook(const char* Class, const VFuncMap& redirectMap) 
-	: VTableSwapHook((uint64_t)Class, redirectMap)
+PLH::VTableSwapHook::VTableSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap)
+	: VTableSwapHook((uint64_t)Class, redirectMap, userOrigMap)
 {}
 
-PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class)
-	: VTableSwapHook(Class, PLH::VFuncMap{ })
+PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, VFuncMap* userOrigMap)
+	: VTableSwapHook(Class, PLH::VFuncMap{ }, userOrigMap)
 {}
 
-PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap) 
+PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap)
 	: m_newVtable(nullptr)
 	, m_origVtable(nullptr)
 	, m_class(Class)
 	, m_vFuncCount(0)
 	, m_redirectMap(redirectMap)
-	, m_origVFuncs()
+	, m_userOrigMap(userOrigMap)
 {}
 
 bool PLH::VTableSwapHook::hook() {
+	assert(m_userOrigMap != nullptr);
 	assert(!m_hooked);
 	if (m_hooked) {
 		Log::log("vtable hook failed: hook already present", ErrorLevel::SEV);
@@ -45,12 +46,12 @@ bool PLH::VTableSwapHook::hook() {
 		if (p.first >= m_vFuncCount) {
 			Log::log("vtable hook failed: index exceeds virtual function count", ErrorLevel::SEV);
 			m_newVtable = nullptr;
-			m_origVFuncs.clear();
+			(*m_userOrigMap).clear();
 			return false;
 		}
 
 		// redirect ptr at VTable[i]
-		m_origVFuncs[p.first] = (uint64_t)m_newVtable[p.first];
+		(*m_userOrigMap)[p.first] = (uint64_t)m_newVtable[p.first];
 		m_newVtable[p.first] = (uintptr_t)p.second;
 	}
 
@@ -86,8 +87,4 @@ uint16_t PLH::VTableSwapHook::countVFuncs() {
 			break;
 	}
 	return count;
-}
-
-const PLH::VFuncMap& PLH::VTableSwapHook::getOriginals() const {
-	return m_origVFuncs;
 }
