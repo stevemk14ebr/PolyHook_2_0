@@ -84,8 +84,7 @@ I've setup an example project to show how to use this as a static library. You s
     
 # Extras
 - THOROUGHLY unit tested, hundreds of tests, using the fantastic library Catch
-- Fully wrapped capstone engine to emit instruction objects. The decompiler engine also tracks jmp and call destinations and builds a map of the distination to the sources, this allows the sort of logic you see in a debugger with the line pointing to the destination of the jmp. Capstone branch encoding features upstreamed to next and current submodule tagged to next
-- Fully wrapped VirtualProtect into an OS agnostic call. Linux implementation is in the git history and will be exposed later once stable and more complete
+- Unix compatible
 
 # Notes
 - Breakpoint tests must not be run under a debugger. They are commented out by default now.
