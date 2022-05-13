@@ -474,10 +474,10 @@ optional<TranslationResult> translate_instruction(const Instruction& instruction
 
         const auto imm_size = instruction.getImmediateSize();
         const auto immediate_string =
-            imm_size == 64 ? int_to_hex((uint64_t) instruction.getImmediate()) :
-            imm_size == 32 ? int_to_hex((uint32_t) instruction.getImmediate()) :
-            imm_size == 16 ? int_to_hex((uint16_t) instruction.getImmediate()) :
-            imm_size == 8 ? int_to_hex((uint8_t) instruction.getImmediate()) : "";
+            imm_size == 8 ? int_to_hex((uint64_t) instruction.getImmediate()) :
+            imm_size == 4 ? int_to_hex((uint32_t) instruction.getImmediate()) :
+            imm_size == 2 ? int_to_hex((uint16_t) instruction.getImmediate()) :
+            imm_size == 1 ? int_to_hex((uint8_t) instruction.getImmediate()) : "";
 
         if (immediate_string.empty()) {
             Log::log("Unexpected size of immediate: " + std::to_string(imm_size), ErrorLevel::SEV);

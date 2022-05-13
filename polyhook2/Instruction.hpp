@@ -277,7 +277,7 @@ public:
             return false;
         }
 
-        return getOperandTypes()[0] == Instruction::OperandType::Displacement;
+        return getOperandTypes().front() == Instruction::OperandType::Displacement;
     }
 
 private:
