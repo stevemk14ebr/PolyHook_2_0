@@ -323,7 +323,7 @@ private:
 
 	uint64_t      m_address;         // Address the instruction is at
 	uint64_t      m_immediate;       // Immediate op
-	uint8_t       m_immediateSize;   // Immediate size, in bits
+	uint8_t       m_immediateSize;   // Immediate size, in bytes
 	uint8_t       m_dispOffset;      // Offset into the byte array where displacement is encoded
 	uint8_t       m_dispSize;        // Size of the displacement, in bytes
 

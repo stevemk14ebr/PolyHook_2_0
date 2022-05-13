@@ -166,7 +166,7 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 				}
 
 				inst.setImmediate(zydisInst->raw.imm->value.s);
-				inst.setImmediateSize(zydisInst->raw.imm->size);
+				inst.setImmediateSize(zydisInst->raw.imm->size / 8);
 
 				break;
 			}
