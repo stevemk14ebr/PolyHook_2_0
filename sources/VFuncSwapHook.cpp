@@ -10,7 +10,6 @@ PLH::VFuncSwapHook::VFuncSwapHook(const uint64_t Class, const VFuncMap& redirect
 	, m_vtable(nullptr)
 	, m_vFuncCount(0)
 	, m_redirectMap(redirectMap)
-	, m_origVFuncs()
 	, m_userOrigMap(userOrigMap)
 {}
 
@@ -29,7 +28,6 @@ bool PLH::VFuncSwapHook::hook() {
 			return false;
 
 		// redirect ptr at VTable[i]
-		m_origVFuncs[p.first] = (uint64_t)m_vtable[p.first];
 		(*m_userOrigMap)[p.first] = (uint64_t)m_vtable[p.first];
 		m_vtable[p.first] = (uintptr_t)p.second;
 	}
@@ -47,7 +45,7 @@ bool PLH::VFuncSwapHook::unHook() {
 	}
 
 	MemoryProtector prot2((uint64_t)&m_vtable[0], sizeof(uintptr_t) * (uint64_t)m_vFuncCount, ProtFlag::R | ProtFlag::W, *this);
-	for (const auto& p : m_origVFuncs) {
+	for (const auto& p : (*m_userOrigMap)) {
 		assert(p.first < m_vFuncCount);
 		if (p.first >= m_vFuncCount)
 			return false;
@@ -55,7 +53,6 @@ bool PLH::VFuncSwapHook::unHook() {
 		m_vtable[p.first] = (uintptr_t)p.second;
 	}
 
-	m_userOrigMap = nullptr;
 	m_hooked = false;
 	return true;
 }

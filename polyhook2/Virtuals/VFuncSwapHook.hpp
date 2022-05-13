@@ -34,7 +34,6 @@ protected:
 
 	// index -> ptr val 
 	VFuncMap m_redirectMap;
-	VFuncMap m_origVFuncs;
 	VFuncMap* m_userOrigMap;
 };
 }
