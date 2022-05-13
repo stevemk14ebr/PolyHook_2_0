@@ -8,20 +8,6 @@
 
 namespace PLH {
 
-template<class T>
-struct Out {
-	explicit Out(T& obj) : base(obj) {}
-	T& operator*() { return base; }
-	T* operator->() { return &base; }
-private:
-	T& base;
-};
-
-template<class T>
-Out<T> out(T& obj) {
-	return Out<T>(obj);
-}
-
 /**First param is an address to a function that you want to
 cast to the type of pFnCastTo. Second param must be a pointer
 to function type**/
