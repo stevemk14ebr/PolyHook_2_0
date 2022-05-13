@@ -75,6 +75,9 @@ bool PLH::VTableSwapHook::unHook() {
 
 	m_hooked = false;
 	m_origVtable = nullptr;
+
+	(*m_userOrigMap).clear();
+
 	Log::log("vtable unhooked", ErrorLevel::INFO);
 	return true;
 }

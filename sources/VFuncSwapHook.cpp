@@ -53,6 +53,8 @@ bool PLH::VFuncSwapHook::unHook() {
 		m_vtable[p.first] = (uintptr_t)p.second;
 	}
 
+	(*m_userOrigMap).clear();
+
 	m_hooked = false;
 	return true;
 }
