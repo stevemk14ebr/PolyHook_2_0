@@ -388,7 +388,7 @@ install(
         "lib/${PROJECT_NAME}"
 )
 
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME} asmtk
     EXPORT ${PROJECT_NAME}-targets
     RUNTIME DESTINATION "bin"
     LIBRARY DESTINATION "lib"
