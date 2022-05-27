@@ -39,10 +39,10 @@ See: https://github.com/stevemk14ebr/PolyHook_2_0/pull/59#issuecomment-619223616
 ```
 I provide directions below for how to setup the visual studio cmake environment only. If you don't want to use visual studio that's fine, this is a standard cmake project and will build from command line just fine. 
 
-### Visual Studio 2017/2019
+### Visual Studio 2022
 clone the project and perform submodule init as above. Do not run the cmake commands, instead:
 
-Open VS 2017, go to file->open->cmake.. this will load the project and start cmake generation. Next goto cmake->build all or cmake->build, you can also set a startup item and release mode to use the play button (do not use the install target). Capstone, Zydis, and asmjit are set to automatically build and link, you DO NOT need to build them seperately.
+Open VS 2022, go to file->open->cmake.. this will load the project and start cmake generation. Next goto cmake->build all or cmake->build, you can also set a startup item and release mode to use the play button (do not use the install target). Capstone, Zydis, and asmjit are set to automatically build and link, you DO NOT need to build them seperately.
 
 ### Documentation
 https://stevemk14ebr.github.io/PolyHook_2_0/ & Read the Tests!
