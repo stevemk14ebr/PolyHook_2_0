@@ -106,7 +106,7 @@ protected:
      * This function ensures that generated nops won't be reused as a code cave by Polyhook.
      * Hence, it will never emit more than 8 0x90 single byte nops in a row.
      */
-    insts_t make_nops(uint64_t base_address, uint16_t size) const;
+    insts_t make_nops(uint64_t address, uint16_t size) const;
 
     static void buildRelocationList(
         insts_t& prologue,

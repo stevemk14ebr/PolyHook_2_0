@@ -4,6 +4,17 @@
 #if defined(WIN64) || defined(_WIN64) || defined(__MINGW64__)
     #define POLYHOOK2_OS_WINDOWS
     #define POLYHOOK2_ARCH_X64
+
+    #ifdef __GNUC__
+    
+    // VirtualAlloc2 requires NTDII_WIN10_RS4 on my distrubition of mingw
+    #define NTDDI_VERSION NTDDI_WIN10_RS4 
+
+    // This was taken from Microsofts Detours library 
+    #define ERROR_DYNAMIC_CODE_BLOCKED 1655L
+
+    #endif
+
 #elif defined(WIN32) || defined(_WIN32) || defined(__MINGW32__)
     #define POLYHOOK2_OS_WINDOWS
     #define POLYHOOK2_ARCH_X86

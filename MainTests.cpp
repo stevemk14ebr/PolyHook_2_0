@@ -4,7 +4,7 @@
 
 #include "polyhook2/ErrorLog.hpp"
 int main(int argc, char* const argv[]) {
-#if defined(POLYHOOK2_OS_WINDOWS)
+#if defined(POLYHOOK2_OS_WINDOWS) && !defined(__GNUC__)
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF );
 #endif
 	std::cout << "Welcome to PolyHook -By- Stevemk14ebr" << std::endl;

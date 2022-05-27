@@ -63,8 +63,8 @@ namespace PLH {
 		// float, double, simd128
 		bool isXmmReg(const asmjit::TypeId typeId) const;
 
-		asmjit::CallConvId PLH::ILCallback::getCallConv(const std::string& conv);
-		asmjit::TypeId PLH::ILCallback::getTypeId(const std::string& type);
+		asmjit::CallConvId getCallConv(const std::string& conv);
+		asmjit::TypeId getTypeId(const std::string& type);
 
 		uint64_t m_callbackBuf;
 		asmjit::x86::Mem argsStack;
