@@ -10,7 +10,11 @@ namespace PLH {
 class Logger
 {
 public:
-	virtual void log(std::string msg, ErrorLevel level) = 0;
+	// move
+	virtual void log(std::string&& msg, ErrorLevel level) = 0;
+
+	// copy
+	virtual void log(const std::string& msg, ErrorLevel level) = 0;
 	virtual ~Logger() {};
 };
 
@@ -34,9 +38,17 @@ struct Error {
 class ErrorLog : public Logger {
 public:
 	void setLogLevel(ErrorLevel level);
-	void log(std::string msg, ErrorLevel level);
-	void push(std::string msg, ErrorLevel level);
-	void push(Error err);
+	//move
+	void log(std::string&& msg, ErrorLevel level) override;
+
+	//copy
+	void log(const std::string& msg, ErrorLevel level) override;
+
+	// copy
+	void push(const Error& err);
+
+	// move
+	void push(Error&& err);
 	Error pop();
 	static ErrorLog& singleton();
 private:
