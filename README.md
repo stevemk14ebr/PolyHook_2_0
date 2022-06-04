@@ -24,8 +24,16 @@ Commands:
 λ cd vcpkg
 λ .\bootstrap-vcpkg.bat -disableMetrics
 λ (as admin) .\vcpkg integrate install
-λ vcpkg.exe install polyhook2
 ```
+For x86:
+```
+λ vcpkg.exe install polyhook2 --triplet x86-windows
+```
+For x64:
+```
+λ vcpkg.exe install polyhook2 --triplet x64-windows
+```
+
 You then simply include the polyhook headers, be sure to link the generated .lib.
 
 # Build Manually
