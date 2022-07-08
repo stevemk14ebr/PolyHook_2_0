@@ -179,8 +179,7 @@ bool Detour::unHook() {
 
     if (m_userTrampVar != nullptr) {
         *m_userTrampVar = NULL;
-        m_userTrampVar = nullptr;
-    }
+	}
 
     m_hooked = false;
     return true;
