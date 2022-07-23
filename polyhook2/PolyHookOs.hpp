@@ -36,6 +36,14 @@
     #endif
 #endif
 
+#if defined(_MSC_VER)
+    #define PLH_INLINE __forceinline
+#elif defined(__GNUC__)
+    #define PLH_INLINE __attribute__((always_inline))
+#else
+    #define PLH_INLINE inline
+#endif
+
 #include <iostream> //for debug printing
 #include <sstream>
 #include <iomanip> //setw
@@ -72,7 +80,7 @@
 void PolyHook2DebugBreak();
 
 // Methods using stack allocation need to be inlined
-__forceinline void* PolyHook2Alloca(size_t size)
+PLH_INLINE void* PolyHook2Alloca(size_t size)
 {
 #if defined(POLYHOOK2_OS_WINDOWS)
     return _alloca(size);
