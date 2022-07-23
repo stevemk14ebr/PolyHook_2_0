@@ -70,6 +70,15 @@
 #include <inttypes.h>
 
 void PolyHook2DebugBreak();
-void* PolyHook2Alloca(size_t size);
+
+// Methods using stack allocation need to be inlined
+__forceinline void* PolyHook2Alloca(size_t size)
+{
+#if defined(POLYHOOK2_OS_WINDOWS)
+    return _alloca(size);
+#else
+    return alloca(size);
+#endif
+}
 
 #endif
