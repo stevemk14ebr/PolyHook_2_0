@@ -2,7 +2,6 @@
 //
 
 #include "ExampleProject.h"
-#include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/Detour/x86Detour.hpp"
 
 #include <cstdarg>
@@ -20,14 +19,10 @@ NOINLINE int __cdecl h_hookPrintf(const char* format, ...) {
 /** THIS EXAMPLE IS SETUP FOR x86. IT WILL CRASH IF YOU COMPILE IN x64**/
 int main()
 {
-	// Switch modes for x64
-	PLH::ZydisDisassembler dis(PLH::Mode::x86);
-	PLH::x86Detour* detour = new PLH::x86Detour((char*)&printf, (char*)&h_hookPrintf, &hookPrintfTramp, dis);
-	detour->hook();
+	PLH::x86Detour detour = PLH::x86Detour((uint64_t)&printf, h_hookPrintf, &hookPrintfTramp);
+	detour.hook();
 
 	printf("%s %f\n", "hi", .5f);
-	detour->unHook();
-	delete detour;
-	getchar();
+	detour.unHook();
 	return 0;
 }
