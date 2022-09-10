@@ -104,9 +104,12 @@ uint64_t PLH::boundAlloc(uint64_t min, uint64_t max, uint64_t size)
 	MEM_ADDRESS_REQUIREMENTS addressReqs = { 0 };
 	MEM_EXTENDED_PARAMETER param = { 0 };
 
+	SYSTEM_INFO info = { 0 };
+	GetSystemInfo(&info);
+
 	addressReqs.Alignment = 0; // any alignment
-	addressReqs.LowestStartingAddress = (PVOID)min; // PAGE_SIZE aligned
-	addressReqs.HighestEndingAddress = (PVOID)(max - 1); // PAGE_SIZE aligned, exclusive so -1
+	addressReqs.LowestStartingAddress = (PVOID)min < info.lpMinimumApplicationAddress ? info.lpMinimumApplicationAddress : (PVOID)min; // PAGE_SIZE aligned
+	addressReqs.HighestEndingAddress = (PVOID)(max - 1) > info.lpMaximumApplicationAddress ? info.lpMaximumApplicationAddress : (PVOID)(max - 1); // PAGE_SIZE aligned, exclusive so -1
 
 	param.Type = MemExtendedParameterAddressRequirements;
 	param.Pointer = &addressReqs;
