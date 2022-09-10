@@ -52,6 +52,17 @@ public:
 		return true;
 	}
 
+	virtual bool setHooked(const bool state) {
+		if (m_hooked == state)
+			return true;
+
+		return state ? hook() : unHook();
+	}
+
+	virtual bool isHooked() {
+		return m_hooked;
+	}
+
 	virtual HookType getType() const = 0;
 
 	virtual void setDebug(const bool state) {
