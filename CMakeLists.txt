@@ -257,6 +257,7 @@ if(POLYHOOK_FEATURE_DETOURS)
 
 	set(POLYHOOK_DETOUR_HEADERS
 		${PROJECT_SOURCE_DIR}/polyhook2/Detour/ADetour.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Detour/NatDetour.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x64Detour.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x86Detour.hpp)
 
