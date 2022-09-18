@@ -5,6 +5,8 @@
 #include "polyhook2/Detour/x86Detour.hpp"
 
 #include "polyhook2/Tests/TestEffectTracker.hpp"
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
 the handler or inline the function. NOINLINE attempts to fix the latter, the former
@@ -31,6 +33,17 @@ HOOK_CALLBACK(&hookMe1, h_hookMe1, { // NOLINT(cert-err58-cpp)
 
     effects.PeakEffect().trigger();
     return PLH::FnCast(hookMe1Tramp, &hookMe1)();
+});
+
+typedef void(*PKNORMAL_ROUTINE)(void* NormalContext, void* SystemArgument1,void* SystemArgument2);
+typedef unsigned long(__stdcall* tNtQueueApcThread)(void* ThreadHandle,PKNORMAL_ROUTINE ApcRoutine,void* NormalContext,void* SystemArgument1,void* SystemArgument2);
+
+uint64_t hkNtQueueapcThread = NULL;
+tNtQueueApcThread pNtQueueApcthread = (tNtQueueApcThread)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQueueApcThread");
+HOOK_CALLBACK(pNtQueueApcthread, h_NtQueueapcThread, { // NOLINT(cert-err58-cpp)
+    std::cout << "hkNtQueueApcThread!" << std::endl;
+
+    return PLH::FnCast(hkNtQueueapcThread, pNtQueueApcthread)(_args...);
 });
 
 /*  55                      push   ebp
@@ -74,6 +87,14 @@ uint8_t hookMe4[] = {
     0x8B, 0x75, 0x08,       // mov esi, [ebp+8]
     0xF6, 0x46, 0x30, 0x02, // test byte ptr ds:[esi+0x30], 0x2
     0xC3                    // ret
+};
+
+// old NtQueueApcThread, call fs:0xC0 was weird
+unsigned char hookMe5[] =
+{
+    0xb8, 0x44, 0x00, 0x00, 0x00, // mov eax, 0x44
+    0x64, 0xff, 0x15, 0xc0, 0x00, 0x00, 0x00, // call dword ptr fs:0xc0
+    0xc2, 0x14, 0x00 // retn 0x14
 };
 
 NOINLINE void PH_ATTR_NAKED hookMeLoop() {
@@ -145,11 +166,10 @@ HOOK_CALLBACK(&malloc, h_hookMalloc, { // NOLINT(cert-err58-cpp)
 
 #pragma comment(lib, "Ws2_32.lib")
 
-uint64_t g_hook_recv_tramp = NULL;
-
-void hkRecv(SOCKET s, char* buf, int len, int flags) {
-    PLH::FnCast(g_hook_recv_tramp, &hkRecv)(s, buf, len, flags);
-}
+uint64_t hookRecvTramp = NULL;
+HOOK_CALLBACK(&recv, h_hookRecv, { // NOLINT(cert-err58-cpp)
+    return PLH::FnCast(hookRecvTramp, &recv)(_args...);
+});
 
 TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
     SECTION("Normal function") {
@@ -187,8 +207,15 @@ TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
         REQUIRE(detour.hook() == true);
         REQUIRE(detour.unHook() == true);
     }
-        SECTION("Test instruction in prologue") {
+    
+    SECTION("Test instruction in prologue") {
         PLH::x86Detour detour((uint64_t) &hookMe4, (uint64_t) &h_nullstub, &nullTramp);
+        REQUIRE(detour.hook() == true);
+        REQUIRE(detour.unHook() == true);
+    }
+
+    SECTION("Call with fs base") {
+        PLH::x86Detour detour((uint64_t)&hookMe5, (uint64_t)&h_nullstub, &nullTramp);
         REQUIRE(detour.hook() == true);
         REQUIRE(detour.unHook() == true);
     }
@@ -237,8 +264,12 @@ TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
     }
 
     SECTION("hook recv") {
-        auto recv_addr = reinterpret_cast<uint64_t>(GetProcAddress(GetModuleHandleA("ws2_32.dll"), "recv"));
-        PLH::x86Detour detour((uint64_t) &recv, (uint64_t) hkRecv, &recv_addr);
+        PLH::x86Detour detour((uint64_t) &recv, (uint64_t)h_hookRecv, &hookRecvTramp);
+        REQUIRE(detour.hook() == true);
+    }
+
+    SECTION("queue apc thread") {
+        PLH::x86Detour detour((uint64_t)pNtQueueApcthread, (uint64_t)h_NtQueueapcThread, &hkNtQueueapcThread);
         effects.PushEffect(); // catch does some allocations, push effect first so peak works
         REQUIRE(detour.hook() == true);
     }

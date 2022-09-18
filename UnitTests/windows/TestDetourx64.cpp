@@ -11,6 +11,9 @@
 
 #include <asmjit/asmjit.h>
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 EffectTracker effects;
 
 /**These tests can spontaneously fail if the compiler desides to optimize away
@@ -77,12 +80,20 @@ unsigned char hookMe4[] = {
 
 // test call instructions in prologue
 unsigned char hookMe5[] =
-    {
-        0x48, 0x83, 0xEC, 0x28, // 180009240: sub rsp, 28h
-        0xE8, 0x96, 0xA8, 0xFF, 0xFF, // call 180003ADF
-        0x48, 0x83, 0xC4, 0x28,  // add rsp, 28h
-        0x48, 0xFF, 0xA0, 0x20, 0x01, 0x00, 0x00 // jmp qword ptr[rax+120h]
-    };
+{
+    0x48, 0x83, 0xEC, 0x28, // 180009240: sub rsp, 28h
+    0xE8, 0x96, 0xA8, 0xFF, 0xFF, // call 180003ADF
+    0x48, 0x83, 0xC4, 0x28,  // add rsp, 28h
+    0x48, 0xFF, 0xA0, 0x20, 0x01, 0x00, 0x00 // jmp qword ptr[rax+120h]
+};
+
+// old NtQueueApcThread, call fs:0xC0 was weird
+unsigned char hookMe6[] =
+{
+    0xb8, 0x44, 0x00, 0x00, 0x00, // mov eax, 0x44
+    0x64, 0xff, 0x15, 0xc0, 0x00, 0x00, 0x00, // call large dword ptr fs:0xc0
+    0xc2, 0x14, 0x00 // retn 0x14
+};
 
 uint64_t nullTramp = NULL;
 
@@ -110,6 +121,16 @@ HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, { // NOLINT(cert-err58-cpp)
     return PLH::FnCast(oCreateMutexExA, &CreateMutexExA)(_args...);
 });
 
+typedef void(*PKNORMAL_ROUTINE)(void* NormalContext, void* SystemArgument1, void* SystemArgument2);
+typedef unsigned long(__stdcall* tNtQueueApcThread)(void* ThreadHandle, PKNORMAL_ROUTINE ApcRoutine, void* NormalContext, void* SystemArgument1, void* SystemArgument2);
+
+uint64_t hkNtQueueapcThread = NULL;
+tNtQueueApcThread pNtQueueApcthread = (tNtQueueApcThread)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQueueApcThread");
+HOOK_CALLBACK(pNtQueueApcthread, h_NtQueueapcThread, { // NOLINT(cert-err58-cpp)
+    std::cout << "hkNtQueueApcThread!" << std::endl;
+
+    return PLH::FnCast(hkNtQueueapcThread, pNtQueueApcthread)(_args...);
+});
 
 TEST_CASE("Testing x64 detours", "[x64Detour][ADetour]") {
     SECTION("Normal function") {
@@ -188,6 +209,14 @@ TEST_CASE("Testing x64 detours", "[x64Detour][ADetour]") {
         REQUIRE(detour.unHook() == true);
     }
 
+    SECTION("Call with fs base") {
+        PLH::StackCanary canary;
+        PLH::x64Detour detour((uint64_t)&hookMe6, (uint64_t)&h_nullstub, &nullTramp);
+
+        REQUIRE(detour.hook() == true);
+        REQUIRE(detour.unHook() == true);
+    }
+
     SECTION("hook malloc") {
         PLH::StackCanary canary;
         PLH::x64Detour detour((uint64_t) &malloc, (uint64_t) h_hookMalloc, &hookMallocTramp);
@@ -199,5 +228,11 @@ TEST_CASE("Testing x64 detours", "[x64Detour][ADetour]") {
         free(pMem);
         detour.unHook(); // unhook so we can popeffect safely w/o catch allocation happening again
         REQUIRE(effects.PopEffect().didExecute());
+    }
+
+    SECTION("queue apc thread") {
+        PLH::x64Detour detour((uint64_t)pNtQueueApcthread, (uint64_t)h_NtQueueapcThread, &hkNtQueueapcThread);
+        effects.PushEffect(); // catch does some allocations, push effect first so peak works
+        REQUIRE(detour.hook() == true);
     }
 }

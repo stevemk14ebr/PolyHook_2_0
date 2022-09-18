@@ -64,6 +64,7 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 			break;
         }
 
+
 		Instruction inst(address,
 						 displacement,
 						 0,
@@ -79,6 +80,13 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 		if (endHit && !isPadBytes(inst)) {
 			break;
         }
+
+		for (int i = 0; i < insInfo.operand_count; i++) {
+			auto op = insInfo.operands[i];
+			if (op.type == ZYDIS_OPERAND_TYPE_MEMORY && op.mem.type == ZYDIS_MEMOP_TYPE_MEM && op.mem.disp.has_displacement && op.mem.base == ZYDIS_REGISTER_NONE && op.mem.segment != ZYDIS_REGISTER_DS && inst.isIndirect()) {
+				inst.setIndirect(false);
+			}
+		}
 
 		insVec.push_back(inst);
 

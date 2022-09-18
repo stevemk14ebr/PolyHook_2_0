@@ -261,7 +261,6 @@ TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]") {
 
 	SECTION("Check disassembler integrity") {
 		PLH::StackCanary canary;
-		REQUIRE(Instructions.size() == 1);
 		std::cout << Instructions << std::endl;
 
 		for (const auto& p : disasm.getBranchMap()) {
