@@ -47,13 +47,16 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 	}
 
 	// copy potentially remote memory to local buffer
-	auto* buf = new uint8_t[(uint32_t) size];
-	accessor.mem_copy((uint64_t) buf, firstInstruction, size);
+	size_t read = 0;
+	auto* buf = new uint8_t[(uint32_t)size];
+	if (!accessor.safe_mem_read(firstInstruction, (uint64_t)buf, size, read)) {
+		goto exit;
+	}
 
 	ZydisDecodedInstruction insInfo;
 	uint64_t offset = 0;
 	bool endHit = false;
-	while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*) (buf + offset), (ZyanUSize) (size - offset), &insInfo))) {
+	while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*) (buf + offset), (ZyanUSize) (read - offset), &insInfo))) {
         Instruction::Displacement displacement = {};
 		displacement.Absolute = 0;
 
@@ -98,6 +101,8 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 
 		offset += insInfo.length;
 	}
+
+exit:
 	delete[] buf;
 	return insVec;
 }
