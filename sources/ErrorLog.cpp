@@ -19,16 +19,7 @@ void PLH::ErrorLog::log(const std::string& msg, ErrorLevel level)
 	log(msg, level);
 }
 
-void PLH::ErrorLog::log(std::string&& msg, ErrorLevel level)
-{
-	push({ std::move(msg), level });
-}
-
 void PLH::ErrorLog::push(const PLH::Error& err) {
-	push(err);
-}
-
-void PLH::ErrorLog::push(PLH::Error&& err) {
 	if (err.lvl >= m_logLevel) {
 		switch (err.lvl) {
 		case ErrorLevel::INFO:
