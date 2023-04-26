@@ -230,8 +230,12 @@ bool x64Detour::allocate_jump_to_callback() {
         if (!region) {
             Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
         } else if (region < min || region >= max) {
+            // Workaround for WINE bug, VirtualAlloc2 does not return region in the correct range (always?)
+            // see: https://github.com/stevemk14ebr/PolyHook_2_0/pull/168
             m_allocator.deallocate(region);
+            region = 0;
             Log::log("VirtualAlloc2 failed allocate within requested range", ErrorLevel::SEV);
+            // intentionally try other schemes.
         } else {
             m_valloc2_region = region;
 
