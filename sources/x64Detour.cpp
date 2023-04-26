@@ -227,7 +227,12 @@ bool x64Detour::allocate_jump_to_callback() {
 
         // each block is m_blocksize (8) at the time of writing. Do not write more than this.
         auto region = (uint64_t) m_allocator.allocate(min, max);
-        if (region) {
+        if (!region) {
+            Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
+        } else if (region < min || region >= max) {
+            m_allocator.deallocate(region);
+            Log::log("VirtualAlloc2 failed allocate within requested range", ErrorLevel::SEV);
+        } else {
             m_valloc2_region = region;
 
             MemoryProtector region_protector(region, 8, ProtFlag::RWX, *this, false);
@@ -235,8 +240,6 @@ bool x64Detour::allocate_jump_to_callback() {
             m_chosen_scheme = detour_scheme_t::VALLOC2;
             return true;
         }
-
-        Log::log("VirtualAlloc2 failed to find a region near function", ErrorLevel::SEV);
     }
 
     // The In-place scheme may only be done for functions with a large enough prologue,
