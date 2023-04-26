@@ -7,7 +7,9 @@ void PLH::Log::registerLogger(std::shared_ptr<Logger> logger) {
 }
 
 void PLH::Log::log(std::string msg, ErrorLevel level) {
-	if (m_logger) m_logger->log(std::move(msg), level);
+	if (m_logger) {
+		m_logger->log(std::move(msg), level);
+	}
 }
 
 void PLH::ErrorLog::setLogLevel(PLH::ErrorLevel level) {
@@ -16,7 +18,7 @@ void PLH::ErrorLog::setLogLevel(PLH::ErrorLevel level) {
 
 void PLH::ErrorLog::log(const std::string& msg, ErrorLevel level)
 {
-	log(msg, level);
+	push({ msg, level });
 }
 
 void PLH::ErrorLog::push(const PLH::Error& err) {
@@ -36,7 +38,7 @@ void PLH::ErrorLog::push(const PLH::Error& err) {
 		}
 	}
 
-	m_log.push_back(std::move(err));
+	m_log.push_back(err);
 }
 
 PLH::Error PLH::ErrorLog::pop() {
