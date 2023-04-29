@@ -1,0 +1,7 @@
+{
+  "name": "testpolyhook2",
+  "version-string": "1.0.0.1",
+  "dependencies": [
+    "polyhook2"
+  ]
+}

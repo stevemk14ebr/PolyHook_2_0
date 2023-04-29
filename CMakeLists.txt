@@ -201,7 +201,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 	${PROJECT_SOURCE_DIR}/sources/UID.cpp
 	${PROJECT_SOURCE_DIR}/sources/Misc.cpp
 	${PROJECT_SOURCE_DIR}/sources/PolyHookOs.cpp
-	)
+	 "Examples/VCPKG_StaticLink/VCPKG_StaticLink/main.cpp")
 
 if(NOT POLYHOOK_BUILD_DLL)
 	target_compile_options(${PROJECT_NAME} PRIVATE
