@@ -27,11 +27,11 @@ Commands:
 ```
 For x86:
 ```
-λ vcpkg.exe install polyhook2 --triplet x86-windows
+λ vcpkg.exe install polyhook2:x86-windows-static polyhook2:x86-windows
 ```
 For x64:
 ```
-λ vcpkg.exe install polyhook2 --triplet x64-windows
+λ vcpkg.exe install polyhook2:x64-windows-static polyhook2:x64-windows
 ```
 
 You then simply include the polyhook headers, be sure to link the generated .lib.
