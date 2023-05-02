@@ -52,56 +52,56 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 	if (!accessor.safe_mem_read(firstInstruction, (uint64_t)buf, size, read)) {
 		goto exit;
 	}
+	{
+		ZydisDecodedInstruction insInfo;
+		uint64_t offset = 0;
+		bool endHit = false;
+		while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*) (buf + offset), (ZyanUSize) (read - offset), &insInfo))) {
+		Instruction::Displacement displacement = {};
+			displacement.Absolute = 0;
 
-	ZydisDecodedInstruction insInfo;
-	uint64_t offset = 0;
-	bool endHit = false;
-	while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*) (buf + offset), (ZyanUSize) (read - offset), &insInfo))) {
-        Instruction::Displacement displacement = {};
-		displacement.Absolute = 0;
+			uint64_t address = start + offset;
 
-		uint64_t address = start + offset;
-
-		std::string opstr;
-		if (!getOpStr(&insInfo, address, &opstr)){
-			break;
-        }
-
-
-		Instruction inst(address,
-						 displacement,
-						 0,
-						 false,
-						 false,
-						 (uint8_t*) ((unsigned char*) buf + offset),
-						 insInfo.length,
-						 ZydisMnemonicGetString(insInfo.mnemonic),
-						 opstr,
-						 m_mode);
-
-		setDisplacementFields(inst, &insInfo);
-		if (endHit && !isPadBytes(inst)) {
-			break;
-        }
-
-		for (int i = 0; i < insInfo.operand_count; i++) {
-			auto op = insInfo.operands[i];
-			if (op.type == ZYDIS_OPERAND_TYPE_MEMORY && op.mem.type == ZYDIS_MEMOP_TYPE_MEM && op.mem.disp.has_displacement && op.mem.base == ZYDIS_REGISTER_NONE && op.mem.segment != ZYDIS_REGISTER_DS && inst.isIndirect()) {
-				inst.setIndirect(false);
-			}
+			std::string opstr;
+			if (!getOpStr(&insInfo, address, &opstr)){
+				break;
 		}
 
-		insVec.push_back(inst);
 
-		// searches instruction vector and updates references
-		addToBranchMap(insVec, inst);
-		if (isFuncEnd(inst, start == address)){
-			endHit = true;
-        }
+			Instruction inst(address,
+							 displacement,
+							 0,
+							 false,
+							 false,
+							 (uint8_t*) ((unsigned char*) buf + offset),
+							 insInfo.length,
+							 ZydisMnemonicGetString(insInfo.mnemonic),
+							 opstr,
+							 m_mode);
 
-		offset += insInfo.length;
+			setDisplacementFields(inst, &insInfo);
+			if (endHit && !isPadBytes(inst)) {
+				break;
+		}
+
+			for (int i = 0; i < insInfo.operand_count; i++) {
+				auto op = insInfo.operands[i];
+				if (op.type == ZYDIS_OPERAND_TYPE_MEMORY && op.mem.type == ZYDIS_MEMOP_TYPE_MEM && op.mem.disp.has_displacement && op.mem.base == ZYDIS_REGISTER_NONE && op.mem.segment != ZYDIS_REGISTER_DS && inst.isIndirect()) {
+					inst.setIndirect(false);
+				}
+			}
+
+			insVec.push_back(inst);
+
+			// searches instruction vector and updates references
+			addToBranchMap(insVec, inst);
+			if (isFuncEnd(inst, start == address)){
+				endHit = true;
+		}
+
+			offset += insInfo.length;
+		}
 	}
-
 exit:
 	delete[] buf;
 	return insVec;
