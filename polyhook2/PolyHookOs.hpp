@@ -39,7 +39,7 @@
 #if defined(_MSC_VER)
 #define PLH_INLINE __forceinline
 #elif defined(__GNUC__)
-#define PLH_INLINE __attribute__((always_inline))
+#define PLH_INLINE inline __attribute__((always_inline))
 #else
 #define PLH_INLINE inline
 #endif
