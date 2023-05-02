@@ -52,7 +52,7 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 	if (!accessor.safe_mem_read(firstInstruction, (uint64_t)buf, size, read)) {
 		goto exit;
 	}
-	{
+
 	ZydisDecodedInstruction insInfo;
 	uint64_t offset = 0;
 	bool endHit = false;
@@ -101,7 +101,7 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 
 		offset += insInfo.length;
 	}
-}
+
 exit:
 	delete[] buf;
 	return insVec;
