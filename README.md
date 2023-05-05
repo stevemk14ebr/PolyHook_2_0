@@ -42,7 +42,8 @@ See: https://github.com/stevemk14ebr/PolyHook_2_0/pull/59#issuecomment-619223616
 λ git clone --recursive https://github.com/stevemk14ebr/PolyHook_2_0.git
 λ cd PolyHook_2_0
 λ git submodule update --init --recursive
-λ cmake -B"./_build" -DCMAKE_INSTALL_PREFIX="./_install/" -DPOLYHOOK_BUILD_SHARED_LIB=ON
+λ (dynamic build) cmake -B"./_build" -DCMAKE_INSTALL_PREFIX="./_install/" -DPOLYHOOK_BUILD_SHARED_LIB=ON
+λ (static build)  cmake -B"./_build" -DCMAKE_INSTALL_PREFIX="./_install/" -DPOLYHOOK_BUILD_SHARED_LIB=OFF
 λ cmake --build "./_build" --config Release --target install
 ```
 I provide directions below for how to setup the visual studio cmake environment only. If you don't want to use visual studio that's fine, this is a standard cmake project and will build from command line just fine. 
