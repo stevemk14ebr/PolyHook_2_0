@@ -5,7 +5,7 @@ PLH::ZydisDisassembler::ZydisDisassembler(PLH::Mode mode) : m_decoder(new ZydisD
 	m_mode = mode;
 	if (ZYAN_FAILED(ZydisDecoderInit(m_decoder,
 									 (mode == PLH::Mode::x64) ? ZYDIS_MACHINE_MODE_LONG_64 : ZYDIS_MACHINE_MODE_LONG_COMPAT_32,
-									 (mode == PLH::Mode::x64) ? ZYDIS_ADDRESS_WIDTH_64 : ZYDIS_ADDRESS_WIDTH_32))) {
+									 (mode == PLH::Mode::x64) ? ZYDIS_STACK_WIDTH_64 : ZYDIS_STACK_WIDTH_32))) {
 		Log::log("Failed to initialize zydis decoder", ErrorLevel::SEV);
 		return;
 	}
@@ -53,18 +53,18 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 		delete[] buf;
 		return insVec;
 	}
-
+	ZydisDecodedOperand decoded_operands[ZYDIS_MAX_OPERAND_COUNT];
 	ZydisDecodedInstruction insInfo;
 	uint64_t offset = 0;
 	bool endHit = false;
-	while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(m_decoder, (char*) (buf + offset), (ZyanUSize) (read - offset), &insInfo))) {
+	while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(m_decoder, (char*) (buf + offset), (ZyanUSize) (read - offset), &insInfo, decoded_operands))) {
         Instruction::Displacement displacement = {};
 		displacement.Absolute = 0;
 
 		uint64_t address = start + offset;
 
 		std::string opstr;
-		if (!getOpStr(&insInfo, address, &opstr)){
+		if (!getOpStr(&insInfo, decoded_operands, address, &opstr)){
 			break;
         }
 
@@ -80,13 +80,13 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 						 opstr,
 						 m_mode);
 
-		setDisplacementFields(inst, &insInfo);
+		setDisplacementFields(inst, &insInfo, decoded_operands);
 		if (endHit && !isPadBytes(inst)) {
 			break;
         }
 
 		for (int i = 0; i < insInfo.operand_count; i++) {
-			auto op = insInfo.operands[i];
+			auto op = decoded_operands[i];
 			if (op.type == ZYDIS_OPERAND_TYPE_MEMORY && op.mem.type == ZYDIS_MEMOP_TYPE_MEM && op.mem.disp.has_displacement && op.mem.base == ZYDIS_REGISTER_NONE && op.mem.segment != ZYDIS_REGISTER_DS && inst.isIndirect()) {
 				inst.setIndirect(false);
 			}
@@ -107,9 +107,9 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 	return insVec;
 }
 
-bool PLH::ZydisDisassembler::getOpStr(ZydisDecodedInstruction* pInstruction, uint64_t addr, std::string* pOpStrOut) {
+bool PLH::ZydisDisassembler::getOpStr(ZydisDecodedInstruction* pInstruction, const ZydisDecodedOperand* decoded_operands, uint64_t addr, std::string* pOpStrOut) {
 	char buffer[256];
-	if (ZYAN_SUCCESS(ZydisFormatterFormatInstruction(m_formatter, pInstruction, buffer, sizeof(buffer), addr))) {
+	if (ZYAN_SUCCESS(ZydisFormatterFormatInstruction(m_formatter, pInstruction, decoded_operands, pInstruction->operand_count, buffer, sizeof(buffer), addr, ZYAN_NULL))) {
 		// remove mnemonic + space (op str is just the right hand side)
 		std::string wholeInstStr(buffer);
 		*pOpStrOut = wholeInstStr.erase(0, wholeInstStr.find(' ') + 1);
@@ -118,12 +118,12 @@ bool PLH::ZydisDisassembler::getOpStr(ZydisDecodedInstruction* pInstruction, uin
 	return false;
 }
 
-void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const {
+void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst, const ZydisDecodedOperand* operands) const {
 	inst.setBranching(zydisInst->meta.branch_type != ZYDIS_BRANCH_TYPE_NONE);
 	inst.setCalling(zydisInst->mnemonic == ZydisMnemonic::ZYDIS_MNEMONIC_CALL);
 
 	for (int i = 0; i < zydisInst->operand_count; i++) {
-		const ZydisDecodedOperand* const operand = &zydisInst->operands[i];
+		const ZydisDecodedOperand* const operand = &operands[i];
 
 		// skip implicit operands (r/w effects)
 		if (operand->visibility == ZYDIS_OPERAND_VISIBILITY_HIDDEN ||

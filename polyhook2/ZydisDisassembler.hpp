@@ -115,9 +115,9 @@ public:
 	}
 protected:
 
-	bool getOpStr(ZydisDecodedInstruction* pInstruction, uint64_t addr, std::string* pOpStrOut);
+	bool getOpStr(ZydisDecodedInstruction* pInstruction, const ZydisDecodedOperand* decoded_operands, uint64_t addr, std::string* pOpStrOut);
 
-	void setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst) const;
+	void setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst, const ZydisDecodedOperand* operands) const;
 
 	typename branch_map_t::mapped_type& updateBranchMap(uint64_t key, const Instruction& new_val) {
 		auto it = m_branchMap.find(key);
