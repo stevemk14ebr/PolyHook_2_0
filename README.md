@@ -9,8 +9,6 @@ Article 3: https://www.fireeye.com/blog/threat-research/2020/11/wow64-subsystem-
 
 Dynamic Re-Writing: https://twitter.com/stevemk14ebr/status/1518621861692817409
 
-# Please consider sponsoring my work by clicking sponsor up in the top right
-
 # Community
 Ask for help, chat with others, talk to me here
 * [Official Gitter Chat](https://gitter.im/PolyHook/Lobby)
