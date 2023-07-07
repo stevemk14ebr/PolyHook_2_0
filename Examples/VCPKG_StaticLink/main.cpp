@@ -1,7 +1,5 @@
 #include "polyhook2/IHook.hpp"
-#include "polyhook2/Detour/x86Detour.hpp"
-#include "polyhook2/Detour/x64Detour.hpp"
-#include "polyhook2/Exceptions/BreakPointHook.hpp"
+#include "polyhook2/Detour/NatDetour.hpp"
 
 #include <cstdarg>
 uint64_t hookPrintfTramp = NULL;
@@ -15,10 +13,9 @@ NOINLINE int __cdecl h_hookPrintf(const char* format, ...) {
 	return PLH::FnCast(hookPrintfTramp, &printf)("INTERCEPTED YO:%s", buffer);
 }
 
-/** THIS EXAMPLE IS SETUP FOR x86. IT WILL CRASH IF YOU COMPILE IN x64**/
 int main()
 {
-	PLH::x86Detour detour = PLH::x86Detour((uint64_t)&printf, (uint64_t)h_hookPrintf, &hookPrintfTramp);
+	PLH::NatDetour detour = PLH::NatDetour((uint64_t)&printf, (uint64_t)h_hookPrintf, &hookPrintfTramp);
 	detour.hook();
 
 	printf("%s %f\n", "hi", .5f);
