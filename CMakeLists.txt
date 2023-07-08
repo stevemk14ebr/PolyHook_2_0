@@ -140,12 +140,6 @@ else()
 	add_executable(${PROJECT_NAME})
 endif()
 
-if(MSVC)
-	if(POLYHOOK_BUILD_STATIC_RUNTIME)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE ASMTK_STATIC ASMJIT_STATIC)
-	endif()
-endif()
-
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
 
