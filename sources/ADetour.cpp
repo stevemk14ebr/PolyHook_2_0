@@ -13,6 +13,11 @@ void Detour::setMaxDepth(uint8_t maxDepth) {
     m_maxDepth = maxDepth;
 }
 
+void Detour::setIsFollowCallOnFnAddress(bool value)
+{
+    m_isFollowCallOnFnAddress = value;
+}
+
 std::optional<insts_t> Detour::calcNearestSz(
     const insts_t& functionInsts,
     const uint64_t prolOvrwStartOffset,
@@ -60,6 +65,16 @@ bool Detour::followJmp(insts_t& functionInsts, const uint8_t curDepth) { // NOLI
     // not a branching instruction, no resolution needed
     if (!functionInsts.front().isBranching()) {
         return true;
+    }
+
+    if (!m_isFollowCallOnFnAddress)
+    {
+        Log::log("setting: Do NOT follow CALL on fnAddress", ErrorLevel::INFO);
+	    if (functionInsts.front().isCalling())
+	    {
+            Log::log("First assembly instruction is CALL", ErrorLevel::INFO);
+            return true;
+	    }
     }
 
     // might be a mem type like jmp rax, not supported

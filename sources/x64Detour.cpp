@@ -331,6 +331,17 @@ bool x64Detour::hook() {
                          m_hookInsts.rbegin()->getAddress() + m_hookInsts.rbegin()->size() -
                          m_hookInsts.begin()->getAddress();
 
+    if (m_hookInsts.size() >= 2)
+    {
+        auto firstInstBytesInHookInsts = m_hookInsts.at(0).getBytes();
+        if (firstInstBytesInHookInsts.at(0) == 0xff
+            && firstInstBytesInHookInsts.at(1) == 0x25
+            && m_hookInsts.at(1).getMnemonic() == "dest holder")
+        {
+            minProlSz += 8; // ff 25 XX XX XX XX 11 22 33 44 55 66 77 88 is treated as two instructions
+        }
+    }
+
     uint64_t roundProlSz = minProlSz;  // nearest size to min that doesn't split any instructions
 
     // find the prologue section we will overwrite with jmp + zero or more nops
