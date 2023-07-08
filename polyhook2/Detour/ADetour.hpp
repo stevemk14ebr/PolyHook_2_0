@@ -63,6 +63,8 @@ public:
 
     void setMaxDepth(uint8_t maxDepth);
 
+    void setIsFollowCallOnFnAddress(bool value);
+
 protected:
     uint64_t m_fnAddress;
     uint64_t m_fnCallback;
@@ -80,6 +82,7 @@ protected:
     uint16_t m_nopProlOffset = 0;
     uint16_t m_nopSize = 0;
     uint32_t m_hookSize = 0;
+    bool m_isFollowCallOnFnAddress = true;  // whether follow 'CALL' destination
 
     /**Walks the given vector of instructions and sets roundedSz to the lowest size possible that doesn't split any instructions and is greater than minSz.
     If end of function is encountered before this condition an empty optional is returned. Returns instructions in the range start to adjusted end**/
