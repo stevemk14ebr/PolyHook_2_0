@@ -48,6 +48,8 @@ public:
 
     void setDetourScheme(detour_scheme_t scheme);
 
+    static const char* printDetourScheme(detour_scheme_t scheme);
+
 protected:
     detour_scheme_t m_detourScheme = detour_scheme_t::RECOMMENDED; // this is the most stable configuration.
     optional<uint64_t> m_valloc2_region;
