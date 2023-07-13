@@ -156,6 +156,8 @@ inline bool isMatch(const char* addr, const char* pat, const char* msk)
 #define getBits( x )		(INRANGE(x,'0','9') ? (x - '0') : ((x&(~0x20)) - 'A' + 0xa))
 #define getByte( x )		(getBits(x[0]) << 4 | getBits(x[1]))
 
+constexpr uint8_t FINDPATTERN_SCRATCH_SIZE = 64;
+
 // https://github.com/learn-more/findpattern-bench/blob/master/patterns/learn_more.h
 // must use space between bytes and ?? for wildcards. Do not add 0x prefix
 uint64_t findPattern(const uint64_t rangeStart, size_t len, const char* pattern);

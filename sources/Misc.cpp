@@ -4,11 +4,11 @@
 
 uint64_t PLH::findPattern(const uint64_t rangeStart, size_t len, const char* pattern)
 {
+	unsigned char pattern_scratch[FINDPATTERN_SCRATCH_SIZE] = { 0 };
+	unsigned char mask_scratch[FINDPATTERN_SCRATCH_SIZE] = { 0 };
 	const size_t patSize = (size_t)getPatternSize(pattern);
-	auto patt_base = (char*)PolyHook2Alloca(patSize + 1);
-	auto msk_base = (char*)PolyHook2Alloca(patSize + 1);
-	char* pat = patt_base;
-	char* msk = msk_base;
+	char* pat = (char*)&pattern_scratch[0];
+	char* msk = (char*)&mask_scratch[0];
 
 	if (patSize + 1 > len)
 		return NULL;
@@ -29,7 +29,7 @@ uint64_t PLH::findPattern(const uint64_t rangeStart, size_t len, const char* pat
 	*msk = 0;
 	for (size_t n = 0; n < (len - (patSize + 1)); ++n)
 	{
-		if (isMatch((char*)(rangeStart + n), patt_base, msk_base)) {
+		if (isMatch((char*)(rangeStart + n), (char*)(&pattern_scratch[0]), (char*)(&mask_scratch[0]))) {
 			return rangeStart + n;
 		}
 	}
@@ -46,11 +46,11 @@ uint64_t PLH::getPatternSize(const char* pattern)
 
 uint64_t PLH::findPattern_rev(const uint64_t rangeStart, size_t len, const char* pattern)
 {
+	unsigned char pattern_scratch[FINDPATTERN_SCRATCH_SIZE] = { 0 };
+	unsigned char mask_scratch[FINDPATTERN_SCRATCH_SIZE] = { 0 };
 	const size_t patSize = (size_t)getPatternSize(pattern);
-	auto patt_base = (char*)PolyHook2Alloca(patSize + 1);
-	auto msk_base = (char*)PolyHook2Alloca(patSize + 1);
-	char* pat = patt_base;
-	char* msk = msk_base;
+	char* pat = (char*)&pattern_scratch[0];
+	char* msk = (char*)&mask_scratch[0];
 	
 	if (patSize + 1 > len)
 		return NULL;
@@ -71,7 +71,7 @@ uint64_t PLH::findPattern_rev(const uint64_t rangeStart, size_t len, const char*
 	*msk = 0;
 	for (size_t n = len - (patSize + 1); n > 0; n--)
 	{
-		if (isMatch((char*)(rangeStart + n), patt_base, msk_base)) {
+		if (isMatch((char*)(rangeStart + n), (char*)(&pattern_scratch[0]), (char*)(&mask_scratch[0]))) {
 			return rangeStart + n;
 		}
 	}

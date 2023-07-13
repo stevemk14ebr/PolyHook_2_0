@@ -60,6 +60,9 @@ const char* x64Detour::printDetourScheme(detour_scheme_t scheme)
 
 template<uint16_t SIZE>
 optional<uint64_t> x64Detour::findNearestCodeCave(uint64_t address) {
+    static_assert(SIZE + 1 < FINDPATTERN_SCRATCH_SIZE);
+    static_assert(SIZE + 1 < FINDPATTERN_SCRATCH_SIZE);
+
     const uint64_t chunkSize = 64000;
     auto* data = new unsigned char[chunkSize];
     auto delete_data = finally([=]() {
