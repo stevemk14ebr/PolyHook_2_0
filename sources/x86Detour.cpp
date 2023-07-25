@@ -17,7 +17,11 @@ uint8_t getJmpSize() {
 }
 
 bool x86Detour::hook() {
+	Log::log("m_fnAddress: " + int_to_hex(m_fnAddress) + "\n", ErrorLevel::INFO);
+	
     insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
+	Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
+	
     if (insts.empty()) {
         Log::log("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
         return false;
@@ -32,8 +36,6 @@ bool x86Detour::hook() {
     m_fnAddress = insts.front().getAddress();
 
     // --------------- END RECURSIVE JMP RESOLUTION ---------------------
-
-    Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
     uint64_t minProlSz = getJmpSize(); // min size of patches that may split instructions
     uint64_t roundProlSz = minProlSz; // nearest size to min that doesn't split any instructions
