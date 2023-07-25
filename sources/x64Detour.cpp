@@ -60,9 +60,9 @@ const char* x64Detour::printDetourScheme(detour_scheme_t scheme)
 
 template<uint16_t SIZE>
 optional<uint64_t> x64Detour::findNearestCodeCave(uint64_t address) {
-	static_assert(SIZE + 1 < FINDPATTERN_SCRATCH_SIZE);
     static_assert(SIZE + 1 < FINDPATTERN_SCRATCH_SIZE);
-	
+    static_assert(SIZE + 1 < FINDPATTERN_SCRATCH_SIZE);
+
     const uint64_t chunkSize = 64000;
     auto* data = new unsigned char[chunkSize];
     auto delete_data = finally([=]() {
@@ -320,9 +320,8 @@ bool x64Detour::allocate_jump_to_callback() {
 
 bool x64Detour::hook() {
     Log::log("m_fnAddress: " + int_to_hex(m_fnAddress) + "\n", ErrorLevel::INFO);
-
     insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
-	Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
+    Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
     if (insts.empty()) {
         Log::log("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
@@ -341,6 +340,12 @@ bool x64Detour::hook() {
         return false;
     }
 
+    {
+        std::stringstream ss;
+        ss << printDetourScheme(m_chosen_scheme);
+        Log::log("Chosen detour scheme: " + ss.str() + "\n", ErrorLevel::INFO);
+    }
+
     // min size of patches that may split instructions
     // For valloc & code cave, we insert the jump, hence we take only size of the 1st instruction.
     // For detours, we calculate the size of the generated code.
@@ -355,12 +360,6 @@ bool x64Detour::hook() {
     if (!prologueOpt) {
         Log::log("Function too small to hook safely!", ErrorLevel::SEV);
         return false;
-    }
-	
-	{
-        std::stringstream ss;
-        ss << printDetourScheme(m_chosen_scheme);
-        Log::log("Chosen detour scheme: " + ss.str() + "\n", ErrorLevel::INFO);
     }
 
     assert(roundProlSz >= minProlSz);
