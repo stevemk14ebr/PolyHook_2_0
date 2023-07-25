@@ -320,6 +320,7 @@ bool x64Detour::allocate_jump_to_callback() {
 
 bool x64Detour::hook() {
     Log::log("m_fnAddress: " + int_to_hex(m_fnAddress) + "\n", ErrorLevel::INFO);
+
     insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
     Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 

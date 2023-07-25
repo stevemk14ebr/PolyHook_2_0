@@ -17,10 +17,10 @@ uint8_t getJmpSize() {
 }
 
 bool x86Detour::hook() {
-	Log::log("m_fnAddress: " + int_to_hex(m_fnAddress) + "\n", ErrorLevel::INFO);
+    Log::log("m_fnAddress: " + int_to_hex(m_fnAddress) + "\n", ErrorLevel::INFO);
 	
     insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
-	Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
+    Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 	
     if (insts.empty()) {
         Log::log("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
