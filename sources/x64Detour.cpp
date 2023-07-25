@@ -45,8 +45,24 @@ void x64Detour::setDetourScheme(detour_scheme_t scheme) {
     m_detourScheme = scheme;
 }
 
+const char* x64Detour::printDetourScheme(detour_scheme_t scheme)
+{
+        switch (scheme) {
+        case VALLOC2: return "VALLOC2";
+        case INPLACE: return "INPLACE";
+        case CODE_CAVE: return "CODE_CAVE";
+        case INPLACE_SHORT: return "INPLACE_SHORT";
+        case RECOMMENDED: return "RECOMMENDED";
+        case ALL: return "ALL";
+        default: return "UNKNOWN";
+        }
+}
+
 template<uint16_t SIZE>
 optional<uint64_t> x64Detour::findNearestCodeCave(uint64_t address) {
+	static_assert(SIZE + 1 < FINDPATTERN_SCRATCH_SIZE);
+    static_assert(SIZE + 1 < FINDPATTERN_SCRATCH_SIZE);
+	
     const uint64_t chunkSize = 64000;
     auto* data = new unsigned char[chunkSize];
     auto delete_data = finally([=]() {
@@ -339,6 +355,12 @@ bool x64Detour::hook() {
     if (!prologueOpt) {
         Log::log("Function too small to hook safely!", ErrorLevel::SEV);
         return false;
+    }
+	
+	{
+        std::stringstream ss;
+        ss << printDetourScheme(m_chosen_scheme);
+        Log::log("Chosen detour scheme: " + ss.str() + "\n", ErrorLevel::INFO);
     }
 
     assert(roundProlSz >= minProlSz);
