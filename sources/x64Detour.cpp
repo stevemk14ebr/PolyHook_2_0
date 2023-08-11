@@ -319,7 +319,10 @@ bool x64Detour::allocate_jump_to_callback() {
 }
 
 bool x64Detour::hook() {
+    Log::log("m_fnAddress: " + int_to_hex(m_fnAddress) + "\n", ErrorLevel::INFO);
+
     insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
+    Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
     if (insts.empty()) {
         Log::log("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
@@ -333,8 +336,6 @@ bool x64Detour::hook() {
 
     // update given fn address to resolved one
     m_fnAddress = insts.front().getAddress();
-
-    Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
 
     if (!allocate_jump_to_callback()) {
         return false;
