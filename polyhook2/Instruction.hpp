@@ -9,6 +9,7 @@
 #include "polyhook2/UID.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/Misc.hpp"
+#include "polyhook2/MemAccessor.hpp"
 #include <type_traits>
 
 namespace PLH {
@@ -67,10 +68,13 @@ public:
 
 		// ff 25 00 00 00 00 goes from jmp qword ptr [rip + 0] to jmp word ptr [rip + 0] on x64 -> x86
 		if (m_isIndirect) {
+			size_t read = 0;
 			if (m_mode == Mode::x64) {
-				dest = *(uint64_t*)dest;
+				// *(uint64_t*)dest;
+				m_accessor.safe_mem_read(dest, (uint64_t)&dest, sizeof(uint64_t), read);
 			} else {
-				dest = *(uint32_t*)dest;
+				// *(uint32_t*)dest;
+				m_accessor.safe_mem_read(dest, (uint64_t)&dest, sizeof(uint32_t), read);
 			}
 		}
 		return dest;
@@ -280,6 +284,10 @@ public:
         return getOperandTypes().front() == Instruction::OperandType::Displacement;
     }
 
+	// This is kind of lazy, should probably make be a non-static member for each instance
+	static void overrideMemAccessor(MemAccessor accessor) {
+		m_accessor = accessor;
+	}
 private:
 	void Init(const uint64_t address,
 			  const Displacement& displacement,
@@ -335,6 +343,8 @@ private:
 	Mode m_mode;
 
 	UID m_uid;
+
+	inline static MemAccessor m_accessor;
 };
 static_assert(std::is_nothrow_move_constructible<Instruction>::value, "PLH::Instruction should be noexcept move constructible");
 
