@@ -9,7 +9,7 @@
 #include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/MemAccessor.hpp"
-
+#include <functional>
 
 #if defined(__clang__)
 #define NOINLINE __attribute__((noinline))
@@ -148,6 +148,10 @@ decltype(auto) get_pack_idx(Ts&&... ts) {
 Creates a hook callback function pointer that matches the type of a given function definition. The name variable
 will be a pointer to the function, and the variables _args... and name_t will be created to represent the original
 arguments of the function and the type of the callback respectively.
+
+THE RETURN TYPE IN THE BODY MUST BE CORRECT OR THIS WILL FAIL. IT IS ON THE USER TO RETURN THE MATCHING TYPE FROM BODY
+
+The adding -> decltype(std::function{pType})::result to the end of non-class callbacks can help debug return type issues.
 **/
 #define HOOK_CALLBACK(pType, name, body) \
     typedef PLH::callback_type_t<decltype(pType)> name##_t; \
