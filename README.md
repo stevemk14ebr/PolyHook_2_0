@@ -1,5 +1,5 @@
 # PolyHook 2.0
-C++17, x86/x64 Hooking Libary v2.0
+C++ 20, x86/x64 Hooking Libary v2.0
 
 Article 1: https://www.codeproject.com/articles/1100579/polyhook-the-cplusplus-x-x-hooking-library
 
@@ -47,7 +47,7 @@ See: https://github.com/stevemk14ebr/PolyHook_2_0/pull/59#issuecomment-619223616
 I provide directions below for how to setup the visual studio cmake environment only. If you don't want to use visual studio that's fine, this is a standard cmake project and will build from command line just fine. 
 
 ### Visual Studio 2022
-clone the project and perform submodule init as above. Do not run the cmake commands, instead:
+An up to date visual studio is required. First clone the project and perform submodule init as above. Do not run the cmake commands, instead:
 
 Open VS 2022, go to file->open->cmake.. this will load the project and start cmake generation. Next goto cmake->build all or cmake->build, you can also set a startup item and release mode to use the play button (do not use the install target). Capstone, Zydis, and asmjit are set to automatically build and link, you DO NOT need to build them seperately.
 
