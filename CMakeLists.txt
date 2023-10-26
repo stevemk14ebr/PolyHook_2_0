@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(PolyHook_2)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 include(CMakePackageConfigHelpers)
 
 if(WIN32)
@@ -140,7 +137,7 @@ else()
 	add_executable(${PROJECT_NAME})
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
