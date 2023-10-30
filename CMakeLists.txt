@@ -46,7 +46,7 @@ option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functional
 
 function(add_asmjit_properties)
     if(MSVC)
-        if(ASMJIT_STATIC)
+        if(POLYHOOK_BUILD_STATIC_RUNTIME)
             set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
         else()
             set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
@@ -67,7 +67,7 @@ if(POLYHOOK_FEATURE_DETOURS AND NOT POLYHOOK_USE_EXTERNAL_ASMTK)
         set(ASMJIT_STATIC ON CACHE BOOL "")
     endif()
 
-	add_subdirectory(asmtk)
+    add_subdirectory(asmtk)
     add_asmjit_properties()
 
 	if(MSVC)
@@ -93,7 +93,7 @@ if(POLYHOOK_FEATURE_INLINENTD AND NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
             set(ASMJIT_STATIC ON CACHE BOOL "")
         endif()
 
-		add_subdirectory(asmjit)
+	add_subdirectory(asmjit)
         add_asmjit_properties()
     endif()
 endif()
