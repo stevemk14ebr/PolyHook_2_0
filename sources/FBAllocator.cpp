@@ -73,8 +73,7 @@ void* ALLOC_Alloc(ALLOC_HANDLE hAlloc, size_t size)
     // Convert handle to an ALLOC_Allocator instance
     self = (ALLOC_Allocator*)hAlloc;
 
-    // Ensure requested size fits within memory block 
-    (size);
+    // Ensure requested size fits within memory block
     assert(size <= self->blockSize);
 
     // Get a block from the free-list
