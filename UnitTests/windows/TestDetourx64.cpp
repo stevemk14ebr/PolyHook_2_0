@@ -13,6 +13,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <shlobj_core.h>
 
 EffectTracker effects;
 
@@ -121,6 +122,13 @@ HOOK_CALLBACK(&CreateMutexExA, hCreateMutexExA, { // NOLINT(cert-err58-cpp)
     return PLH::FnCast(oCreateMutexExA, &CreateMutexExA)(_args...);
 });
 
+uint64_t oSHGetSpecialFolderPathW = 0;
+HOOK_CALLBACK(&SHGetSpecialFolderPathW, hSHGetSpecialFolderPathW, {
+    PLH::StackCanary canary;
+    printf("shell32!SHGetSpecialFolderPathW\n");
+    return PLH::FnCast(oSHGetSpecialFolderPathW, &SHGetSpecialFolderPathW)(_args...);
+});
+
 typedef void(*PKNORMAL_ROUTINE)(void* NormalContext, void* SystemArgument1, void* SystemArgument2);
 typedef unsigned long(__stdcall* tNtQueueApcThread)(void* ThreadHandle, PKNORMAL_ROUTINE ApcRoutine, void* NormalContext, void* SystemArgument1, void* SystemArgument2);
 
@@ -173,6 +181,15 @@ TEST_CASE("Testing x64 detours", "[x64Detour][ADetour]") {
         PLH::x64Detour detour((uint64_t) &CreateMutexExA, (uint64_t) hCreateMutexExA, &oCreateMutexExA);
         REQUIRE(detour.hook() == true);
         REQUIRE(detour.unHook() == true);
+
+        PLH::x64Detour detour2((uint64_t)&SHGetSpecialFolderPathW, (uint64_t)hSHGetSpecialFolderPathW, &oSHGetSpecialFolderPathW);
+        REQUIRE(detour2.hook() == true);
+       
+        wchar_t receiver[MAX_PATH] = { 0 };
+        BOOL thing = SHGetSpecialFolderPathW(0, receiver, 0, FALSE);
+        printf("%d\n", thing);
+
+        REQUIRE(detour2.unHook() == true);
     }
 
     SECTION("Loop function") {

@@ -590,49 +590,59 @@ optional<uint64_t> x64Detour::generateTranslationRoutine(const Instruction& inst
     x86::Assembler assembler(&code);
     asmtk::AsmParser parser(&assembler);
 
-    const auto result = translate_instruction(instruction);
-    if (!result) {
-        return {};
-    }
-
-    auto [translated_instruction, scratch_register, address_register] = *result;
-
-    const auto& scratch_register_64 = scratch_to_64.at(scratch_register);
-
     // Stores vector of instruction strings that comprise translation routine
     std::vector<string> translation;
 
-    // Avoid spoiling the shadow space
+    // LEA is special case, it doesn't need dereferenced like the sequences below always generate
+    // TODO: handle LEA's that do actual math, we assume the LEA is always constant right now
+
+    // ALWAYS: Avoid spoiling the shadow space
     translation.emplace_back("lea rsp, [rsp - 0x80]");
+    if (instruction.getMnemonic() == "lea") { // lea rax, ds:[0x00007FFD4FFDC400]
+        uint64_t relativeDest = instruction.getRelativeDestination();
+        const string reg_string = ZydisRegisterGetString(instruction.getRegister());
+        
+        // translate the relative LEA into a fixed MOV, using same register and it's computed relative address
+        translation.emplace_back("mov " + reg_string + ", " + int_to_hex(relativeDest));
+    } else {
+        const auto result = translate_instruction(instruction);
+        if (!result) {
+            return {};
+        }
 
-    // Save the scratch register
-    translation.emplace_back("push " + scratch_register_64);
+        auto [translated_instruction, scratch_register, address_register] = *result;
 
-    // Save the address holder register
-    translation.emplace_back("push " + address_register);
+        const auto& scratch_register_64 = scratch_to_64.at(scratch_register);
 
-    // Load the destination address into the address holder register
-    const auto destination = int_to_hex(instruction.getDestination());
-    translation.emplace_back("mov " + address_register + ", " + destination);
+        // Save the scratch register
+        translation.emplace_back("push " + scratch_register_64);
 
-    // Load the destination content into scratch register
-    translation.emplace_back("mov " + scratch_register + ", [" + address_register + "]");
+        // Save the address holder register
+        translation.emplace_back("push " + address_register);
 
-    // Replace RIP-relative instruction
-    translation.emplace_back(translated_instruction);
+        // Load the destination address into the address holder register
+        const auto destination = int_to_hex(instruction.getDestination());
+        translation.emplace_back("mov " + address_register + ", " + destination);
 
-    // Store the scratch register content into the destination, if necessary
-    if (instruction.startsWithDisplacement() && instructions_to_store.count(instruction.getMnemonic())) {
-        translation.emplace_back("mov [" + address_register + "], " + scratch_register_64);
+        // Load the destination content into scratch register
+        translation.emplace_back("mov " + scratch_register + ", [" + address_register + "]");
+
+        // Replace RIP-relative instruction
+        translation.emplace_back(translated_instruction);
+
+        // Store the scratch register content into the destination, if necessary
+        if (instruction.startsWithDisplacement() && instructions_to_store.count(instruction.getMnemonic())) {
+            translation.emplace_back("mov [" + address_register + "], " + scratch_register_64);
+        }
+
+        // Restore the memory holder register
+        translation.emplace_back("pop " + address_register);
+
+        // Restore the scratch register
+        translation.emplace_back("pop " + scratch_register_64);
     }
 
-    // Restore the memory holder register
-    translation.emplace_back("pop " + address_register);
-
-    // Restore the scratch register
-    translation.emplace_back("pop " + scratch_register_64);
-
-    // Jump back to trampoline, ret cleans up the lea from earlier
+    // ALWAYS: Jump back to trampoline, ret cleans up the lea from earlier
     // we do it this way to ensure pushing our return address doesn't overwrite shadow space
     const auto jump_instructions = generateAbsoluteJump(resume_address, 0x80);
     translation.insert(translation.end(), jump_instructions.begin(), jump_instructions.end());
