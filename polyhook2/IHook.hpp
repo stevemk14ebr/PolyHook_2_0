@@ -9,7 +9,7 @@
 #include "polyhook2/ZydisDisassembler.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/MemAccessor.hpp"
-
+#include <functional>
 
 #if defined(__clang__)
 #define NOINLINE __attribute__((noinline))
@@ -78,9 +78,15 @@ protected:
 template<typename T, typename = void>
 struct callback_type { using type = T; };
 
+// from all the overloads below return the entire function type of whichever casts successfully
 template<typename T>
 using callback_type_t = typename callback_type<T>::type;
 
+// from all the overloads below return just the return type of whichever casts successfully
+template<typename T>
+using callback_return_type_t = typename callback_type<T>::return_type;
+
+// given a value, call callback_type_t on its type
 template<auto V>
 using callback_type_v = typename callback_type<decltype(V)>::type;
 
@@ -94,6 +100,7 @@ template<typename Ret, typename... Args> \
 struct callback_type<Ret(CCFROM*)(Args...), void> \
 { \
     using type = Ret(CCTO*)(Args...); \
+    using return_type = Ret; \
 };
 
 // switch to __VA_OPT__ when C++ 2a release. MSVC removes comma before empty __VA_ARGS__ as is.
@@ -108,20 +115,13 @@ template<typename Ret, typename Class, typename... Args> \
 struct callback_type<Ret(CCFROM Class::*)(Args...), void> \
 { \
     using type = Ret(CCTO*)(Class*, ## __VA_ARGS__, Args...); \
+    using return_type = Ret; \
 };
 
-#ifdef POLYHOOK2_OS_WINDOWS
-
-#ifdef FASTCALL
-#undef FASTCALL
-#endif
-
-#define FASTCALL __fastcall
-
-#else
-
-#define FASTCALL __attribute__((fastcall))
-
+#ifndef _MSC_VER
+#define __cdecl __attribute__((__cdecl__))
+#define __fastcall __attribute__((__fastcall__))
+#define __stdcall __attribute__((__stdcall__))
 #endif
 
 #ifndef POLYHOOK2_ARCH_X64
@@ -135,8 +135,8 @@ MAKE_CALLBACK_IMPL(__thiscall, __thiscall)
 MAKE_CALLBACK_CLASS_IMPL(__thiscall, __fastcall, char*)
 #endif
 
-MAKE_CALLBACK_IMPL(FASTCALL, FASTCALL)
-MAKE_CALLBACK_CLASS_IMPL(FASTCALL, FASTCALL)
+MAKE_CALLBACK_IMPL(__fastcall, __fastcall)
+MAKE_CALLBACK_CLASS_IMPL(__fastcall, __fastcall)
 
 template <int I, class... Ts>
 decltype(auto) get_pack_idx(Ts&&... ts) {
@@ -151,7 +151,7 @@ arguments of the function and the type of the callback respectively.
 **/
 #define HOOK_CALLBACK(pType, name, body) \
     typedef PLH::callback_type_t<decltype(pType)> name##_t; \
-    PLH::callback_type_t<decltype(pType)> (name) = PLH::make_callback(pType, [](auto... _args) body) // NOLINT(bugprone-macro-parentheses)
+    PLH::callback_type_t<decltype(pType)> (name) = PLH::make_callback(pType, [](auto... _args) -> PLH::callback_return_type_t<decltype(pType)> body) // NOLINT(bugprone-macro-parentheses)
 
 /**
 When using the HOOK_CALLBACK macro this helper utility can be used to retreive one of the original

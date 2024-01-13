@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(PolyHook_2)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+string(TOLOWER ${PROJECT_NAME} LOWERCASE_PROJECT_NAME)
 include(CMakePackageConfigHelpers)
 
 if(WIN32)
@@ -49,7 +47,7 @@ option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functional
 
 function(add_asmjit_properties)
     if(MSVC)
-        if(ASMJIT_STATIC)
+        if(POLYHOOK_BUILD_STATIC_RUNTIME)
             set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
         else()
             set_target_properties(asmjit PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
@@ -70,7 +68,7 @@ if(POLYHOOK_FEATURE_DETOURS AND NOT POLYHOOK_USE_EXTERNAL_ASMTK)
         set(ASMJIT_STATIC ON CACHE BOOL "")
     endif()
 
-	add_subdirectory(asmtk)
+    add_subdirectory(asmtk)
     add_asmjit_properties()
 
 	if(MSVC)
@@ -96,7 +94,7 @@ if(POLYHOOK_FEATURE_INLINENTD AND NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
             set(ASMJIT_STATIC ON CACHE BOOL "")
         endif()
 
-		add_subdirectory(asmjit)
+	add_subdirectory(asmjit)
         add_asmjit_properties()
     endif()
 endif()
@@ -140,7 +138,7 @@ else()
 	add_executable(${PROJECT_NAME})
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
@@ -376,15 +374,15 @@ endif()
 #
 
 configure_package_config_file(
-		"${PROJECT_NAME}-config.cmake.in"
-		"${PROJECT_NAME}-config.cmake"
+		"${LOWERCASE_PROJECT_NAME}-config.cmake.in"
+		"${LOWERCASE_PROJECT_NAME}-config.cmake"
 	INSTALL_DESTINATION
         "lib/${PROJECT_NAME}"
 )
 
 install(
     FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/${LOWERCASE_PROJECT_NAME}-config.cmake"
     DESTINATION
         "lib/${PROJECT_NAME}"
 )
