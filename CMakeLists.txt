@@ -374,7 +374,7 @@ endif()
 #
 
 configure_package_config_file(
-		"${PROJECT_NAME}-config.cmake.in"
+		"${LOWERCASE_PROJECT_NAME}-config.cmake.in"
 		"${LOWERCASE_PROJECT_NAME}-config.cmake"
 	INSTALL_DESTINATION
         "lib/${PROJECT_NAME}"
