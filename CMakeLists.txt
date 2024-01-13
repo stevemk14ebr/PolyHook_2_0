@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(PolyHook_2)
+string(TOLOWER ${PROJECT_NAME} LOWERCASE_PROJECT_NAME)
 include(CMakePackageConfigHelpers)
 
 if(WIN32)
@@ -374,14 +375,14 @@ endif()
 
 configure_package_config_file(
 		"${PROJECT_NAME}-config.cmake.in"
-		"${PROJECT_NAME}-config.cmake"
+		"${LOWERCASE_PROJECT_NAME}-config.cmake"
 	INSTALL_DESTINATION
         "lib/${PROJECT_NAME}"
 )
 
 install(
     FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/${LOWERCASE_PROJECT_NAME}-config.cmake"
     DESTINATION
         "lib/${PROJECT_NAME}"
 )
