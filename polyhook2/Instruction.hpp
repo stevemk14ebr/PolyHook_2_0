@@ -462,7 +462,7 @@ inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t de
 	std::stringstream ss;
 	ss << std::hex << "[" << destHolder << "] ->" << destination;
 
-	return { Instruction(address, disp, 2, true, true, bytes, "jmp", ss.str(), Mode::x64),  specialDest };
+	return { specialDest, Instruction(address, disp, 2, true, true, bytes, "jmp", ss.str(), Mode::x64) };
 }
 
 inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destination) {
