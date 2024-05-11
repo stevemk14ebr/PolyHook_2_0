@@ -191,11 +191,21 @@ using ci_wstring_view = std::basic_string_view<wchar_t, ci_wchar_traits>;
 template< typename T >
 std::string int_to_hex(T i)
 {
+#ifndef POLYHOOK_DISABLE_IOSTREAM
 	std::stringstream stream;
 	stream << "0x" << std::setfill('0') << std::setw(sizeof(T) * 2) << std::hex
 		<< (uint64_t) i; // We cast to the highest possible int because uint8_t will be printed as char
 
 	return stream.str();
+#else
+	char buffer[32];
+#ifdef __i386__
+	sprintf(buffer, "0x%0*x", (int)sizeof(T) * 2, (uintptr_t)i);
+#else
+	sprintf(buffer, "0x%0*lx", (int)sizeof(T) * 2, (uintptr_t)i);
+#endif
+	return std::string(buffer);
+#endif
 }
 
 template< typename T >

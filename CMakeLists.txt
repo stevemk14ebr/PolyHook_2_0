@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
 project(PolyHook_2)
 string(TOLOWER ${PROJECT_NAME} LOWERCASE_PROJECT_NAME)
 include(CMakePackageConfigHelpers)
@@ -40,6 +43,23 @@ endif()
 option(POLYHOOK_FEATURE_DETOURS "Implement detour functionality" ON)
 option(POLYHOOK_FEATURE_INLINENTD "Support inline hooks without specifying typedefs by generating callback stubs at runtime with AsmJit" ON)
 option(POLYHOOK_FEATURE_VIRTUALS "Implement all virtual table hooking functionality" ON)
+
+option(POLYHOOK_COMPILE_32 "Force 32 bit compile" OFF)
+option(POLYHOOK_DISABLE_IOSTREAM "Replace iostream debug routines with more Cish versions for stability" OFF)
+option(POLYHOOK_DISABLE_INSTRUCTION_PRINTING "Disable instruction debug printing for more speed" OFF)
+
+if(POLYHOOK_COMPILE_32)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+endif()
+
+if(POLYHOOK_DISABLE_IOSTREAM)
+	add_compile_definitions(POLYHOOK_DISABLE_IOSTREAM=1)
+endif()
+
+if(POLYHOOK_DISABLE_INSTRUCTION_PRINTING)
+	add_compile_definitions(POLYHOOK_DISABLE_INSTRUCTION_PRINTING=1)
+endif()
 
 #
 # ASMTK

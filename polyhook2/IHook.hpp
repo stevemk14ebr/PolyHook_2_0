@@ -12,7 +12,9 @@
 #include <functional>
 
 #if defined(__clang__)
+#ifndef NOINLINE
 #define NOINLINE __attribute__((noinline))
+#endif
 #define PH_ATTR_NAKED __attribute__((naked))
 #elif defined(__GNUC__) || defined(__GNUG__)
 #define NOINLINE __attribute__((noinline))
@@ -25,6 +27,10 @@ _Pragma("GCC optimize (\"O0\")")
 #define PH_ATTR_NAKED __declspec(naked)
 #define OPTS_OFF __pragma(optimize("", off))
 #define OPTS_ON __pragma(optimize("", on))
+#endif
+
+#ifdef __linux__
+#define __thiscall
 #endif
 
 #define PH_UNUSED(a) (void)a
@@ -119,9 +125,17 @@ struct callback_type<Ret(CCFROM Class::*)(Args...), void> \
 };
 
 #ifndef _MSC_VER
+#ifndef __cdecl
 #define __cdecl __attribute__((__cdecl__))
+#endif
+
+#ifndef __fastcall
 #define __fastcall __attribute__((__fastcall__))
+#endif
+
+#ifndef __stdcall
 #define __stdcall __attribute__((__stdcall__))
+#endif
 #endif
 
 #ifndef POLYHOOK2_ARCH_X64
@@ -131,12 +145,17 @@ MAKE_CALLBACK_CLASS_IMPL(__stdcall, __stdcall)
 MAKE_CALLBACK_IMPL(__cdecl, __cdecl)
 MAKE_CALLBACK_CLASS_IMPL(__cdecl, __cdecl)
 
+#ifndef __linux__
 MAKE_CALLBACK_IMPL(__thiscall, __thiscall)
 MAKE_CALLBACK_CLASS_IMPL(__thiscall, __fastcall, char*)
 #endif
 
+#endif
+
+#if defined(__linux__) && defined(__i386__)
 MAKE_CALLBACK_IMPL(__fastcall, __fastcall)
 MAKE_CALLBACK_CLASS_IMPL(__fastcall, __fastcall)
+#endif
 
 template <int I, class... Ts>
 decltype(auto) get_pack_idx(Ts&&... ts) {

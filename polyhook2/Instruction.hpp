@@ -367,6 +367,43 @@ inline std::ostream& operator<<(std::ostream& os, const PLH::Instruction& obj) {
 	return os;
 }
 
+#ifdef POLYHOOK_DISABLE_IOSTREAM
+inline std::string PrintInstruction(const PLH::Instruction& obj) {
+	std::string output;
+	char buffer[256];
+
+#ifdef __i386__
+	sprintf(buffer, "%-16x [%zu] ", (uintptr_t)obj.getAddress(), obj.size());
+#else
+	sprintf(buffer, "%-16lx [%zu] ", (uintptr_t)obj.getAddress(), obj.size());
+#endif
+	output += buffer;
+
+	std::string hex;
+	for (std::size_t i = 0; i < obj.size(); i++)
+	{
+		sprintf(buffer, "%02x ", (unsigned)obj.getBytes()[i]);
+		hex += buffer;
+	}
+	sprintf(buffer, "%-40s", hex.c_str());
+	output += buffer;
+
+	sprintf(buffer, "%s", obj.getFullName().c_str());
+	output += buffer;
+
+	if (obj.hasDisplacement() && obj.isDisplacementRelative())
+	{
+#ifdef __i386__		
+		sprintf(buffer, " -> %x", (uintptr_t)obj.getDestination());
+#else
+		sprintf(buffer, " -> %lx", (uintptr_t)obj.getDestination());
+#endif
+		output += buffer;
+	}
+	return output;
+}
+#endif
+
 typedef std::vector<Instruction> insts_t;
 
 inline uint16_t calcInstsSz(const insts_t& insts) {
@@ -378,20 +415,32 @@ inline uint16_t calcInstsSz(const insts_t& insts) {
 
 template<typename T>
 std::string instsToStr(const T& container) {
+#if POLYHOOK_DISABLE_INSTRUCTION_PRINTING
+	return std::string();
+#else
+#ifndef POLYHOOK_DISABLE_IOSTREAM
 	std::stringstream ss;
 	printInsts(ss, container);
 	return ss.str();
+#else
+	std::string output;
+	for (auto ii = container.cbegin(); ii != container.cend(); ++ii) {
+		output += PrintInstruction(*ii) + "\n";
+	}
+	return output;
+#endif
+#endif
 }
 
 template <typename T>
-inline std::ostream& printInsts(std::ostream& out, const T& container) {
+inline std::stringstream& printInsts(std::stringstream& out, const T& container) {
 	for (auto ii = container.cbegin(); ii != container.cend(); ++ii) {
 		out << *ii << std::endl;
 	}
 	return out;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const std::vector<Instruction>& v) { return printInsts(os, v); }
+//inline std::ostream& operator<<(std::ostream& os, const std::vector<Instruction>& v) { return printInsts(os, v); }
 //std::ostream& operator<<(std::ostream& os, const std::deque<X>& v) { return printInsts(os, v); }
 //std::ostream& operator<<(std::ostream& os, const std::list<X>& v) { return printInsts(os, v); }
 //std::ostream& operator<<(std::ostream& os, const std::set<X>& v) { return printInsts(os, v); }
@@ -459,10 +508,19 @@ inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t de
 	bytes[1] = 0x25;
 	memcpy(&bytes[2], &disp.Relative, 4);
 
+#ifndef __linux__
 	std::stringstream ss;
 	ss << std::hex << "[" << destHolder << "] ->" << destination;
-
 	return { specialDest, Instruction(address, disp, 2, true, true, bytes, "jmp", ss.str(), Mode::x64) };
+#else
+	char buffer[32];
+#ifdef __i386__
+	sprintf(buffer, "[%x] ->%x", (uintptr_t)destHolder, (uintptr_t)destination);
+#else
+	sprintf(buffer, "[%lx] ->%lx", (uintptr_t)destHolder, (uintptr_t)destination);
+#endif
+	return { specialDest, Instruction(address, disp, 2, true, true, bytes, "jmp", std::string(buffer), Mode::x64) };
+#endif
 }
 
 inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destination) {

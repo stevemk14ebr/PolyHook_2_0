@@ -17,6 +17,7 @@ namespace PLH {
 
 class x86Detour : public Detour {
 public:
+    x86Detour(const uint32_t fnAddress, const uint32_t fnCallback, uint32_t* userTrampVar);
     x86Detour(uint64_t fnAddress, uint64_t fnCallback, uint64_t* userTrampVar);
 
     virtual ~x86Detour() = default;

@@ -5,6 +5,10 @@
 
 namespace PLH {
 
+x86Detour::x86Detour(const uint32_t fnAddress, const uint32_t fnCallback, uint32_t* userTrampVar)
+    : Detour(static_cast<uint64_t>(fnAddress), static_cast<uint64_t>(fnCallback), reinterpret_cast<uint64_t*>(userTrampVar), getArchType()) {}
+
+
 x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar)
     : Detour(fnAddress, fnCallback, userTrampVar, getArchType()) {}
 
