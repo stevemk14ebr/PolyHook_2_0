@@ -508,7 +508,7 @@ inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t de
 	bytes[1] = 0x25;
 	memcpy(&bytes[2], &disp.Relative, 4);
 
-#ifndef __linux__
+#ifndef POLYHOOK_DISABLE_IOSTREAM
 	std::stringstream ss;
 	ss << std::hex << "[" << destHolder << "] ->" << destination;
 	return { specialDest, Instruction(address, disp, 2, true, true, bytes, "jmp", ss.str(), Mode::x64) };
