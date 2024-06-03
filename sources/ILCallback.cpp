@@ -250,12 +250,11 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 }
 
 uint64_t PLH::ILCallback::getJitFunc(const std::string& retType, const std::vector<std::string>& paramTypes, const asmjit::Arch arch, const tUserCallback callback, std::string callConv/* = ""*/) {
-	asmjit::FuncSignature sig = {};
-	std::vector<asmjit::TypeId> args;
+	asmjit::FuncSignature sig(getCallConv(callConv), asmjit::FuncSignature::kNoVarArgs, getTypeId(retType));
 	for (const std::string& s : paramTypes) {
-		args.push_back(getTypeId(s));
+		sig.addArg(getTypeId(s));
 	}
-	sig.init(getCallConv(callConv),asmjit::FuncSignature::kNoVarArgs, getTypeId(retType), args.data(), (uint32_t)args.size());
+	
 	return getJitFunc(sig, arch, callback);
 }
 
