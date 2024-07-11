@@ -274,14 +274,16 @@ if(POLYHOOK_FEATURE_DETOURS)
 		${PROJECT_SOURCE_DIR}/polyhook2/Detour/ADetour.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Detour/NatDetour.hpp
 		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x64Detour.hpp
-		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x86Detour.hpp)
+		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x86Detour.hpp
+		${PROJECT_SOURCE_DIR}/polyhook2/Detour/x86HotpatchDetour.hpp)
 
 	install(FILES ${POLYHOOK_DETOUR_HEADERS} DESTINATION include/polyhook2/Detour)
 
 	target_sources(${PROJECT_NAME} PRIVATE
 		${PROJECT_SOURCE_DIR}/sources/ADetour.cpp
 		${PROJECT_SOURCE_DIR}/sources/x64Detour.cpp
-		${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp)
+		${PROJECT_SOURCE_DIR}/sources/x86Detour.cpp
+		${PROJECT_SOURCE_DIR}/sources/x86HotpatchDetour.cpp)
 
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
@@ -291,7 +293,9 @@ if(POLYHOOK_FEATURE_DETOURS)
 			    ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourTranslationx64.cpp
 				${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourSchemex64.cpp)
 		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4) #32-bit
-			target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx86.cpp)
+			target_sources(${PROJECT_NAME} PRIVATE
+			    ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx86.cpp
+			    ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx86hotpatch.cpp)
 		endif()
 	endif()
 endif()
