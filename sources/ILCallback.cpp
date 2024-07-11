@@ -165,7 +165,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	asmjit::InvokeNode* invokeNode;
 	cc.invoke(&invokeNode,
 		(uint64_t)callback,
-		asmjit::FuncSignatureT<void, Parameters*, uint8_t, ReturnValue*>()
+		asmjit::FuncSignature::build<void, Parameters*, uint8_t, ReturnValue*>()
 	);
 
 	// call to user provided function (use ABI of host compiler)
