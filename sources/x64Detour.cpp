@@ -5,6 +5,7 @@
 #include <functional>
 #include <set>
 #include <sstream>
+#include <iterator>
 
 #include <asmtk/asmtk.h>
 
