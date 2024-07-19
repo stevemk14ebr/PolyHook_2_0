@@ -22,6 +22,7 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         build_type: [Release]
         c_compiler: [gcc, clang, cl]
+        arch: [x86, AMD64, x86_64]
         include:
           - os: windows-latest
             c_compiler: cl
@@ -39,6 +40,10 @@ jobs:
             c_compiler: clang
           - os: ubuntu-latest
             c_compiler: cl
+          - os: windows-latest
+            arch: x86_x64
+          - os: ubuntu-latest
+            arch: AMD64
 
     steps:
     - uses: actions/checkout@v4
@@ -60,6 +65,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_SYSTEM_PROCESSOR =${{ matrix.arch }} 
         -S ${{ github.workspace }}
 
     - name: Build
