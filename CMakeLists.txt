@@ -59,13 +59,13 @@ if(POLYHOOK_FEATURE_DETOURS AND NOT POLYHOOK_USE_EXTERNAL_ASMTK)
 	if(NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
 	    set(ASMJIT_DIR "${PROJECT_SOURCE_DIR}/asmjit")
     endif()
-
+	# asmjit and asmtk do not use `option`
 	if(POLYHOOK_BUILD_SHARED_ASMTK)
-		set(ASMTK_STATIC OFF CACHE BOOL "")
-        set(ASMJIT_STATIC OFF CACHE BOOL "")
+		set(ASMTK_STATIC OFF)
+		set(ASMJIT_STATIC OFF)
     else()
-		set(ASMTK_STATIC ON CACHE BOOL "")
-        set(ASMJIT_STATIC ON CACHE BOOL "")
+		set(ASMTK_STATIC ON)
+		set(ASMJIT_STATIC ON)
     endif()
 
     add_subdirectory(asmtk)
@@ -88,10 +88,11 @@ endif()
 if(POLYHOOK_FEATURE_INLINENTD AND NOT POLYHOOK_USE_EXTERNAL_ASMJIT)
     # Avoid including asmjit again if it was already included
     if(NOT TARGET asmjit)
+        # asmjit doesn't use `option`
         if(POLYHOOK_BUILD_SHARED_ASMJIT)
-            set(ASMJIT_STATIC OFF CACHE BOOL "")
+            set(ASMJIT_STATIC OFF)
         else()
-            set(ASMJIT_STATIC ON CACHE BOOL "")
+            set(ASMJIT_STATIC ON)
         endif()
 
 	add_subdirectory(asmjit)
@@ -103,13 +104,23 @@ endif()
 # Zydis
 #
 
-if(NOT POLYHOOK_USE_EXTERNAL_ZYDIS)
-    set(ZYDIS_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_ZYDIS} CACHE BOOL "")
-	set(ZYCORE_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_ZYDIS} CACHE BOOL "")
-	set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
-	set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
+function(set_zycore_options)
+	set(ZYCORE_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_ZYDIS} CACHE BOOL "" FORCE)
+	set(ZYCORE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+	set(ZYCORE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+endfunction()
 
+function(set_zydis_options)
+	set(ZYDIS_BUILD_SHARED_LIB ${POLYHOOK_BUILD_SHARED_ZYDIS} CACHE BOOL "" FORCE)
+	set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+	set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+	set(ZYDIS_BUILD_DOXYGEN OFF CACHE BOOL "" FORCE)
+endfunction()
+
+if(NOT POLYHOOK_USE_EXTERNAL_ZYDIS)
+	set_zycore_options()
 	add_subdirectory(zydis/dependencies/zycore)
+	set_zydis_options()
 	add_subdirectory(zydis)
 
 	if(MSVC)
