@@ -51,6 +51,31 @@ std::optional<insts_t> Detour::calcNearestSz(
     return std::nullopt;
 }
 
+std::optional<insts_t> Detour::calcNearestSzForHotpatch(
+    const insts_t& functionInsts,
+    const uint64_t prolOvrwStartOffset,
+    uint64_t& prolOvrwEndOffset
+) {
+    uint64_t prolLen = 0;
+    insts_t instructionsInRange;
+
+    // count instructions until at least length needed
+    for (const auto& inst : functionInsts) {
+        prolLen += inst.size();
+        instructionsInRange.push_back(inst);
+
+        if (prolLen >= prolOvrwStartOffset)
+            break;
+    }
+
+    prolOvrwEndOffset = prolLen;
+    if (prolLen >= prolOvrwStartOffset) {
+        return instructionsInRange;
+    }
+
+    return std::nullopt;
+}
+
 bool Detour::followJmp(insts_t& functionInsts, const uint8_t curDepth) { // NOLINT(misc-no-recursion)
     if (functionInsts.empty()) {
         Log::log("Couldn't decompile instructions at followed jmp", ErrorLevel::WARN);
