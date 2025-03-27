@@ -15,7 +15,7 @@ PLH::IatHook::IatHook(const std::string& dllName, const std::string& apiName, co
 
 bool PLH::IatHook::hook() {
 	assert(m_userOrigVar != nullptr);
-	IMAGE_THUNK_DATA* pThunk = FindIatThunk(m_dllName, m_apiName);
+	IMAGE_THUNK_DATA* pThunk = FindIatThunk(m_dllName, m_apiName, m_moduleName);
 	if (pThunk == nullptr)
 		return false;
 
@@ -34,7 +34,7 @@ bool PLH::IatHook::unHook() {
 	if (!m_hooked)
 		return false;
 
-	IMAGE_THUNK_DATA* pThunk = FindIatThunk(m_dllName, m_apiName);
+	IMAGE_THUNK_DATA* pThunk = FindIatThunk(m_dllName, m_apiName, m_moduleName);
 	if (pThunk == nullptr)
 		return false;
 
@@ -45,7 +45,7 @@ bool PLH::IatHook::unHook() {
 	return true;
 }
 
-IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunk(const std::string& dllName, const std::string& apiName, const std::wstring moduleName /* = L"" */) {
+IMAGE_THUNK_DATA* PLH::IatHook::FindIatThunk(const std::string& dllName, const std::string& apiName, const std::wstring& moduleName /* = L"" */) {
 #if defined(_WIN64)
 	PEB* peb = (PPEB)__readgsqword(0x60);
 #else
