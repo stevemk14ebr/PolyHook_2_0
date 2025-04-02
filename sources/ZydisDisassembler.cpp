@@ -1,4 +1,7 @@
 #include "polyhook2/ZydisDisassembler.hpp"
+
+#include <deque>
+
 #include "polyhook2/ErrorLog.hpp"
 
 PLH::ZydisDisassembler::ZydisDisassembler(PLH::Mode mode) : m_decoder(new ZydisDecoder()), m_formatter(new ZydisFormatter()) {
@@ -107,6 +110,170 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 	return insVec;
 }
 
+std::optional<PLH::Instruction> PLH::ZydisDisassembler::disassemble_one_inst(
+	uint64_t firstInstruction,
+	const MemAccessor& accessor
+) {
+	uint64_t size = 100;
+	// copy potentially remote memory to local buffer
+	size_t read = 0;
+	auto* buf = new uint8_t[(uint32_t)size];
+	if (!accessor.safe_mem_read(firstInstruction, (uint64_t)buf, size, read)) {
+		delete[] buf;
+		return std::nullopt;
+	}
+	ZydisDecodedOperand decoded_operands[ZYDIS_MAX_OPERAND_COUNT];
+	ZydisDecodedInstruction insInfo;
+
+	if (ZYAN_SUCCESS(ZydisDecoderDecodeFull(m_decoder, (char*)(buf), (ZyanUSize)(read), &insInfo, decoded_operands))) {
+		Instruction::Displacement displacement = {};
+		displacement.Absolute = 0;
+
+		std::string opstr;
+		if (!getOpStr(&insInfo, decoded_operands, firstInstruction, &opstr)) {
+			delete[] buf;
+			return std::nullopt;
+		}
+
+		Instruction inst(firstInstruction,
+			displacement,
+			0,
+			false,
+			false,
+			buf,
+			insInfo.length,
+			ZydisMnemonicGetString(insInfo.mnemonic),
+			opstr,
+			m_mode);
+
+		setDisplacementFields(inst, &insInfo, decoded_operands);
+
+
+		for (int i = 0; i < insInfo.operand_count; i++) {
+			auto op = decoded_operands[i];
+			if (op.type == ZYDIS_OPERAND_TYPE_MEMORY && op.mem.type == ZYDIS_MEMOP_TYPE_MEM && op.mem.disp.has_displacement && op.mem.base == ZYDIS_REGISTER_NONE && op.mem.segment != ZYDIS_REGISTER_DS && inst.isIndirect()) {
+				inst.setIndirect(false);
+			}
+		}
+
+		delete[] buf;
+		return inst;
+	}
+	return std::nullopt;
+}
+
+PLH::insts_t PLH::ZydisDisassembler::disassemble_backward_until_prev_func_end(
+	uint64_t startInstruction,
+	const MemAccessor& accessor
+) {
+	//insts_t insVec;
+	std::deque<Instruction> insDeque;
+	uint64_t batchSzArr[] = { 4, 8, 16, 32, 64 };
+	int batchSzArrLen = sizeof(batchSzArr) / sizeof(uint64_t);
+	int batchIdx = 0;
+	bool foundPrevFuncEdge = false;
+	
+	while(batchIdx < batchSzArrLen)
+	{
+		insDeque.clear();
+
+		uint64_t eachBatchSize = batchSzArr[batchIdx];
+		Log::log("try with batch size: " + std::to_string(eachBatchSize), ErrorLevel::INFO);
+
+		// copy potentially remote memory to local buffer
+		size_t thisBatchCount = 0;
+		auto* buf = new uint8_t[(uint32_t)eachBatchSize];
+		uint64_t start = startInstruction - eachBatchSize;
+		if (!accessor.safe_mem_read(start, (uint64_t)buf, eachBatchSize, thisBatchCount)) {
+			delete[] buf;
+			break;
+		}
+		ZydisDecodedOperand decoded_operands[ZYDIS_MAX_OPERAND_COUNT];
+		ZydisDecodedInstruction insInfo;
+		uint64_t offset = 0;
+		while (thisBatchCount - offset > 0) {
+			ZyanStatus decode_status = ZydisDecoderDecodeFull(m_decoder, (char*)(buf + offset), (ZyanUSize)(thisBatchCount - offset), &insInfo, decoded_operands);
+			if (ZYAN_FAILED(decode_status))
+			{
+				offset += 1;
+				continue;
+			}
+			Instruction::Displacement displacement = {};
+			displacement.Absolute = 0;
+
+			uint64_t address = start + offset;
+
+			std::string opstr;
+			if (!getOpStr(&insInfo, decoded_operands, address, &opstr)) {
+				break;
+			}
+
+			Instruction inst(address,
+				displacement,
+				0,
+				false,
+				false,
+				(uint8_t*)((unsigned char*)buf + offset),
+				insInfo.length,
+				ZydisMnemonicGetString(insInfo.mnemonic),
+				opstr,
+				m_mode);
+			inst.setMnemonicZydis(insInfo.mnemonic);
+
+			setDisplacementFields(inst, &insInfo, decoded_operands);
+			setNoOpField(inst, &insInfo, decoded_operands);
+
+			for (int i = 0; i < insInfo.operand_count; i++) {
+				auto op = decoded_operands[i];
+				if (op.type == ZYDIS_OPERAND_TYPE_MEMORY && op.mem.type == ZYDIS_MEMOP_TYPE_MEM && op.mem.disp.has_displacement && op.mem.base == ZYDIS_REGISTER_NONE && op.mem.segment != ZYDIS_REGISTER_DS && inst.isIndirect()) {
+					inst.setIndirect(false);
+				}
+			}
+
+			insDeque.push_back(inst);
+
+			offset += insInfo.length;
+		}
+
+		delete[] buf;
+
+		// check this batch whether we found the edge of the previous function
+		int funcEndIdx = -1;
+		for(int i = insDeque.size()-1; i >= 0; --i)
+		{
+			Instruction inst = insDeque.at(i);
+			if (inst.getMnemonicZydis() != ZYDIS_MNEMONIC_INT3 /* 0xcc is valid padding bytes between functions */
+				&& isFuncEnd(inst))
+			{
+				foundPrevFuncEdge = true;
+				// at this time, the iterator is pointing to func end
+				funcEndIdx = i;
+				break;
+			}
+		}
+
+
+		if (foundPrevFuncEdge)
+		{
+			// remove it and all items previous to that
+			
+			for(size_t i = 0; i < funcEndIdx+1; ++i)
+			{
+				insDeque.pop_front();
+			}
+
+			return std::vector(insDeque.begin(), insDeque.end());
+		}
+		else
+		{
+			// try a larger batch
+			++batchIdx;
+		}
+	}
+
+	return std::vector(insDeque.begin(), insDeque.end());
+}
+
 bool PLH::ZydisDisassembler::getOpStr(ZydisDecodedInstruction* pInstruction, const ZydisDecodedOperand* decoded_operands, uint64_t addr, std::string* pOpStrOut) {
 	char buffer[256];
 	if (ZYAN_SUCCESS(ZydisFormatterFormatInstruction(m_formatter, pInstruction, decoded_operands, pInstruction->operand_count, buffer, sizeof(buffer), addr, ZYAN_NULL))) {
@@ -184,5 +351,69 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 				break;
 			}
 		}
+	}
+}
+
+void PLH::ZydisDisassembler::setNoOpField(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst, const ZydisDecodedOperand* operands) const {
+	// default value
+	inst.setIsNoOp(false);
+	if (zydisInst->mnemonic == ZYDIS_MNEMONIC_NOP || zydisInst->meta.category == ZYDIS_CATEGORY_NOP)
+	{
+		inst.setIsNoOp(true);
+	}
+	if (zydisInst->mnemonic == ZYDIS_MNEMONIC_INT3)
+	{
+		inst.setIsNoOp(true);
+	}
+	// xchg rAX, rAX
+	if (zydisInst->mnemonic == ZYDIS_MNEMONIC_XCHG
+		&& zydisInst->operand_count == 2
+		&& operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER
+		&& operands[1].type == ZYDIS_OPERAND_TYPE_REGISTER
+		&& operands[0].reg.value == operands[1].reg.value)
+	{
+		inst.setIsNoOp(true);
+	}
+	// lea     esi, [esi+0]
+	if (zydisInst->mnemonic == ZYDIS_MNEMONIC_LEA
+		&& zydisInst->operand_count == 2
+		&& operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER
+		&& operands[1].type == ZYDIS_OPERAND_TYPE_MEMORY
+		&& operands[0].reg.value == operands[1].mem.base
+		&& (!operands[1].mem.disp.has_displacement || operands[1].mem.disp.value == 0))
+	{
+		inst.setIsNoOp(true);
+	} 
+	// mov edi, edi
+	if (zydisInst->mnemonic == ZYDIS_MNEMONIC_MOV
+		&& zydisInst->operand_count == 2
+		&& operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER
+		&& operands[1].type == ZYDIS_OPERAND_TYPE_REGISTER
+		&& operands[0].reg.value == operands[1].reg.value)
+	{
+		inst.setIsNoOp(true);
+	}
+	// and eax, -1 (all ones)
+	if (zydisInst->mnemonic == ZYDIS_MNEMONIC_AND
+		&& zydisInst->operand_count == 2
+		&& operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER
+		&& operands[1].type == ZYDIS_OPERAND_TYPE_IMMEDIATE
+		)
+	{
+		if (operands[1].imm.is_signed)
+		{
+			if (operands[1].imm.value.s == -1)
+			{
+				inst.setIsNoOp(true);
+			}
+		}
+		else
+		{
+			if (operands[1].imm.value.u == ZYAN_UINT64_MAX)
+			{
+				inst.setIsNoOp(true);
+			}
+		}
+		
 	}
 }

@@ -12,7 +12,7 @@ Mode x86Detour::getArchType() const {
     return Mode::x86;
 }
 
-uint8_t getJmpSize() {
+uint8_t x86Detour::getJmpSize() {
     return 5;
 }
 

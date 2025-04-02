@@ -172,6 +172,28 @@ public:
 		return m_mnemonic;
 	}
 
+	/** Set mnemonic from zydis **/
+	void setMnemonicZydis(ZydisMnemonic mnemonic)
+	{
+		m_mnemonic_zydis = mnemonic;
+	}
+
+	/** Get previous recorded zydis mnemonic **/
+	ZydisMnemonic getMnemonicZydis() const
+	{
+		return m_mnemonic_zydis;
+	}
+
+	void setIsNoOp(bool value)
+	{
+		m_isNoOp = value;
+	}
+
+	bool getIsNoOp() const
+	{
+		return m_isNoOp;
+	}
+
 	/**Get symbol name and parameters**/
 	std::string getFullName() const {
 		return m_mnemonic + " " + m_opStr;
@@ -338,6 +360,8 @@ private:
 	std::vector<uint8_t> m_bytes;    // All the raw bytes of this instruction
 	std::vector<OperandType> m_operands; // Types of all instruction operands
 	std::string          m_mnemonic;
+	ZydisMnemonic        m_mnemonic_zydis;
+	bool                 m_isNoOp;  // Does this instruction doing non-operation
 	std::string          m_opStr;
 
 	Mode m_mode;
@@ -472,6 +496,17 @@ inline PLH::insts_t makex86Jmp(const uint64_t address, const uint64_t destinatio
 	std::vector<uint8_t> bytes(5);
 	bytes[0] = 0xE9;
 	memcpy(&bytes[1], &disp.Relative, 4);
+
+	return { Instruction(address, disp, 1, true, false, bytes, "jmp", PLH::int_to_hex(destination), Mode::x86) };
+}
+
+inline PLH::insts_t makex86ShortJmp(const uint64_t address, const uint64_t destination) {
+	Instruction::Displacement disp{ 0 };
+	disp.Relative = Instruction::calculateRelativeDisplacement<int32_t>(address, destination, 2);
+
+	std::vector<uint8_t> bytes(2);
+	bytes[0] = 0xEB;
+	bytes[1] = static_cast<uint8_t>(disp.Relative);
 
 	return { Instruction(address, disp, 1, true, false, bytes, "jmp", PLH::int_to_hex(destination), Mode::x86) };
 }
