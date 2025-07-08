@@ -9,7 +9,7 @@ asmjit::CallConvId PLH::ILCallback::getCallConv(const std::string& conv) {
 	}else if (conv == "fastcall") {
 		return asmjit::CallConvId::kFastCall;
 	} 
-	return asmjit::CallConvId::kHost;
+	return asmjit::CallConvId::kCDecl;
 }
 
 #define TYPEID_MATCH_STR_IF(var, T) if (var == #T) { return asmjit::TypeId(asmjit::TypeUtils::TypeIdOfT<T>::kTypeId); }
@@ -139,7 +139,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 		if (isGeneralReg(argType)) {
 			cc.mov(argsStackIdx, argRegisters.at(argIdx).as<asmjit::x86::Gp>());
 		} else if(isXmmReg(argType)) {
-			cc.movq(argsStackIdx, argRegisters.at(argIdx).as<asmjit::x86::Xmm>());
+			cc.movq(argsStackIdx, argRegisters.at(argIdx).as<asmjit::x86::Vec>());
 		} else {
 			Log::log("Parameters wider than 64bits not supported", ErrorLevel::SEV);
 			return 0;
@@ -165,7 +165,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 	asmjit::InvokeNode* invokeNode;
 	cc.invoke(&invokeNode,
 		(uint64_t)callback,
-		asmjit::FuncSignatureT<void, Parameters*, uint8_t, ReturnValue*>()
+		asmjit::FuncSignature::build<void, Parameters*, uint8_t, ReturnValue*>()
 	);
 
 	// call to user provided function (use ABI of host compiler)
@@ -181,7 +181,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 		if (isGeneralReg(argType)) {
 			cc.mov(argRegisters.at(arg_idx).as<asmjit::x86::Gp>(), argsStackIdx);
 		}else if (isXmmReg(argType)) {
-			cc.movq(argRegisters.at(arg_idx).as<asmjit::x86::Xmm>(), argsStackIdx);
+			cc.movq(argRegisters.at(arg_idx).as<asmjit::x86::Vec>(), argsStackIdx);
 		}else {
 			Log::log("Parameters wider than 64bits not supported", ErrorLevel::SEV);
 			return 0;
@@ -210,7 +210,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 			cc.mov(tmp2, retStackIdx);
 			cc.ret(tmp2);
 		} else {
-			asmjit::x86::Xmm tmp2 = cc.newXmm();
+			asmjit::x86::Vec tmp2 = cc.newXmm();
 			cc.movq(tmp2, retStackIdx);
 			cc.ret(tmp2);
 		}
@@ -236,10 +236,7 @@ uint64_t PLH::ILCallback::getJitFunc(const asmjit::FuncSignature& sig, const asm
 
 	MemoryProtector protector(m_callbackBuf, size, ProtFlag::R | ProtFlag::W | ProtFlag::X, *this, false);
 
-	// if multiple sections, resolve linkage (1 atm)
-	if (code.hasUnresolvedLinks()) {
-		code.resolveUnresolvedLinks();
-	}
+	code.resolveCrossSectionFixups();
 
 	 // Relocate to the base-address of the allocated memory.
 	code.relocateToBase(m_callbackBuf);

@@ -72,7 +72,7 @@ TEST_CASE("Minimal ILCallback", "[AsmJit][ILCallback]") {
     PLH::ILCallback callback;
     SECTION("Integer argument") {
         PLH::StackCanary canary;
-        asmjit::FuncSignatureT<void, int> sig;
+        asmjit::FuncSignature sig{ asmjit::FuncSignature::build<void, int>() };
         sig.setCallConvId(asmjit::CallConvId::kX64Windows);
         uint64_t JIT = callback.getJitFunc(sig, asmjit::Arch::kHost, &myCallback);
         REQUIRE(JIT != 0);
