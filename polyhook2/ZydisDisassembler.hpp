@@ -18,6 +18,8 @@ public:
 	virtual ~ZydisDisassembler();
 
 	std::vector<PLH::Instruction> disassemble(uint64_t firstInstruction, uint64_t start, uint64_t end, const MemAccessor& accessor);
+	std::optional<PLH::Instruction> disassemble_one_inst(uint64_t firstInstruction, const MemAccessor& accessor);
+	std::vector<PLH::Instruction> disassemble_backward_until_prev_func_end(uint64_t firstInstruction, const MemAccessor& accessor);
 
     // TODO: Move to accessor
 	static void writeEncoding(const PLH::insts_t& instructions, const MemAccessor& accessor) {
@@ -105,6 +107,8 @@ protected:
 	bool getOpStr(ZydisDecodedInstruction* pInstruction, const ZydisDecodedOperand* decoded_operands, uint64_t addr, std::string* pOpStrOut);
 
 	void setDisplacementFields(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst, const ZydisDecodedOperand* operands) const;
+
+	void setNoOpField(PLH::Instruction& inst, const ZydisDecodedInstruction* zydisInst, const ZydisDecodedOperand* operands) const;
 
 	typename branch_map_t::mapped_type& updateBranchMap(uint64_t key, const Instruction& new_val) {
 		auto it = m_branchMap.find(key);

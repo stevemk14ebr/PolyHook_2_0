@@ -25,6 +25,8 @@ public:
 
     Mode getArchType() const override;
 
+    static uint8_t getJmpSize();
+
 protected:
     bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
 };

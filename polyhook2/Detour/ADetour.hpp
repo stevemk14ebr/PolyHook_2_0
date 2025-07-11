@@ -88,6 +88,8 @@ protected:
     If end of function is encountered before this condition an empty optional is returned. Returns instructions in the range start to adjusted end**/
     static std::optional<insts_t> calcNearestSz(const insts_t& functionInsts, uint64_t minSz, uint64_t& roundedSz);
 
+    static std::optional<insts_t> calcNearestSzForHotpatch(const insts_t& functionInsts, uint64_t minSz, uint64_t& roundedSz);
+
     /**If function starts with a jump follow it until the first non-jump instruction, recursively. This handles already hooked functions
     and also compilers that emit jump tables on function call. Returns true if resolution was successful (nothing to resolve, or resolution worked),
     false if resolution failed.**/
