@@ -101,7 +101,7 @@ protected:
         const insts_t& func,
         uint64_t& minProlSz,
         uint64_t& roundProlSz
-    );
+    ) const;
 
     /**
      * Insert nops from [Base, Base+size).

@@ -88,7 +88,7 @@ bool Detour::followJmp(insts_t& functionInsts, const uint8_t curDepth) { // NOLI
     return followJmp(functionInsts, curDepth + 1); // recurse
 }
 
-bool Detour::expandProlSelfJmps(insts_t& prol, const insts_t& func, uint64_t& minProlSz, uint64_t& roundProlSz) {
+bool Detour::expandProlSelfJmps(insts_t& prol, const insts_t& func, uint64_t& minProlSz, uint64_t& roundProlSz) const {
     uint64_t maxAddr = 0;
     const uint64_t prolStart = prol.front().getAddress();
     const branch_map_t& branchMap = m_disasm.getBranchMap();

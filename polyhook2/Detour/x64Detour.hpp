@@ -65,9 +65,16 @@ protected:
 
     optional<uint64_t> generateTranslationRoutine(const Instruction& instruction, uint64_t resume_address);
 
-    bool make_inplace_trampoline(uint64_t base_address, const std::function<void(asmjit::x86::Assembler&)>& builder);
+	using builder_fn_t = std::function<void(asmjit::x86::Assembler&)>;
+    std::optional<insts_t> make_inplace_trampoline(uint64_t base_address, const builder_fn_t& builder);
 
-    bool allocate_jump_to_callback();
+    bool allocate_jump_to_callback(const insts_t& originalInsts);
+
+	bool fitHookInstsIntoPrologue(
+		const insts_t& originalInsts,
+		const insts_t& hookInsts,
+		detour_scheme_t chosenScheme
+	);
 };
 
 }

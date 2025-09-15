@@ -1,6 +1,3 @@
-//
-// Created by steve on 7/9/18.
-//
 // NOLINTBEGIN(*-err58-cpp)
 
 #include <Catch.hpp>
@@ -90,6 +87,51 @@ PLH_TEST_DETOUR_CALLBACK(malloc, {
 });
 
 TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
+	SECTION("Normal function (VALLOC2)") {
+		PLH::StackCanary canary;
+		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
+		detour.setDetourScheme(PLH::x64Detour::VALLOC2);
+		// VALLOC2 is not supported on linux so we expect hooking & unhooking to fail
+		REQUIRE(detour.hook() == false);
+		REQUIRE(detour.unHook() == false);
+	}
+
+	SECTION("Normal function (INPLACE)") {
+		PLH::StackCanary canary;
+		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
+		detour.setDetourScheme(PLH::x64Detour::INPLACE);
+		REQUIRE(detour.hook() == true);
+
+		effects.PushEffect();
+		hookMe1();
+		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
+	}
+
+	SECTION("Normal function (CODE_CAVE)") {
+		PLH::StackCanary canary;
+		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
+		detour.setDetourScheme(PLH::x64Detour::CODE_CAVE);
+		REQUIRE(detour.hook() == true);
+
+		effects.PushEffect();
+		hookMe1();
+		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
+	}
+
+	SECTION("Normal function (INPLACE_SHORT)") {
+		PLH::StackCanary canary;
+		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
+		detour.setDetourScheme(PLH::x64Detour::INPLACE_SHORT);
+		REQUIRE(detour.hook() == true);
+
+		effects.PushEffect();
+		hookMe1();
+		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
+	}
+
 	SECTION("Normal function") {
 		PLH::StackCanary canary;
 		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
