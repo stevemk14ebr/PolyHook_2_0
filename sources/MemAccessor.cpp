@@ -109,7 +109,7 @@ bool PLH::MemAccessor::safe_mem_write(uint64_t dest, uint64_t src, uint64_t size
 	return true;
 }
 
-bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, uint64_t size, size_t &read) const noexcept {
+bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, size_t size, size_t &read) const noexcept {
 	if (!size) {
 		return false;
 	}
