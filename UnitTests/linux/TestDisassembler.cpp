@@ -25,8 +25,8 @@ std::vector<uint8_t> x64ASM = {
 	0xAB, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xAA
 };
 
-std::vector<uint8_t> x64ASM2 = { 
-	0x48, 0x8B, 0x05, 0x10, 0x00, 0x00, 0x00,  // mov    rax,QWORD PTR[rip + 0x10]  
+std::vector<uint8_t> x64ASM2 = {
+	0x48, 0x8B, 0x05, 0x10, 0x00, 0x00, 0x00,  // mov    rax,QWORD PTR[rip + 0x10]
     0x48, 0x8B, 0x90, 0x55, 0x02, 0x00, 0x00  // mov    rdx,QWORD PTR[rax + 0x255]
 };
 
@@ -62,10 +62,10 @@ std::vector<uint8_t> x86x64Nops = {
 	0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x66, 0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x66, 0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
 
 	/*
-	* 
+	*
 	x64/x86 capstone
     [1]: 90                            nop
     [2]: 66 90                         nop
@@ -252,7 +252,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]", PLH::Zy
 #endif
 
 	// re-write ff 25 displacement to point to data (absolute)
-	*(uint32_t*)(x86ASM_FF25.data() + 2) = (uint32_t)(x86ASM_FF25.data() + 6); // 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
+	memcpy(x86ASM_FF25.data() + 2, x86ASM_FF25.data() + 6, 4); // 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
 
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x86);
@@ -426,7 +426,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers NOPS", "[ZydisDisassembler]", PLH::ZydisD
 	SECTION("Verify multi-byte nops decodings x86") {
 		for (auto& ins : Instructionsx86) {
 			REQUIRE(ins.getMnemonic() == "nop");
-			REQUIRE(TestType::isPadBytes(ins));			
+			REQUIRE(TestType::isPadBytes(ins));
 		}
 	}
 }
