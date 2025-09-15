@@ -1,0 +1,12 @@
+BasedOnStyle: LLVM
+ColumnLimit: 120
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+
+AlignAfterOpenBracket: AlwaysBreak
+BracedInitializerIndentWidth: 4
+
+FixNamespaceComments: false
+KeepEmptyLines:
+  AtEndOfFile: true
