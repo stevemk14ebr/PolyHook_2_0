@@ -7,6 +7,9 @@
 - [x] Inline helper for `volatile int i = 0; PH_UNUSED(i);` with documentation
 - [x] Fix scheme retry logic:
     - Reason: Current impl doesn't try other schemes if the chosen scheme does not fit into the prologue
+- [x] Fix safe_mem_read (Trampoline in code cave detour is not disassembled properly because it's allocated at the end
+  of a memory map)
+- [x] Fix mem_protect (same as above, i.e. support for memory regions that span multiple mappings)
 - [ ] Fix instruction translation (Displacement is not handled properly)
 - [ ] Test linux-gcc
 - [ ] Tests in CI/CD

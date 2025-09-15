@@ -241,7 +241,7 @@ bool x64Detour::fitHookInstsIntoPrologue(
 ) {
 	// min size of patches that may split instructions
 	// For valloc & code cave, we insert the jump, hence we take only size of the 1st instruction.
-	// For detours, we calculate the size of the generated code.
+	// For inplace, we calculate the size of the generated code.
 	uint64_t minProlSz = (chosenScheme == VALLOC2 || chosenScheme == CODE_CAVE)
 		? hookInsts.begin()->size()
 		: hookInsts.rbegin()->getAddress() + hookInsts.rbegin()->size() - hookInsts.begin()->getAddress();
@@ -345,7 +345,8 @@ bool x64Detour::allocate_jump_to_callback(const insts_t& originalInsts) {
     if (m_detourScheme & detour_scheme_t::CODE_CAVE) {
         Log::log(std::format("Trying scheme: {}", printDetourScheme(detour_scheme_t::CODE_CAVE)), ErrorLevel::INFO);
 
-		if (auto cave = findNearestCodeCave<8>(m_fnAddress)) {
+		if (const auto cave = findNearestCodeCave<8>(m_fnAddress)) {
+			Log::log(std::format("Found code cave at: {}", (void*) *cave), ErrorLevel::INFO);
 			const auto hookInsts = makex64MinimumJump(m_fnAddress, m_fnCallback, *cave);
 			if (fitHookInstsIntoPrologue(originalInsts, hookInsts, detour_scheme_t::CODE_CAVE)) {
 				MemoryProtector cave_protector(*cave, 8, ProtFlag::RWX, *this, false);
@@ -411,7 +412,9 @@ bool x64Detour::hook() {
     *m_userTrampVar = m_trampoline;
 
     Log::log("Hook instructions: \n" + instsToStr(m_hookInsts) + "\n", ErrorLevel::INFO);
-    MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::RWX, *this);
+	// We must not unset protections on destroy, since this will remove the Write permission
+	// that might be used by other instructions allocated within the same memory mapping
+    MemoryProtector prot(m_fnAddress, m_hookSize, ProtFlag::RWX, *this, false);
     ZydisDisassembler::writeEncoding(m_hookInsts, *this);
 
     Log::log("Hook size: " + std::to_string(m_hookSize) + "\n", ErrorLevel::INFO);
@@ -735,7 +738,7 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 
     // allocate new trampoline before deleting old to increase odds of new mem address
     auto tmpTrampoline = (uint64_t) new uint8_t[m_trampolineSz];
-    if (m_trampoline != NULL) {
+    if (m_trampoline != NULL) { // TODO: is that really necessary? Won't it always be null here?
         delete[] (uint8_t*) m_trampoline;
     }
 

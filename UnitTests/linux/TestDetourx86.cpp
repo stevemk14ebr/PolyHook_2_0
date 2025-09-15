@@ -1,6 +1,5 @@
-//
-// Created by steve on 7/4/17.
-//
+// TODO: Fix this as well (remove windows stuff)
+
 #include <Catch.hpp>
 #include "polyhook2/Detour/x86Detour.hpp"
 #include "polyhook2/ZydisDisassembler.hpp"

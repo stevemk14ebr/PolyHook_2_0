@@ -69,10 +69,10 @@ static region_t get_region_from_addr(uint64_t addr) {
 				++strend;
 				if (strend[0] == 'r')
 					res.prot = res.prot | PLH::ProtFlag::R;
-	
+
 				if (strend[1] == 'w')
 					res.prot = res.prot | PLH::ProtFlag::W;
-	
+
 				if (strend[2] == 'x')
 					res.prot = res.prot | PLH::ProtFlag::X;
 
@@ -83,6 +83,9 @@ static region_t get_region_from_addr(uint64_t addr) {
 			}
 		}
 	}
+
+	// TODO: What if we fail to find the region?
+
 	return res;
 }
 
@@ -93,40 +96,77 @@ bool PLH::MemAccessor::mem_copy(uint64_t dest, uint64_t src, uint64_t size) cons
 
 bool PLH::MemAccessor::safe_mem_write(uint64_t dest, uint64_t src, uint64_t size, size_t& written) const noexcept {
 	region_t region_infos = get_region_from_addr(src);
-	
+
 	// Make sure that the region we query is writable
 	if(!(region_infos.prot & PLH::ProtFlag::W))
 		return false;
-	
+
 	size = std::min<uint64_t>(region_infos.end - src, size);
-	
+
 	memcpy((void*)dest, (void*)src, (size_t)size);
 	written = size;
 
 	return true;
 }
 
-bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, uint64_t size, size_t& read) const noexcept {
-	region_t region_infos = get_region_from_addr(src);
-	
-	// Make sure that the region we query is readable
-	if(!(region_infos.prot & PLH::ProtFlag::R))
+bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, uint64_t size, size_t &read) const noexcept {
+	if (!size) {
 		return false;
+	}
 
-	size = std::min<uint64_t>(region_infos.end - src, size);
+	auto address_in_region = src;
+	size_t readable_size = 0;
+	while (readable_size < size) {
+		const auto region = get_region_from_addr(address_in_region);
+		if (!(region.prot & PLH::ProtFlag::R)) {
+			// Stop when encountering an unreadable memory mapping.
+			break;
+		}
 
-	memcpy((void*)dest, (void*)src, (size_t)size);
-	read = size;
+		// Update the size of readable memory.
+		readable_size = region.end - src;
+
+		// If the memory slice in question spans multiple memory maps,
+		// then we need to check the next adjacent memory map as well.
+		address_in_region = region.end;
+	}
+
+	if (!readable_size) {
+		return false;
+	}
+
+	read = std::min(size, readable_size);
+	memcpy((void *)dest, (void *)src, read);
 
 	return true;
 }
 
 PLH::ProtFlag PLH::MemAccessor::mem_protect(uint64_t dest, uint64_t size, PLH::ProtFlag prot, bool& status) const {
-	region_t region_infos = get_region_from_addr(dest);
-	uint64_t aligned_dest = MEMORY_ROUND(dest, PLH::getPageSize());
-	uint64_t aligned_size = MEMORY_ROUND_UP(size, PLH::getPageSize());
-	status = mprotect((void*)aligned_dest, aligned_size, TranslateProtection(prot)) == 0;
-	return region_infos.prot;
+	auto current_address = dest;
+	size_t protected_size = 0;
+	region_t region{};
+	while (current_address < dest + size) {
+		region = get_region_from_addr(current_address);
+
+		const auto aligned_dest = region.start;// MEMORY_ROUND(current_address, PLH::getPageSize());
+		const auto aligned_size = region.end - region.start; MEMORY_ROUND_UP(protected_size + size, PLH::getPageSize());
+
+		status = mprotect((void *)aligned_dest, aligned_size, TranslateProtection(prot)) == 0;
+
+		if (!status) {
+			break;
+		}
+
+		protected_size += aligned_size;
+
+		// If the memory slice in question spans multiple memory maps,
+		// then we need to protect the next adjacent memory map as well.
+		current_address = aligned_dest + aligned_size;
+	}
+
+	// TODO: This is valid only for cases with single memory mapping.
+	//       Ideally we should store an array of protections instead.
+	return region.prot;
 }
 
 #elif defined(POLYHOOK2_OS_APPLE)

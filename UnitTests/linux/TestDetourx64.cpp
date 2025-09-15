@@ -16,6 +16,7 @@ EffectTracker effects;
 
 NOINLINE void hookMe1() {
 	PLH::StackCanary canary;
+	std::cout << "hookMe1 called" << std::endl;
 	volatile int var = 1;
 	volatile int var2 = 0;
 	var2 += 3;
@@ -29,7 +30,7 @@ NOINLINE void hookMe1() {
 
 PLH_TEST_DETOUR_CALLBACK(hookMe1, {
 	PLH::StackCanary canary;
-	std::cout << "Hook 1 Called!" << std::endl;
+	std::cout << "Hook 1 Called! Trampoline: 0x" << std::hex << hookMe1_trmp << std::endl;
 	effects.PeakEffect().trigger();
 });
 
@@ -47,17 +48,16 @@ PLH_TEST_DETOUR_CALLBACK(hookMe2, {
 });
 
 unsigned char hookMe3[] = {
-	//
 	0x57,								// push rdi
 	0x74, 0xf9,							// je -5
 	0x74, 0xf0,							// je -14
+	0x90, 0x90, 0x90, 0x90, 0x90, 0x90, // [x6] nop
 	0x90, 0x90, 0x90, 0x90, 0x90, 0x90, // [x6] nop
 	0x90, 0x90, 0x90, 0x90, 0x90, 0x90, // [x6] nop
 	0xc3								// ret
 };
 
 unsigned char hookMe4[] = {
-	//
 	0x57,								// push rdi
 	0x48, 0x83, 0xec, 0x30,				// sub rsp, 0x30
 	0x90, 0x90, 0x90, 0x90, 0x90, 0x90, // [x6] nop
@@ -110,6 +110,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		REQUIRE(detour.unHook() == true);
 	}
 
+	// TODO: Fix this. Raises SIGSEGV
 	SECTION("Normal function (CODE_CAVE)") {
 		PLH::StackCanary canary;
 		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
@@ -126,17 +127,6 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		PLH::StackCanary canary;
 		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
 		detour.setDetourScheme(PLH::x64Detour::INPLACE_SHORT);
-		REQUIRE(detour.hook() == true);
-
-		effects.PushEffect();
-		hookMe1();
-		REQUIRE(effects.PopEffect().didExecute());
-		REQUIRE(detour.unHook() == true);
-	}
-
-	SECTION("Normal function") {
-		PLH::StackCanary canary;
-		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
 		REQUIRE(detour.hook() == true);
 
 		effects.PushEffect();

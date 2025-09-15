@@ -57,7 +57,7 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 	ZydisDecodedInstruction insInfo;
 	uint64_t offset = 0;
 	bool endHit = false;
-	while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(m_decoder, (char*) (buf + offset), (ZyanUSize) (read - offset), &insInfo, decoded_operands))) {
+	while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(m_decoder, buf + offset, (ZyanUSize) (read - offset), &insInfo, decoded_operands))) {
         Instruction::Displacement displacement = {};
 		displacement.Absolute = 0;
 
@@ -74,7 +74,7 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 						 0,
 						 false,
 						 false,
-						 (uint8_t*) ((unsigned char*) buf + offset),
+						 buf + offset,
 						 insInfo.length,
 						 ZydisMnemonicGetString(insInfo.mnemonic),
 						 opstr,
