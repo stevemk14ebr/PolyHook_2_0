@@ -285,7 +285,10 @@ if(POLYHOOK_FEATURE_DETOURS)
 
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
-		target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/UnitTests/TestUtils.hpp)
+		target_sources(${PROJECT_NAME} PRIVATE
+                ${PROJECT_SOURCE_DIR}/UnitTests/TestUtils.hpp
+                ${PROJECT_SOURCE_DIR}/UnitTests/TestUtils.cpp
+        )
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8) #64-bit
 			target_sources(${PROJECT_NAME} PRIVATE
 			    ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx64.cpp

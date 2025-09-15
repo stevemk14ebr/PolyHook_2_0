@@ -24,6 +24,8 @@
     - [ ] Move test headers/sources to UnitTests
     - [ ] Test specific schemas in addition to recommended
     - [ ] Test different hooking functions with explicit calling conventions on windows
+    - [ ] Add optional diagnostic data to hooks, like instructions that were translated
+        - Reason: Ensure during translations tests that translation did actually occur
 - [ ] Misc:
     - [ ] Adopt a consistent naming convention (right now it's a mix of camelCase, snake_case, and hungarian)
     - [ ] Create a glossary

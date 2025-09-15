@@ -87,6 +87,8 @@ PLH_TEST_DETOUR_CALLBACK(malloc, {
 });
 
 TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
+	PLH::test::registerTestLogger();
+
 	SECTION("Normal function (VALLOC2)") {
 		PLH::StackCanary canary;
 		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
