@@ -22,6 +22,7 @@
 - [ ] Refactor implementation:
     - [ ] Refactor private static functions into an anonymous namespace
     - [ ] Refactor implementations into explicit pure and side-effect functions
+    - [ ] Do not use global static values (leads to C++ static initialization order fiasco)
 - [ ] Tests:
     - [ ] Deduplicate tests
     - [ ] Move test headers/sources to UnitTests
@@ -29,9 +30,13 @@
     - [ ] Test different hooking functions with explicit calling conventions on windows
     - [ ] Add optional diagnostic data to hooks, like instructions that were translated
         - Reason: Ensure during translations tests that translation did actually occur
+- [ ] Logging:
+    - [ ] Use lambda callback instead of a class (less boilerplate)
+    - [ ] Don't add newline at the end of log lines (should be up to the consumer)
 - [ ] Misc:
     - [ ] Adopt a consistent naming convention (right now it's a mix of camelCase, snake_case, and hungarian)
     - [ ] Create a glossary
+    - [ ] Goal: Zero clang-tidy warnings
 
 ## Unplanned
 
