@@ -15,11 +15,14 @@
  * "This lambda is noexcept if and only if calling the original function with the same arguments would be noexcept."
  * This is a compile-time mechanism that perfectly mirrors the exception specification of the original function.\
  */
-#define PLH_TEST_CALLBACK(FUNC, HOOK, TRMP, BODY) \
+#define PLH_TEST_CALLBACK(FUNC, HOOK, TRMP, ...) \
     uint64_t TRMP = 0; \
     decltype(&FUNC) HOOK = []<typename... Args>(Args... $args) \
         noexcept(noexcept(std::declval<decltype(&FUNC)>()(std::declval<Args>()...))) -> auto { \
-        BODY \
+        PLH::StackCanary canary; \
+        PLH_STOP_OPTIMIZATIONS(); \
+		effects.PeakEffect().trigger(); \
+        __VA_ARGS__ \
         return PLH::FnCast(TRMP, &FUNC)($args...); \
     }
 // clang-format on
@@ -29,7 +32,8 @@
  * where hooked functions and trampoline variables derive their name from the original function.
  * Hence, it makes sense to create a corresponding macro utility
  */
-#define PLH_TEST_DETOUR_CALLBACK(FUNC, BODY) PLH_TEST_CALLBACK(FUNC, FUNC##_hooked, FUNC##_trmp, BODY)
+#define PLH_TEST_DETOUR_CALLBACK(FUNC, ...) PLH_TEST_CALLBACK(FUNC, FUNC##_hooked, FUNC##_trmp, __VA_ARGS__)
+#define PLH_TEST_DETOUR(FUNC)	detour((uint64_t)&FUNC, (uint64_t)FUNC##_hooked, &FUNC##_trmp);
 
 /**
  * These tests can spontaneously fail if the compiler decides to optimize away

@@ -29,9 +29,7 @@ NOINLINE void hookMe1() {
 }
 
 PLH_TEST_DETOUR_CALLBACK(hookMe1, {
-	PLH::StackCanary canary;
 	std::cout << "Hook 1 Called! Trampoline: 0x" << std::hex << hookMe1_trmp << std::endl;
-	effects.PeakEffect().trigger();
 });
 
 NOINLINE void hookMe2() {
@@ -42,9 +40,7 @@ NOINLINE void hookMe2() {
 }
 
 PLH_TEST_DETOUR_CALLBACK(hookMe2, {
-	PLH::StackCanary canary;
 	std::cout << "Hook 2 Called!" << std::endl;
-	effects.PeakEffect().trigger();
 });
 
 unsigned char hookMe3[] = {
@@ -80,18 +76,14 @@ NOINLINE void h_nullstub() {
 	PLH_STOP_OPTIMIZATIONS();
 }
 
-PLH_TEST_DETOUR_CALLBACK(malloc, {
-	PLH::StackCanary canary;
-	PLH_STOP_OPTIMIZATIONS();
-	effects.PeakEffect().trigger();
-});
+PLH_TEST_DETOUR_CALLBACK(malloc);
 
 TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 	PLH::test::registerTestLogger();
 
 	SECTION("Normal function (VALLOC2)") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
+		PLH::x64Detour PLH_TEST_DETOUR(hookMe1);
 		detour.setDetourScheme(PLH::x64Detour::VALLOC2);
 		// VALLOC2 is not supported on linux so we expect hooking & unhooking to fail
 		REQUIRE(detour.hook() == false);
@@ -100,7 +92,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 
 	SECTION("Normal function (INPLACE)") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
+		PLH::x64Detour PLH_TEST_DETOUR(hookMe1);
 		detour.setDetourScheme(PLH::x64Detour::INPLACE);
 		REQUIRE(detour.hook() == true);
 
@@ -112,7 +104,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 
 	SECTION("Normal function (CODE_CAVE)") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
+		PLH::x64Detour PLH_TEST_DETOUR(hookMe1);
 		detour.setDetourScheme(PLH::x64Detour::CODE_CAVE);
 		REQUIRE(detour.hook() == true);
 
@@ -124,7 +116,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 
 	SECTION("Normal function (INPLACE_SHORT)") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
+		PLH::x64Detour PLH_TEST_DETOUR(hookMe1);
 		detour.setDetourScheme(PLH::x64Detour::INPLACE_SHORT);
 		REQUIRE(detour.hook() == true);
 
@@ -136,7 +128,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 
 	SECTION("Normal function rehook") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
+		PLH::x64Detour PLH_TEST_DETOUR(hookMe1);
 		REQUIRE(detour.hook() == true);
 
 		effects.PushEffect();
@@ -149,7 +141,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 
 	SECTION("Loop function") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((uint64_t)&hookMe2, (uint64_t)hookMe2_hooked, &hookMe2_trmp);
+		PLH::x64Detour PLH_TEST_DETOUR(hookMe2);
 		REQUIRE(detour.hook() == true);
 
 		effects.PushEffect();
@@ -184,7 +176,7 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 
 	SECTION("Hook malloc") {
 		PLH::StackCanary canary;
-		PLH::x64Detour detour((uint64_t)&malloc, (uint64_t)malloc_hooked, &malloc_trmp);
+		PLH::x64Detour PLH_TEST_DETOUR(malloc);
 		effects.PushEffect(); // catch does some allocations, push effect first
 							  // so peak works
 		bool result = detour.hook();

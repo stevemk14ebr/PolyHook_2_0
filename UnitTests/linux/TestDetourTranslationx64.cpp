@@ -10,15 +10,13 @@
 
 #include "../TestUtils.hpp"
 
-EffectTracker ripEffects;
+namespace {
+	EffectTracker effects;
+}
 
 // TODO: Translation + INPLACE scheme
 
 PLH_TEST_DETOUR_CALLBACK(dlmopen, {
-	PLH::StackCanary canary;
-	PLH_STOP_OPTIMIZATIONS();
-
-	ripEffects.PeakEffect().trigger();
 	printf("Hooked dlmopen\n");
 });
 
@@ -37,10 +35,10 @@ TEST_CASE("Testing Detours with Translations", "[Translation][ADetour]") {
 		detour.setDetourScheme(PLH::x64Detour::detour_scheme_t::INPLACE);
 		REQUIRE(detour.hook());
 
-		ripEffects.PushEffect();
+		effects.PushEffect();
 		const auto *resultAfter = dlmopen(LM_ID_BASE, LIBM_SO, RTLD_NOW);
 
-		REQUIRE(ripEffects.PopEffect().didExecute());
+		REQUIRE(effects.PopEffect().didExecute());
 		REQUIRE(resultAfter == resultBefore);
 
 		REQUIRE(detour.unHook());

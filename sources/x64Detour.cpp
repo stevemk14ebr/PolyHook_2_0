@@ -815,7 +815,7 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 
     const auto trampoline_end = m_trampoline + m_trampolineSz;
     // & ~0x7 for 8 bytes align for performance.
-    const uint64_t jmpHolderCurAddr = (trampoline_end - destHldrSz) & ~0x7;
+    const uint64_t jmpHolderCurAddr = (trampoline_end - destHldrSz) & ~alignment_pad_size;
     const auto jmpToProl = makex64MinimumJump(jmpToProlAddr, prolStart + prolSz, jmpHolderCurAddr);
 
     Log::log("Jmp To Prol:\n" + instsToStr(jmpToProl) + "\n", ErrorLevel::INFO);

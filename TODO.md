@@ -10,7 +10,8 @@
 - [x] Fix safe_mem_read (Trampoline in code cave detour is not disassembled properly because it's allocated at the end
   of a memory map)
 - [x] Fix mem_protect (same as above, i.e. support for memory regions that span multiple mappings)
-- [ ] Fix instruction translation (Displacement is not handled properly)
+- [x] Fix unhooking (user tramp var should not be managed)
+- [ ] Fix makex86Jmp (when making jmpToProl, relative displacement can only encode offset up to 0x7FFFFFFF)
 - [ ] Test linux-gcc
 - [ ] Tests in CI/CD
 
@@ -38,11 +39,7 @@
     - [ ] Create a glossary
     - [ ] Goal: Zero clang-tidy warnings
 
-## Unplanned
+## Long-term
 
 - [ ] Windows-clang support
 - [ ] Generate test hooks with asmjit?
-
-## Questions
-
-- When do we use StackCanary, and we do we not?

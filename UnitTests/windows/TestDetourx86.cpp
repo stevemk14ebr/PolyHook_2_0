@@ -14,7 +14,9 @@ is out of our control but typically returning volatile things, volatile locals, 
 printf inside the body can mitigate this significantly. Do serious checking in debug
 or releasewithdebinfo mode (relwithdebinfo optimizes sliiiightly less)**/
 
-EffectTracker effects;
+namespace {
+	EffectTracker effects;
+}
 
 NOINLINE int __cdecl hookMe1() {
     volatile int var = 1;
