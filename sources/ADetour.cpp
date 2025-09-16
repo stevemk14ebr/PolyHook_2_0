@@ -192,9 +192,14 @@ bool Detour::unHook() {
         m_trampoline = NULL;
     }
 
-    if (m_userTrampVar != nullptr) {
-        *m_userTrampVar = NULL;
-	}
+    // This code requires that m_userTrampVar is static or has global lifetime.
+	// But there is no way for us to enforce such a requirement, apart from documenting it somewhere.
+	// For example, if trampolineVariable is allocated on a stack, it will get corrupted after unhooking.
+	// Still, there is no real need for Polyhook to manage user's trampoline variable.
+	// It should be managed by the user instead.
+    // if (m_userTrampVar != nullptr) {
+    //    *m_userTrampVar = NULL;
+	// }
 
     m_hooked = false;
     return true;

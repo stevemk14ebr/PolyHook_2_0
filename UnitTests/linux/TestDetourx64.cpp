@@ -110,7 +110,6 @@ TEST_CASE("Testing 64 detours", "[x64Detour],[ADetour]") {
 		REQUIRE(detour.unHook() == true);
 	}
 
-	// TODO: Fix this. Raises SIGSEGV
 	SECTION("Normal function (CODE_CAVE)") {
 		PLH::StackCanary canary;
 		PLH::x64Detour detour((uint64_t)&hookMe1, (uint64_t)hookMe1_hooked, &hookMe1_trmp);
