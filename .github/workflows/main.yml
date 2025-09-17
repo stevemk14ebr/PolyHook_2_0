@@ -28,6 +28,9 @@ jobs:
         include:
           # Windows
           - os: windows-latest
+            test_bin_path: ${{ env.BUILD_DIR }}\\${{ matrix.build_type }}\\PolyHook_2.exe
+
+          - os: windows-latest
             bitness: 32
             arch: -A Win32
 
@@ -42,6 +45,9 @@ jobs:
             cpp_compiler: cl
 
           # Linux
+          - os: ubuntu-latest
+            test_bin_path: ${{ env.BUILD_DIR }}/PolyHook_2
+
           - os: ubuntu-latest
             bitness: 32
             arch: -DCMAKE_C_FLAGS="-m32" -DCMAKE_CXX_FLAGS="-m32"
@@ -108,15 +114,6 @@ jobs:
         if: ${{ matrix.c_compiler != 'gcc' }} # See PLH_TEST_CALLBACK in TestUtils.hpp for the reason
         run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }} --target PolyHook_2
 
-      - name: Set test executable path
-        if: ${{ steps.build-tests.outcome != 'skipped' }}
-        run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            echo "TEST_EXECUTABLE=${{ env.BUILD_DIR }}\\${{ matrix.build_type }}\\PolyHook_2.exe" >> $GITHUB_ENV
-          else
-            echo "TEST_EXECUTABLE=${{ env.BUILD_DIR }}/PolyHook_2" >> $GITHUB_ENV
-          fi
-
       - name: Run tests
         if: ${{ steps.build-tests.outcome != 'skipped' }}
-        run: ${{ env.TEST_EXECUTABLE }}
+        run: ${{ matrix.test_bin_path }}
