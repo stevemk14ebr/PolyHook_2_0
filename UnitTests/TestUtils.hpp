@@ -13,7 +13,11 @@
  *   uses the result of that test to set the noexcept specification on the lambda.
  * In simple terms, this construct says:
  * "This lambda is noexcept if and only if calling the original function with the same arguments would be noexcept."
- * This is a compile-time mechanism that perfectly mirrors the exception specification of the original function.\
+ * This is a compile-time mechanism that perfectly mirrors the exception specification of the original function.
+ *
+ * Note that this is not supported by GCC, since generic lambdas cannot be assigned to function pointers in GCC.
+ * Clang allows generic lambdas to decay to function pointers if the instantiated signature matches.
+ * This is a known divergence from the C++ standard.
  */
 #define PLH_TEST_CALLBACK(FUNC, HOOK, TRMP, ...) \
     uint64_t TRMP = 0; \
@@ -33,7 +37,7 @@
  * Hence, it makes sense to create a corresponding macro utility
  */
 #define PLH_TEST_DETOUR_CALLBACK(FUNC, ...) PLH_TEST_CALLBACK(FUNC, FUNC##_hooked, FUNC##_trmp, __VA_ARGS__)
-#define PLH_TEST_DETOUR(FUNC)	detour((uint64_t)&FUNC, (uint64_t)FUNC##_hooked, &FUNC##_trmp);
+#define PLH_TEST_DETOUR(FUNC) detour((uint64_t)&FUNC, (uint64_t)FUNC##_hooked, &FUNC##_trmp);
 
 /**
  * These tests can spontaneously fail if the compiler decides to optimize away

@@ -11,6 +11,7 @@
   of a memory map)
 - [x] Fix mem_protect (same as above, i.e. support for memory regions that span multiple mappings)
 - [x] Fix unhooking (user tramp var should not be managed)
+- [x] 32-bit linux build in CI/CD
 - [x] Tests in CI/CD
 - [ ] Fix makex86Jmp (when making jmpToProl, relative displacement can only encode offset up to 0x7FFFFFFF)
 

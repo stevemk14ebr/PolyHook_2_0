@@ -66,6 +66,7 @@ jobs:
       BUILD_DIR: "${{ github.workspace }}/build"
 
     steps:
+      # The default GitHub runner is missing dependencies for cross-compilation
       - name: Install 32-bit compiler toolchain
         if: ${{ matrix.bitness == '32' && matrix.os == 'ubuntu-latest' }}
         run: sudo apt update && sudo apt install gcc-multilib g++-multilib
@@ -75,7 +76,8 @@ jobs:
           submodules: 'recursive'
 
       - name: Configure CMake for build
-        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if
+        # you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: >
           cmake -B ${{ env.BUILD_DIR }}
@@ -92,8 +94,6 @@ jobs:
 
       # TODO: Deduplicate this command
       - name: Configure CMake for test
-        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: >
           cmake -B ${{ env.BUILD_DIR }}
           -S ${{ github.workspace }}
@@ -104,9 +104,10 @@ jobs:
           -DPOLYHOOK_BUILD_DLL="OFF"
 
       - name: Build tests
-        # Build your program with the given configuration. Note that --config is needed because
-        # the default Windows generator is a multi-config generator (Visual Studio generator).
+        id: build-tests
+        if: ${{ matrix.c_compiler != 'gcc' }} # See PLH_TEST_CALLBACK in TestUtils.hpp for the reason
         run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }} --target PolyHook_2
 
       - name: Run tests
+        if: ${{ steps.build-tests.outcome != 'skipped' }}
         run: ${{ env.BUILD_DIR }}/PolyHook_2
