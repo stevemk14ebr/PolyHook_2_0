@@ -53,6 +53,5 @@
 namespace PLH::test {
 
 void registerTestLogger();
-void makeMemoryPageExecutable(const uint8_t byteArray[]);
 
 }
