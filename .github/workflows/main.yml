@@ -19,22 +19,42 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
         build_type: [ Release, Debug ]
+        bitness: [ 32, 64 ]
         include:
-          # Windows configurations
+          # Windows
+
+          - os: windows-latest
+            bitness: 32
+            arch: x86
+
+          - os: windows-latest
+            bitness: 64
+            arch: AMD64
+
+          ## MSVC
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
-            arch: [ x86, AMD64 ]
 
-          # Linux configurations
+          # Linux
+
+          - os: ubuntu-latest
+            bitness: 32
+            arch: x86
+
+          - os: ubuntu-latest
+            bitness: 64
+            arch: x86_64
+
+          ## GCC
           - os: ubuntu-latest
             c_compiler: gcc
             cpp_compiler: g++
-            arch: [ x86, x86_64 ]
+
+          ## Clang
           - os: ubuntu-latest
             c_compiler: clang
             cpp_compiler: clang++
-            arch: [ x86, x86_64 ]
 
     env:
       BUILD_DIR: "${{ github.workspace }}/build"
@@ -65,7 +85,7 @@ jobs:
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: >
-          cmake -B $BUILD_DIR
+          cmake -B ${{ env.BUILD_DIR }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
@@ -76,7 +96,7 @@ jobs:
       - name: Build tests
         # Build your program with the given configuration. Note that --config is needed because
         # the default Windows generator is a multi-config generator (Visual Studio generator).
-        run: cmake --build $BUILD_DIR --config ${{ matrix.build_type }} --target PolyHook_2
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }} --target PolyHook_2
 
       - name: Run tests
-        run: $BUILD_DIR/PolyHook_2
+        run: ${{ env.BUILD_DIR }}/PolyHook_2
