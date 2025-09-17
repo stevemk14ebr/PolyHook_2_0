@@ -18,7 +18,7 @@ jobs:
       # To add more build types (Release, Debug, RelWithDebInfo, etc.) customize the build_type list.
       matrix:
         os: [ ubuntu-latest, windows-latest ]
-        build_type: [ Release, Debug ]
+        build_type: [ Debug, Release ]
         bitness: [ 32, 64 ]
         compiler: [ native, clang ]
         exclude:
@@ -28,7 +28,12 @@ jobs:
         include:
           # Windows
           - os: windows-latest
-            test_bin_path: ${{ matrix.build_type }}\\PolyHook_2.exe
+            build_type: Debug
+            test_bin_path: Debug\\PolyHook_2.exe
+
+          - os: windows-latest
+            build_type: Release
+            test_bin_path: Release\\PolyHook_2.exe
 
           - os: windows-latest
             bitness: 32
