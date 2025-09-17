@@ -20,41 +20,46 @@ jobs:
         os: [ ubuntu-latest, windows-latest ]
         build_type: [ Release, Debug ]
         bitness: [ 32, 64 ]
-        c_compiler: [ gcc, clang, cl ]
+        compiler: [ native, clang ]
         exclude:
-          - os: windows-latest
-            c_compiler: gcc
-
-          - os: ubuntu-latest
-            c_compiler: cl
-
           # TODO: Add this in the future
           - os: windows-latest
-            c_compiler: clang
+            compiler: clang
         include:
-          - bitness: 32
-            arch: x86 # same for Windows and Linux
-
           # Windows
           - os: windows-latest
+            bitness: 32
+            arch: -A Win32
+
+          - os: windows-latest
             bitness: 64
-            arch: AMD64
+            arch: -A x64
 
           ## MSVC
-          - c_compiler: cl
+          - os: windows-latest
+            compiler: native
+            c_compiler: cl
             cpp_compiler: cl
 
           # Linux
           - os: ubuntu-latest
+            bitness: 32
+            arch: -DCMAKE_C_FLAGS="-m32" -DCMAKE_CXX_FLAGS="-m32"
+
+          - os: ubuntu-latest
             bitness: 64
-            arch: x86_64
+            arch: -DCMAKE_C_FLAGS="-m64" -DCMAKE_CXX_FLAGS="-m64"
 
           ## GCC
-          - c_compiler: gcc
+          - os: ubuntu-latest
+            compiler: native
+            c_compiler: gcc
             cpp_compiler: g++
 
           ## Clang
-          - c_compiler: clang
+          - os: ubuntu-latest
+            compiler: clang
+            c_compiler: clang
             cpp_compiler: clang++
 
     env:
@@ -70,29 +75,29 @@ jobs:
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: >
           cmake -B ${{ env.BUILD_DIR }}
+          -S ${{ github.workspace }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }}
-          -S ${{ github.workspace }}
+          ${{ matrix.arch }}
 
       - name: Build
         # Build your program with the given configuration. Note that --config is needed because
         # the default Windows generator is a multi-config generator (Visual Studio generator).
         run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
 
-      # TODO: Deduplicate the command
+      # TODO: Deduplicate this command
       - name: Configure CMake for test
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: >
           cmake -B ${{ env.BUILD_DIR }}
+          -S ${{ github.workspace }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }}
+          ${{ matrix.arch }}
           -DPOLYHOOK_BUILD_DLL="OFF"
-          -S ${{ github.workspace }}
 
       - name: Build tests
         # Build your program with the given configuration. Note that --config is needed because
