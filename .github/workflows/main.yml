@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Install 32-bit compiler toolchain
-        if: ${{ matrix.bitness == 32 && matrix.os == ubuntu-latest }}
+        if: ${{ matrix.bitness == '32' && matrix.os == 'ubuntu-latest' }}
         run: sudo apt update && sudo apt install gcc-multilib
 
       - uses: actions/checkout@v5
