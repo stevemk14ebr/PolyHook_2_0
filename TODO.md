@@ -27,7 +27,7 @@
     - [ ] Do not use global static values (leads to C++ static initialization order fiasco)
 - [ ] Tests:
     - [ ] Deduplicate tests
-    - [ ] Test linux-gcc
+    - [ ] Test linux-gcc (Current macro helper for callbacks relies on non-standard clang extensions)
     - [ ] Move test headers/sources to UnitTests
     - [ ] Test specific schemas in addition to recommended
     - [ ] Test different hooking functions with explicit calling conventions on windows
