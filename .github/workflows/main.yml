@@ -28,7 +28,7 @@ jobs:
         include:
           # Windows
           - os: windows-latest
-            test_bin_path: ${{ env.BUILD_DIR }}\\${{ matrix.build_type }}\\PolyHook_2.exe
+            test_bin_path: ${{ matrix.build_type }}\\PolyHook_2.exe
 
           - os: windows-latest
             bitness: 32
@@ -46,7 +46,7 @@ jobs:
 
           # Linux
           - os: ubuntu-latest
-            test_bin_path: ${{ env.BUILD_DIR }}/PolyHook_2
+            test_bin_path: PolyHook_2
 
           - os: ubuntu-latest
             bitness: 32
@@ -116,4 +116,4 @@ jobs:
 
       - name: Run tests
         if: ${{ steps.build-tests.outcome != 'skipped' }}
-        run: ${{ matrix.test_bin_path }}
+        run: ${{ env.BUILD_DIR }}/${{ matrix.test_bin_path }}
