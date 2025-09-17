@@ -754,7 +754,7 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 
     // allocate new trampoline before deleting old to increase odds of new mem address
     auto tmpTrampoline = (uint64_t) new uint8_t[m_trampolineSz];
-    if (m_trampoline != NULL) { // TODO: is that really necessary? Won't it always be null here?
+    if (m_trampoline != NULL) {
         delete[] (uint8_t*) m_trampoline;
     }
 
