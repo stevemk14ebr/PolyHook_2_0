@@ -62,6 +62,9 @@ int __stdcall hkEatMessageBox(HWND, LPCTSTR, LPCTSTR, UINT) {
 	return 1;
 }
 
+// Disable test in CI that require GUI interactions
+#ifndef PLH_CI
+
 TEST_CASE("Hook User32.MessageBoxA using module name", "[EatHook]") {
 	PLH::StackCanary canary;
 	LoadLibrary(TEXT("User32.dll"));
@@ -83,6 +86,7 @@ TEST_CASE("Hook User32.MessageBoxA using module name", "[EatHook]") {
 	hook.unHook();
 }
 
+#endif
 
 typedef DWORD(__stdcall* tGetTickCount)();
 uint64_t oGetTickCount = 0;

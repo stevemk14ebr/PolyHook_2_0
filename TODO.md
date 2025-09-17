@@ -13,7 +13,8 @@
 - [x] Fix unhooking (user tramp var should not be managed)
 - [x] 32-bit linux build in CI/CD
 - [x] Tests in CI/CD
-- [ ] Fix makex86Jmp (when making jmpToProl, relative displacement can only encode offset up to 0x7FFFFFFF)
+- [ ] Fix makex86Jmp (see test section "hook printf" in linux/TestDetourx86.cpp)
+- [ ] Fix instruction.getDestination() (see test case "Test Disassemblers x86 FF25" in windows/TestDisassembler.cpp)
 
 ## Future PR
 

@@ -147,6 +147,16 @@ if(POLYHOOK_BUILD_DLL)
 	endif()
 else()
 	add_executable(${PROJECT_NAME})
+
+	target_sources(${PROJECT_NAME} PRIVATE
+			${PROJECT_SOURCE_DIR}/UnitTests/TestUtils.hpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestUtils.cpp
+	)
+
+	# https://docs.github.com/en/actions/reference/workflows-and-actions/variables
+	if("$ENV{CI}" STREQUAL "true")
+		target_compile_definitions(${PROJECT_NAME} PRIVATE PLH_CI)
+	endif()
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20)
@@ -285,10 +295,6 @@ if(POLYHOOK_FEATURE_DETOURS)
 
 	# only build tests if making exe
 	if(NOT POLYHOOK_BUILD_DLL)
-		target_sources(${PROJECT_NAME} PRIVATE
-                ${PROJECT_SOURCE_DIR}/UnitTests/TestUtils.hpp
-                ${PROJECT_SOURCE_DIR}/UnitTests/TestUtils.cpp
-        )
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8) #64-bit
 			target_sources(${PROJECT_NAME} PRIVATE
 			    ${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDetourx64.cpp

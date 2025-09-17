@@ -16,11 +16,11 @@ bool PLH::MemAccessor::safe_mem_write(uint64_t dest, uint64_t src, uint64_t size
 	return WriteProcessMemory(GetCurrentProcess(), (char*)dest, (char*)src, (SIZE_T)size, (PSIZE_T)&written);
 }
 
-bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, uint64_t size, size_t& read) const noexcept {
+bool PLH::MemAccessor::safe_mem_read(uint64_t src, uint64_t dest, size_t size, size_t& read) const noexcept {
 	HANDLE process = GetCurrentProcess();
 	read = 0;
 
-	if (ReadProcessMemory(process, (char*)src, (char*)dest, (SIZE_T)size, (PSIZE_T)&read) && read > 0)
+	if (ReadProcessMemory(process, (char*)src, (char*)dest, size, (PSIZE_T)&read) && read > 0)
 		return true;
 
 	// Tries to read again on a partial copy, but limited by the end of the memory region

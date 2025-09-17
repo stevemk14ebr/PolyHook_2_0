@@ -252,12 +252,20 @@ TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]") {
 #endif
 
 	// re-write ff 25 displacement to point to data (absolute)
-	*(uint32_t*)(x86ASM_FF25.data() + 2) = (uint32_t)(x86ASM_FF25.data() + 6); // 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
+	const auto jmp_address_ptr = x86ASM_FF25.data() + 2;
+	constexpr auto address_length = sizeof(size_t);
+
+	// 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
+	memcpy(jmp_address_ptr, jmp_address_ptr + address_length, address_length);
 
 	PLH::StackCanary canaryg;
     PLH::ZydisDisassembler disasm(PLH::Mode::x86);
-	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM_FF25.front(), (uint64_t)&x86ASM_FF25.front(),
-		(uint64_t)&x86ASM_FF25.front() + x86ASM_FF25.size(), PLH::MemAccessor());
+	auto Instructions = disasm.disassemble(
+		(uint64_t)x86ASM_FF25.data(),
+		(uint64_t)x86ASM_FF25.data(),
+		(uint64_t)(jmp_address_ptr + address_length),
+		PLH::MemAccessor()
+	);
 
 	SECTION("Check disassembler integrity") {
 		PLH::StackCanary canary;
@@ -267,12 +275,16 @@ TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]") {
 			std::cout << std::hex << "dest: " << p.first << " -> " << std::dec << p.second << std::endl;
 		}
 
-		// special little indirect ff25 jmp
-		REQUIRE(Instructions.back().getDestination() == 0xaa0000ab);
-	}
+		REQUIRE(Instructions.size() == 1);
 
-	REQUIRE(Instructions.at(0).isBranching());
-	REQUIRE(Instructions.at(0).hasDisplacement());
+		// special little indirect ff25 jmp
+		const auto& instruction = Instructions.at(0);
+		// TODO: Due to signed extension, instruction destination becomes 0xffffffffaa0000ab
+		//       Is this intended or not?
+		REQUIRE(instruction.getDestination() == 0xaa0000ab);
+		REQUIRE(instruction.isBranching());
+		REQUIRE(instruction.hasDisplacement());
+	}
 }
 
 TEST_CASE("Test Disassemblers x86", "[ZydisDisassembler]") {

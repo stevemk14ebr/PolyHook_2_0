@@ -252,12 +252,20 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]", PLH::Zy
 #endif
 
 	// re-write ff 25 displacement to point to data (absolute)
-	memcpy(x86ASM_FF25.data() + 2, x86ASM_FF25.data() + 6, 4); // 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
+	const auto jmp_address_ptr = x86ASM_FF25.data() + 2;
+	constexpr auto address_length = sizeof(size_t);
+
+	// 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
+	memcpy(jmp_address_ptr, jmp_address_ptr + address_length, address_length);
 
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x86);
-	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM_FF25.front(), (uint64_t)&x86ASM_FF25.front(),
-		(uint64_t)&x86ASM_FF25.front() + x86ASM_FF25.size(), PLH::MemAccessor());
+	auto Instructions = disasm.disassemble(
+		(uint64_t)x86ASM_FF25.data(),
+		(uint64_t)x86ASM_FF25.data(),
+		(uint64_t)(x86ASM_FF25.data() + address_length),
+		PLH::MemAccessor()
+	);
 
 	SECTION("Check disassembler integrity") {
 		PLH::StackCanary canary;
