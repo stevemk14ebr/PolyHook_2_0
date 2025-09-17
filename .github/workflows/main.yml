@@ -24,6 +24,11 @@ jobs:
         exclude:
           - os: windows-latest
             c_compiler: gcc
+
+          - os: ubuntu-latest
+            c_compiler: cl
+
+          # TODO: Add this in the future
           - os: windows-latest
             c_compiler: clang
         include:
