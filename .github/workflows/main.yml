@@ -66,6 +66,10 @@ jobs:
       BUILD_DIR: "${{ github.workspace }}/build"
 
     steps:
+      - name: Install 32-bit compiler toolchain
+        if: ${{ matrix.bitness == 32 }}
+        run: sudo apt update && sudo apt install gcc-multilib
+
       - uses: actions/checkout@v5
         with:
           submodules: 'recursive'
