@@ -148,8 +148,8 @@ PLH::ProtFlag PLH::MemAccessor::mem_protect(uint64_t dest, uint64_t size, PLH::P
 	while (current_address < dest + size) {
 		region = get_region_from_addr(current_address);
 
-		const auto aligned_dest = region.start;// MEMORY_ROUND(current_address, PLH::getPageSize());
-		const auto aligned_size = region.end - region.start; MEMORY_ROUND_UP(protected_size + size, PLH::getPageSize());
+		const auto aligned_dest = region.start;
+		const auto aligned_size = region.end - region.start;
 
 		status = mprotect((void *)aligned_dest, aligned_size, TranslateProtection(prot)) == 0;
 
