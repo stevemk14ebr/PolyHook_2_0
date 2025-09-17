@@ -11,9 +11,8 @@
   of a memory map)
 - [x] Fix mem_protect (same as above, i.e. support for memory regions that span multiple mappings)
 - [x] Fix unhooking (user tramp var should not be managed)
+- [x] Tests in CI/CD
 - [ ] Fix makex86Jmp (when making jmpToProl, relative displacement can only encode offset up to 0x7FFFFFFF)
-- [ ] Test linux-gcc
-- [ ] Tests in CI/CD
 
 ## Future PR
 
@@ -26,6 +25,7 @@
     - [ ] Do not use global static values (leads to C++ static initialization order fiasco)
 - [ ] Tests:
     - [ ] Deduplicate tests
+    - [ ] Test linux-gcc
     - [ ] Move test headers/sources to UnitTests
     - [ ] Test specific schemas in addition to recommended
     - [ ] Test different hooking functions with explicit calling conventions on windows

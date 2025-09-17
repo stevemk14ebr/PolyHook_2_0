@@ -1,15 +1,13 @@
-# This starter workflow is for a CMake project running on multiple platforms. There is a different starter workflow if you just want a single platform.
-# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-single-platform.yml
 name: Win MSVC, Linux GCC, Linux Clang
 
-on: [push, pull_request, workflow_dispatch]
+on: [ push, pull_request, workflow_dispatch ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+      # We want to see all failing combinations, not just the first one.
       fail-fast: false
 
       # Set up a matrix to run the following 3 configurations:
@@ -19,55 +17,66 @@ jobs:
       #
       # To add more build types (Release, Debug, RelWithDebInfo, etc.) customize the build_type list.
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        build_type: [Release, Debug]
-        c_compiler: [gcc, clang, cl]
-        arch: [x86, AMD64, x86_64]
+        os: [ ubuntu-latest, windows-latest ]
+        build_type: [ Release, Debug ]
         include:
+          # Windows configurations
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
+            arch: [ x86, AMD64 ]
+
+          # Linux configurations
           - os: ubuntu-latest
             c_compiler: gcc
             cpp_compiler: g++
+            arch: [ x86, x86_64 ]
           - os: ubuntu-latest
             c_compiler: clang
             cpp_compiler: clang++
-        exclude:
-          - os: windows-latest
-            c_compiler: gcc
-          - os: windows-latest
-            c_compiler: clang
-          - os: ubuntu-latest
-            c_compiler: cl
-          - os: windows-latest
-            arch: x86_x64
-          - os: ubuntu-latest
-            arch: AMD64
+            arch: [ x86, x86_64 ]
+
+    env:
+      BUILD_DIR: "${{ github.workspace }}/build"
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: 'recursive'
+      - uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
 
-    - name: Set reusable strings
-      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+      - name: Configure CMake for build
+        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+        run: >
+          cmake -B $BUILD_DIR
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }}
+          -S ${{ github.workspace }}
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} 
-        -S ${{ github.workspace }}
+      - name: Build
+        # Build your program with the given configuration. Note that --config is needed because
+        # the default Windows generator is a multi-config generator (Visual Studio generator).
+        run: cmake --build $BUILD_DIR --config ${{ matrix.build_type }}
 
-    - name: Build
-      # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+      # TODO: Deduplicate the command
+      - name: Configure CMake for test
+        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+        run: >
+          cmake -B $BUILD_DIR
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }}
+          -DPOLYHOOK_BUILD_DLL="OFF"
+          -S ${{ github.workspace }}
+
+      - name: Build tests
+        # Build your program with the given configuration. Note that --config is needed because
+        # the default Windows generator is a multi-config generator (Visual Studio generator).
+        run: cmake --build $BUILD_DIR --config ${{ matrix.build_type }} --target PolyHook_2
+
+      - name: Run tests
+        run: $BUILD_DIR/PolyHook_2

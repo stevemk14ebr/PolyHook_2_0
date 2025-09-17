@@ -46,21 +46,6 @@
 	volatile int i = 0;                                                                                                \
 	PH_UNUSED(i)
 
-#if defined(POLYHOOK2_OS_WINDOWS)
-#define PLH_NAKED __declspec(naked)
-#elif defined(__GNUC__)
-#define PLH_NAKED __attribute__((naked))
-#endif
-
-// TODO: Document these a little more and check if they work in clang
-#if defined(__GNUC__) || defined(__GNUG__)
-#define OPTS_OFF _Pragma("GCC push_options") _Pragma("GCC optimize (\"O0\")")
-#define OPTS_ON #pragma GCC pop_options
-#elif defined(_MSC_VER)
-#define OPTS_OFF __pragma(optimize("", off))
-#define OPTS_ON __pragma(optimize("", on))
-#endif
-
 namespace PLH::test {
 
 void registerTestLogger();
