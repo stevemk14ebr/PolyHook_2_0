@@ -10,12 +10,12 @@ jobs:
       # We want to see all failing combinations, not just the first one.
       fail-fast: false
 
-      # Set up a matrix to run the following 3 configurations:
-      # 1. <Windows, Release, latest MSVC compiler toolchain on the default runner image, default generator>
-      # 2. <Linux, Release, latest GCC compiler toolchain on the default runner image, default generator>
-      # 3. <Linux, Release, latest Clang compiler toolchain on the default runner image, default generator>
-      #
-      # To add more build types (Release, Debug, RelWithDebInfo, etc.) customize the build_type list.
+      # This matrix sets up 16 combinations, which are a cross product of: OS, Build Type, Bitness and Compiler
+      # Then it excludes 4 combinations where OS is Windows and compiler is Clang. It will be included in the future.
+      # This results in the following 12 combinations:
+      # windows-debug-32-msvc  | windows-debug-64-msvc  | windows-release-32-msvc  | windows-release-64-msvc
+      #   linux-debug-32-gcc   |   linux-debug-64-gcc   |   linux-release-32-gcc   |   linux-release-64-gcc
+      #   linux-debug-32-clang |   linux-debug-64-clang |   linux-release-32-clang |   linux-release-64-clang
       matrix:
         os: [ ubuntu-latest, windows-latest ]
         build_type: [ Debug, Release ]
