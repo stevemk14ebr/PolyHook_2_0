@@ -5,16 +5,17 @@
 - [x] Update Catch.hpp to latest v2
     - Reason: `Catch.hpp:10881:33: error: variable length array declaration not allowed at file scope`
 - [x] Inline helper for `volatile int i = 0; PH_UNUSED(i);` with documentation
+- [x] Tests in CI/CD
 - [x] Fix scheme retry logic:
     - Reason: Current impl doesn't try other schemes if the chosen scheme does not fit into the prologue
+- [x] Fix static order initialization fiasco
 - [x] Fix safe_mem_read (Trampoline in code cave detour is not disassembled properly because it's allocated at the end
   of a memory map)
 - [x] Fix mem_protect (same as above, i.e. support for memory regions that span multiple mappings)
 - [x] Fix unhooking (user tramp var should not be managed)
-- [x] 32-bit linux build in CI/CD
-- [x] Tests in CI/CD
 - [ ] Fix makex86Jmp (see test section "hook printf" in linux/TestDetourx86.cpp)
 - [ ] Fix instruction.getDestination() (see test case "Test Disassemblers x86 FF25" in windows/TestDisassembler.cpp)
+- [ ] 32-bit linux build in CI/CD
 
 ## Future PR
 
@@ -26,6 +27,7 @@
     - [ ] Refactor implementations into explicit pure and side-effect functions
     - [ ] Do not use global static values (leads to C++ static initialization order fiasco)
 - [ ] Tests:
+    - [ ] Catch v3
     - [ ] Deduplicate tests
     - [ ] Test linux-gcc (Current macro helper for callbacks relies on non-standard clang extensions)
     - [ ] Move test headers/sources to UnitTests
