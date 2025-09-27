@@ -27,6 +27,7 @@ _Pragma("GCC optimize (\"O0\")")
 #define OPTS_ON __pragma(optimize("", on))
 #endif
 
+// TODO: Move this to test utils
 #define PH_UNUSED(a) (void)a
 
 namespace PLH {
@@ -73,6 +74,8 @@ protected:
 	bool m_debugSet;
 	bool m_hooked = false;
 };
+
+// TODO: Move to these to test utils
 
 //Thanks @_can1357 for help with this.
 template<typename T, typename = void>
@@ -124,7 +127,7 @@ struct callback_type<Ret(CCFROM Class::*)(Args...), void> \
 #define __stdcall __attribute__((__stdcall__))
 #endif
 
-#ifndef POLYHOOK2_ARCH_X64
+#if defined(POLYHOOK2_ARCH_X86) && defined(POLYHOOK2_OS_WINDOWS)
 MAKE_CALLBACK_IMPL(__stdcall, __stdcall)
 MAKE_CALLBACK_CLASS_IMPL(__stdcall, __stdcall)
 

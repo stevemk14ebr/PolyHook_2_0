@@ -1,5 +1,4 @@
-#ifndef POLYHOOK_2_OS_HPP
-#define POLYHOOK_2_OS_HPP
+#pragma once
 
 #if defined(WIN64) || defined(_WIN64) || defined(__MINGW64__)
 #define POLYHOOK2_OS_WINDOWS
@@ -89,4 +88,3 @@
 #include <inttypes.h>
 
 void PolyHook2DebugBreak();
-#endif

@@ -1,5 +1,6 @@
 <component name="ProjectCodeStyleConfiguration">
   <code_scheme name="Project" version="173">
+    <option name="AUTODETECT_INDENTS" value="false" />
     <option name="FORMATTER_TAGS_ENABLED" value="true" />
     <Objective-C>
       <option name="INDENT_NAMESPACE_MEMBERS" value="0" />
@@ -12,6 +13,161 @@
       <option name="SPACE_BEFORE_REFERENCE_IN_DECLARATION" value="false" />
       <option name="SPACE_AFTER_REFERENCE_IN_DECLARATION" value="true" />
     </Objective-C>
+    <RiderCodeStyleSettings>
+      <option name="/Default/CodeStyle/CodeFormatting/CppClangFormat/EnableClangFormatSupport/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/EditorConfig/EnableClangFormatSupport/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTILINE_BINARY_EXPRESSIONS_CHAIN/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTILINE_CALLS_CHAIN/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTILINE_EXPRESSION/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTILINE_FOR_STMT/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTIPLE_DECLARATION/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_TERNARY/@EntryValue" value="ALIGN_ALL" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/BLANK_LINES_AROUND_CLASS_DEFINITION/@EntryValue" value="1" type="int" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/KEEP_BLANK_LINES_IN_DECLARATIONS/@EntryValue" value="2" type="int" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/KEEP_BLANK_LINES_IN_CODE/@EntryValue" value="2" type="int" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/KEEP_USER_LINEBREAKS/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/INDENT_CASE_FROM_SWITCH/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/INDENT_COMMENT/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/INT_ALIGN_EQ/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SIMPLE_BLOCK_STYLE/@EntryValue" value="DO_NOT_CHANGE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_COMMA_IN_TEMPLATE_ARGS/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_COMMA_IN_TEMPLATE_PARAMS/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_FOR_SEMICOLON/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_FOR_SEMICOLON/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_UNARY_OPERATOR/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_ARRAY_ACCESS_BRACKETS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_CAST_EXPRESSION_PARENTHESES/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_EMPTY_INITIALIZER_BRACES/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_EMPTY_METHOD_PARENTHESES/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_INITIALIZER_BRACES/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPECIAL_ELSE_IF_TREATMENT/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_CAST_EXPRESSION_PARENTHESES/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_AFTER_BINARY_OPSIGN/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_BEFORE_TERNARY_OPSIGNS/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/TYPE_DECLARATION_BRACES/@EntryValue" value="END_OF_LINE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/OTHER_BRACES/@EntryValue" value="END_OF_LINE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/CASE_BLOCK_BRACES/@EntryValue" value="END_OF_LINE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/BLANK_LINES_AROUND_FUNCTION_DECLARATION/@EntryValue" value="1" type="int" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/BLANK_LINES_AROUND_FUNCTION_DEFINITION/@EntryValue" value="1" type="int" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/PLACE_WHILE_ON_NEW_LINE/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/PLACE_ELSE_ON_NEW_LINE/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/PLACE_CATCH_ON_NEW_LINE/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/NAMESPACE_INDENTATION/@EntryValue" value="None" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTILINE_ARGUMENT/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTILINE_EXTENDS_LIST/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTILINE_PARAMETER/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTILINE_TYPE_ARGUMENT/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ALIGN_MULTILINE_TYPE_PARAMETER/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/BLANK_LINES_AROUND_DECLARATIONS/@EntryValue" value="0" type="int" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/INDENT_ACCESS_SPECIFIERS_FROM_CLASS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/INDENT_CLASS_MEMBERS_FROM_ACCESS_SPECIFIERS/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/LINE_BREAK_AFTER_COLON_IN_MEMBER_INITIALIZER_LISTS/@EntryValue" value="ON_SINGLE_LINE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/MEMBER_INITIALIZER_LIST_STYLE/@EntryValue" value="DO_NOT_CHANGE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/PLACE_NAMESPACE_DEFINITIONS_ON_SAME_LINE/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_COLON_IN_BITFIELD_DECLARATOR/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_COLON_IN_BITFIELD_DECLARATOR/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_EXTENDS_COLON/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_EXTENDS_COLON/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_FOR_COLON/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_FOR_COLON/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_PTR_IN_DATA_MEMBER/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_PTR_IN_DATA_MEMBERS/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_PTR_IN_METHOD/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_PTR_IN_NESTED_DECLARATOR/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_REF_IN_DATA_MEMBER/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_REF_IN_DATA_MEMBERS/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_AFTER_REF_IN_METHOD/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_PTR_IN_ABSTRACT_DECL/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_PTR_IN_DATA_MEMBER/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_PTR_IN_DATA_MEMBERS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_PTR_IN_METHOD/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_REF_IN_ABSTRACT_DECL/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_REF_IN_DATA_MEMBER/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_REF_IN_DATA_MEMBERS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_REF_IN_METHOD/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_TEMPLATE_ARGS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BEFORE_TEMPLATE_PARAMS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_BETWEEN_CLOSING_ANGLE_BRACKETS_IN_TEMPLATE_ARGS/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_EMPTY_TEMPLATE_PARAMS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_TEMPLATE_ARGS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_TEMPLATE_PARAMS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_DECLARATION_PARENTHESES/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/SPACE_WITHIN_EMPTY_BLOCKS/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_BEFORE_INVOCATION_LPAR/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_AFTER_INVOCATION_LPAR/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_BEFORE_INVOCATION_RPAR/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_BEFORE_DECLARATION_LPAR/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_AFTER_DECLARATION_LPAR/@EntryValue" value="false" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_BEFORE_DECLARATION_RPAR/@EntryValue" value="true" type="bool" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_ARGUMENTS_STYLE/@EntryValue" value="WRAP_IF_LONG" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/WRAP_PARAMETERS_STYLE/@EntryValue" value="WRAP_IF_LONG" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/BREAK_TEMPLATE_DECLARATION/@EntryValue" value="LINE_BREAK" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/NAMESPACE_DECLARATION_BRACES/@EntryValue" value="END_OF_LINE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/INVOCABLE_DECLARATION_BRACES/@EntryValue" value="END_OF_LINE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/ANONYMOUS_METHOD_DECLARATION_BRACES/@EntryValue" value="END_OF_LINE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/INITIALIZER_BRACES/@EntryValue" value="END_OF_LINE_NO_SPACE" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/INDENT_STYLE/@EntryValue" value="Space" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/INDENT_SIZE/@EntryValue" value="4" type="int" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/CONTINUOUS_LINE_INDENT/@EntryValue" value="Single" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppFormatting/TAB_WIDTH/@EntryValue" value="4" type="int" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=0B82708A1BA7774EB13D27F245698A56/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=0B82708A1BA7774EB13D27F245698A56/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=A42D627FA43B054F91D1E1C4281D8896/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=A42D627FA43B054F91D1E1C4281D8896/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=A7EBF16DA3BDCB42A0B710704BC8A053/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=A7EBF16DA3BDCB42A0B710704BC8A053/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=2229A2BE1AA9214483A51F028530E042/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=2229A2BE1AA9214483A51F028530E042/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=18392FF80FA40749AA8CC53981A32AE0/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=18392FF80FA40749AA8CC53981A32AE0/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=1350D079A82E0740947E85445B5AF47C/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=1350D079A82E0740947E85445B5AF47C/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=0AFB7787612DF743B09AD9412E48D4CC/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=0AFB7787612DF743B09AD9412E48D4CC/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=72514D5DF422D442B71A277F97B72887/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=72514D5DF422D442B71A277F97B72887/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=821F3C5CF47D5640AD3511BCBADE17C4/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=821F3C5CF47D5640AD3511BCBADE17C4/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=8F69F48E2532F54CBAA0039D4557825E/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=8F69F48E2532F54CBAA0039D4557825E/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=B6E900853D6D05429D8C57765B2E546A/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=B6E900853D6D05429D8C57765B2E546A/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=B82A063F0DDD98498A70D8D7EBB97F8D/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=B82A063F0DDD98498A70D8D7EBB97F8D/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=BBE8AA08E662BF409B2CB08EC597C493/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=BBE8AA08E662BF409B2CB08EC597C493/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=5653BA7B6222F349B94149A2A53C35B8/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=5653BA7B6222F349B94149A2A53C35B8/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=4203BE6F332C5149B409B4D5F7197E54/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=4203BE6F332C5149B409B4D5F7197E54/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=2B232F1067F0324F8FF4B9D63ACECDB2/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=2B232F1067F0324F8FF4B9D63ACECDB2/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=BF0D1AE66D64FE4FAF613448A12051A0/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=BF0D1AE66D64FE4FAF613448A12051A0/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=1CBDD658AEE8EA4382EE1F914B5B3314/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=1CBDD658AEE8EA4382EE1F914B5B3314/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=A4FAA2257682A94F8C2C93E123FAFC7A/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=A4FAA2257682A94F8C2C93E123FAFC7A/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=05D45346A5B5B54F93A9F94C46B14079/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=05D45346A5B5B54F93A9F94C46B14079/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=9E4D28CA929F6B4AB5F6F3FEB9E69A47/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=9E4D28CA929F6B4AB5F6F3FEB9E69A47/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=2AD8EC23F81C6F4AB06852FBF796A3D1/@EntryIndexedValue" value="" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=2AD8EC23F81C6F4AB06852FBF796A3D1/@EntryIndexRemoved" value="true" type="bool" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=FF1CA290E1773F479E6E7C787B9B6027/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;1&quot; Title=&quot;Types&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;__interface&quot; /&gt;&lt;type Name=&quot;class&quot; /&gt;&lt;type Name=&quot;concept&quot; /&gt;&lt;type Name=&quot;enum&quot; /&gt;&lt;type Name=&quot;struct&quot; /&gt;&lt;type Name=&quot;type alias&quot; /&gt;&lt;type Name=&quot;type template parameter&quot; /&gt;&lt;type Name=&quot;typedef&quot; /&gt;&lt;type Name=&quot;union&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot; /&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=29414343E0D24942A955EEF55E4D7425/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;2&quot; Title=&quot;Fields&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;class field&quot; /&gt;&lt;type Name=&quot;struct field&quot; /&gt;&lt;type Name=&quot;union member&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot;&gt;&lt;ExtraRule Prefix=&quot;is&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot; /&gt;&lt;/Policy&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=DA1920458605D347ACCC2D0A62217927/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;3&quot; Title=&quot;Variables&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;global variable&quot; /&gt;&lt;type Name=&quot;lambda&quot; /&gt;&lt;type Name=&quot;local variable&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot;&gt;&lt;ExtraRule Prefix=&quot;is&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot; /&gt;&lt;/Policy&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=009C7E7BE92CD1438F8C664AB756726F/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;4&quot; Title=&quot;Parameters&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;function parameter&quot; /&gt;&lt;type Name=&quot;lambda parameter&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot;&gt;&lt;ExtraRule Prefix=&quot;is&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot; /&gt;&lt;/Policy&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=4D1F7648CE929743929CFF1FAEC7D5E2/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;5&quot; Title=&quot;Functions&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;global function&quot; /&gt;&lt;type Name=&quot;member function&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;aaBb&quot;&gt;&lt;ExtraRule Prefix=&quot;&quot; Suffix=&quot;_begin&quot; Style=&quot;aa_bb&quot; /&gt;&lt;ExtraRule Prefix=&quot;&quot; Suffix=&quot;_end&quot; Style=&quot;aa_bb&quot; /&gt;&lt;/Policy&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=54296A35A512D84A8360DAF37A63C3E7/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;6&quot; Title=&quot;Enumerators&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;scoped enumerator&quot; /&gt;&lt;type Name=&quot;unscoped enumerator&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot; /&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=A5D27AC6B703054BAD264C93CC57BD29/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;7&quot; Title=&quot;Namespaces&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;namespace&quot; /&gt;&lt;type Name=&quot;namespace alias&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;aa_bb&quot; /&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=E3042951BBB6CB4DA94B1E69FCA35C7C/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;8&quot; Title=&quot;Macros&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;macro&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;AA_BB&quot; /&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/Naming/CppNamingOptions/Rules/=D3DF477E7FB54E4DB04A1E8CD817F3A5/@EntryIndexedValue" value="&lt;NamingElement Priority=&quot;9&quot; Title=&quot;Non-Type Template Parameters&quot;&gt;&lt;Descriptor Static=&quot;Indeterminate&quot; Constexpr=&quot;Indeterminate&quot; Const=&quot;Indeterminate&quot; Volatile=&quot;Indeterminate&quot; Accessibility=&quot;NOT_APPLICABLE&quot;&gt;&lt;type Name=&quot;non-type template parameter&quot; /&gt;&lt;/Descriptor&gt;&lt;Policy Inspect=&quot;True&quot; WarnAboutPrefixesAndSuffixes=&quot;False&quot; Prefix=&quot;&quot; Suffix=&quot;&quot; Style=&quot;AaBb&quot; /&gt;&lt;/NamingElement&gt;" type="string" />
+      <option name="/Default/CodeStyle/CodeFormatting/CppClangFormat/ExternalClangFormatPath/@EntryValue" value="/usr/bin/clang-format" type="string" />
+    </RiderCodeStyleSettings>
+    <clangFormatSettings>
+      <option name="ENABLED" value="true" />
+    </clangFormatSettings>
     <editorconfig>
       <option name="ENABLED" value="false" />
     </editorconfig>
@@ -19,7 +175,6 @@
       <option name="SPACE_BEFORE_IF_PARENTHESES" value="false" />
     </codeStyleSettings>
     <codeStyleSettings language="ObjectiveC">
-      <option name="RIGHT_MARGIN" value="120" />
       <option name="SOFT_MARGINS" value="120" />
       <indentOptions>
         <option name="CONTINUATION_INDENT_SIZE" value="4" />

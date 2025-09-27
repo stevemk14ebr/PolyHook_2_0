@@ -147,6 +147,16 @@ if(POLYHOOK_BUILD_DLL)
 	endif()
 else()
 	add_executable(${PROJECT_NAME})
+
+	target_sources(${PROJECT_NAME} PRIVATE
+			${PROJECT_SOURCE_DIR}/UnitTests/TestUtils.hpp
+			${PROJECT_SOURCE_DIR}/UnitTests/TestUtils.cpp
+	)
+
+	# https://docs.github.com/en/actions/reference/workflows-and-actions/variables
+	if("$ENV{CI}" STREQUAL "true")
+		target_compile_definitions(${PROJECT_NAME} PRIVATE PLH_CI)
+	endif()
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20)

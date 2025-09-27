@@ -74,6 +74,7 @@ public:
 				m_accessor.safe_mem_read(dest, (uint64_t)&dest, sizeof(uint64_t), read);
 			} else {
 				// *(uint32_t*)dest;
+				dest &= 0x00000000FFFFFFFF;
 				m_accessor.safe_mem_read(dest, (uint64_t)&dest, sizeof(uint32_t), read);
 			}
 		}
@@ -445,7 +446,7 @@ inline PLH::insts_t makex64PreferredJump(const uint64_t address, const uint64_t 
  * Destination should be the value that is written into destHolder, and be the address of where
  * the jmp should land.**/
 inline PLH::insts_t makex64MinimumJump(const uint64_t address, const uint64_t destination, const uint64_t destHolder) {
-	PLH::Instruction::Displacement disp{ 0 };
+	PLH::Instruction::Displacement disp{};
 	disp.Relative = PLH::Instruction::calculateRelativeDisplacement<int32_t>(address, destHolder, 6);
 
 	std::vector<uint8_t> destBytes;

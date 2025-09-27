@@ -1,0 +1,16 @@
+# Settings for clang-format 20
+# See: https://releases.llvm.org/20.1.0/tools/clang/docs/ClangFormatStyleOptions.html
+
+BasedOnStyle: LLVM
+ColumnLimit: 120
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+
+BinPackArguments: false
+BinPackParameters: OnePerLine
+AlignAfterOpenBracket: BlockIndent
+BracedInitializerIndentWidth: 4
+FixNamespaceComments: false
+KeepEmptyLines:
+  AtEndOfFile: true

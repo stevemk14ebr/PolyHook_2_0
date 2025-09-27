@@ -63,7 +63,7 @@ public:
 		return (instruction.size() == 1 && bytes[0] == 0xCC) ||
 			(instruction.size() >= 2 && bytes[0] == 0xf3 && bytes[1] == 0xc3) || // rep ret
 			(instruction.size() >= 2 && bytes[0] == 0xf2 && bytes[1] == 0xc3) || // bnd ret for Intel mpx
-            (mnemonic == "jmp" && !firstFunc) || // Jump to tranlslation
+            (mnemonic == "jmp" && !firstFunc) || // Jump to translation
 			mnemonic == "ret" || mnemonic.find("iret") == 0;
 	}
 

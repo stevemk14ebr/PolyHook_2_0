@@ -25,8 +25,8 @@ std::vector<uint8_t> x64ASM = {
 	0xAB, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xAA
 };
 
-std::vector<uint8_t> x64ASM2 = { 
-	0x48, 0x8B, 0x05, 0x10, 0x00, 0x00, 0x00,  // mov    rax,QWORD PTR[rip + 0x10]  
+std::vector<uint8_t> x64ASM2 = {
+	0x48, 0x8B, 0x05, 0x10, 0x00, 0x00, 0x00,  // mov    rax,QWORD PTR[rip + 0x10]
     0x48, 0x8B, 0x90, 0x55, 0x02, 0x00, 0x00  // mov    rdx,QWORD PTR[rax + 0x255]
 };
 
@@ -62,10 +62,10 @@ std::vector<uint8_t> x86x64Nops = {
 	0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x66, 0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x66, 0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00,
 
 	/*
-	* 
+	*
 	x64/x86 capstone
     [1]: 90                            nop
     [2]: 66 90                         nop
@@ -252,12 +252,20 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]", PLH::Zy
 #endif
 
 	// re-write ff 25 displacement to point to data (absolute)
-	*(uint32_t*)(x86ASM_FF25.data() + 2) = (uint32_t)(x86ASM_FF25.data() + 6); // 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
+	const auto jmp_address_ptr = x86ASM_FF25.data() + 2;
+	constexpr auto address_length = sizeof(size_t);
+
+	// 0xFF25 <pMem> = &mem; (just fyi *mem == 0xAA0000AB)
+	memcpy(jmp_address_ptr, jmp_address_ptr + address_length, address_length);
 
 	PLH::StackCanary canaryg;
 	TestType disasm(PLH::Mode::x86);
-	auto                      Instructions = disasm.disassemble((uint64_t)&x86ASM_FF25.front(), (uint64_t)&x86ASM_FF25.front(),
-		(uint64_t)&x86ASM_FF25.front() + x86ASM_FF25.size(), PLH::MemAccessor());
+	auto Instructions = disasm.disassemble(
+		(uint64_t)x86ASM_FF25.data(),
+		(uint64_t)x86ASM_FF25.data(),
+		(uint64_t)(x86ASM_FF25.data() + address_length),
+		PLH::MemAccessor()
+	);
 
 	SECTION("Check disassembler integrity") {
 		PLH::StackCanary canary;
@@ -426,7 +434,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers NOPS", "[ZydisDisassembler]", PLH::ZydisD
 	SECTION("Verify multi-byte nops decodings x86") {
 		for (auto& ins : Instructionsx86) {
 			REQUIRE(ins.getMnemonic() == "nop");
-			REQUIRE(TestType::isPadBytes(ins));			
+			REQUIRE(TestType::isPadBytes(ins));
 		}
 	}
 }

@@ -67,3 +67,5 @@ TEST_CASE("Test setting page protections", "[MemProtector]") {
 	}
 	munmap(page, 4*1024);
 }
+
+// TODO: test cases when memory slice spans multiple mappings
