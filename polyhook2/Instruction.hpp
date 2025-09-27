@@ -74,6 +74,7 @@ public:
 				m_accessor.safe_mem_read(dest, (uint64_t)&dest, sizeof(uint64_t), read);
 			} else {
 				// *(uint32_t*)dest;
+				dest &= 0x00000000FFFFFFFF;
 				m_accessor.safe_mem_read(dest, (uint64_t)&dest, sizeof(uint32_t), read);
 			}
 		}
