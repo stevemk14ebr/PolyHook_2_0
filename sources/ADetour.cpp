@@ -286,7 +286,6 @@ std::optional<insts_t> Detour::getRoutineReturningSP(const Instruction& callInst
     }
 
     if (
-        routine.size() == 2 &&
         routine[0].getMnemonic() == "mov" && routine[0].hasRegister() && routine[0].isReadingSP() &&
         routine[1].getMnemonic() == "ret"
     ) {
