@@ -7,9 +7,6 @@
 #include "polyhook2/Detour/ADetour.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/Instruction.hpp"
-#include "polyhook2/ZydisDisassembler.hpp"
-#include "polyhook2/ErrorLog.hpp"
-#include "polyhook2/MemProtector.hpp"
 
 using namespace std::placeholders;
 
@@ -26,6 +23,8 @@ public:
     Mode getArchType() const override;
 
 protected:
+    void fixSpecialCases(insts_t& prologue);
+
     bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
 };
 

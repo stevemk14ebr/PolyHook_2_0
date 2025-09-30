@@ -1,12 +1,18 @@
 //
 // Created by steve on 7/5/17.
 //
+#include <format>
+
+#include <asmtk/asmtk.h>
+#include <asmjit/x86.h>
+
 #include "polyhook2/Detour/x86Detour.hpp"
 
 namespace PLH {
 
 x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar)
-    : Detour(fnAddress, fnCallback, userTrampVar, getArchType()) {}
+    : Detour(fnAddress, fnCallback, userTrampVar, getArchType()) {
+}
 
 Mode x86Detour::getArchType() const {
     return Mode::x86;
@@ -19,26 +25,56 @@ uint8_t getJmpSize() {
 /**
  * @param prologue Must be before any relocations/replacements were made
  */
-void fixSpecialCases(insts_t& prologue) {
+void x86Detour::fixSpecialCases(insts_t& prologue) {
     for (auto& instruction: prologue) {
-        // Fix for https://github.com/stevemk14ebr/PolyHook_2_0/issues/215
         if (instruction.getMnemonic() == "call") {
-            // 8B 04 24 | mov eax, dword ptr [esp]
-            // C3       | ret
-            if (*(uint32_t*) instruction.getRelativeDestination() == 0xC324048B) {
+            const uint64_t mov_addr = instruction.getRelativeDestination();
+            insts_t routine = m_disasm.disassemble(mov_addr, mov_addr, mov_addr + 4, *this);
+            if (routine.size() != 2) {
+                continue;
+            }
+
+            if (
+                routine.size() == 2 &&
+                routine[0].getMnemonic() == "mov" && routine[0].hasRegister() && routine[0].isReadingSP() &&
+                routine[1].getMnemonic() == "ret"
+            ) {
                 Log::log("Fixing special case #215:\n" + instsToStr(std::vector{instruction}), ErrorLevel::INFO);
 
-                // replace it with: mov eax, imm32
-                const uint32_t originalAddress = instruction.getAddress() + instruction.size();
-                const auto* bytePtr = (const uint8_t*)&originalAddress;
-                std::vector<uint8_t> bytes = {0xB8};
-                bytes.insert(bytes.end(), bytePtr, bytePtr + 4);
+                // Fix for https://github.com/stevemk14ebr/PolyHook_2_0/issues/215
+                // Example routine(eax could be any register):
+                // 8B 04 24 | mov eax, dword ptr [esp]
+                // C3       | ret
 
-                instruction = Instruction(
-                    instruction.getAddress(), {}, 0, false, false, bytes,
-                    "mov", "eax, "+ int_to_hex(originalAddress),
-                    Mode::x86
-                );
+                const auto destReg = routine[0].getOperands().substr(0, 3);
+                const uint32_t originalAddress = instruction.getAddress();
+                const uint32_t originalNextAddress = originalAddress + instruction.size();
+
+                // AsmTK parses strings for AsmJit, which generates the binary code.
+                asmjit::CodeHolder code;
+                asmjit::JitRuntime m_asmjit_rt;
+                code.init(m_asmjit_rt.environment());
+
+                asmjit::x86::Assembler assembler(&code);
+                asmtk::AsmParser parser(&assembler);
+
+                // Parse the instructions via AsmTK
+                if (const auto error = parser.parse(std::format("mov {}, {:#x}", destReg, originalNextAddress).c_str())) {
+                    Log::log(std::format("AsmTK error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+                    continue;
+                }
+
+                // Generate the binary code via AsmJit
+                uint64_t fixed_mov_addr = 0;
+                if (const auto error = m_asmjit_rt.add(&fixed_mov_addr, &code)) {
+                    Log::log(std::format("AsmJIT error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+                    continue;
+                }
+
+                // Replace `call rel32` instruction with `mov reg, imm32`
+
+                instruction = m_disasm.disassemble(fixed_mov_addr, fixed_mov_addr, fixed_mov_addr + instruction.size(), *this)[0];
+                instruction.setAddress(originalAddress);
             }
         }
     }
