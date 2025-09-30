@@ -216,8 +216,6 @@ TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
 		REQUIRE(detour.hook() == true);
 	}
 
-	// TODO: Fix this. when making jmpToProl, relative displacement can only encode offset up to 0x7FFFFFFF
-	//       But during tests, distance between prologue and trampoline was larger than that, leading to incorrect jump.
 	SECTION("hook printf") {
 		PLH::x86Detour detour((uint64_t)&printf, (uint64_t)h_hookPrintf, &hookPrintfTramp);
 		REQUIRE(detour.hook() == true);

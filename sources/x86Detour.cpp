@@ -16,12 +16,40 @@ uint8_t getJmpSize() {
     return 5;
 }
 
+/**
+ * @param prologue Must be before any relocations/replacements were made
+ */
+void fixSpecialCases(insts_t& prologue) {
+    for (auto& instruction: prologue) {
+        // Fix for https://github.com/stevemk14ebr/PolyHook_2_0/issues/215
+        if (instruction.getMnemonic() == "call") {
+            // 8B 04 24 | mov eax, dword ptr [esp]
+            // C3       | ret
+            if (*(uint32_t*) instruction.getRelativeDestination() == 0xC324048B) {
+                Log::log("Fixing special case #215:\n" + instsToStr(std::vector{instruction}), ErrorLevel::INFO);
+
+                // replace it with: mov eax, imm32
+                const uint32_t originalAddress = instruction.getAddress() + instruction.size();
+                const auto* bytePtr = (const uint8_t*)&originalAddress;
+                std::vector<uint8_t> bytes = {0xB8};
+                bytes.insert(bytes.end(), bytePtr, bytePtr + 4);
+
+                instruction = Instruction(
+                    instruction.getAddress(), {}, 0, false, false, bytes,
+                    "mov", "eax, "+ int_to_hex(originalAddress),
+                    Mode::x86
+                );
+            }
+        }
+    }
+}
+
 bool x86Detour::hook() {
     Log::log("m_fnAddress: " + int_to_hex(m_fnAddress) + "\n", ErrorLevel::INFO);
-	
+
     insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
     Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
-	
+
     if (insts.empty()) {
         Log::log("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
         return false;
@@ -92,6 +120,9 @@ bool x86Detour::hook() {
 
 bool x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
     assert(!prologue.empty());
+
+    fixSpecialCases(prologue);
+
     const uint64_t prolStart = prologue.front().getAddress();
     const uint16_t prolSz = calcInstsSz(prologue);
 
@@ -99,7 +130,7 @@ bool x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
     address will change each attempt, which changes delta, which changes the number of needed entries. So
     we just try until we hit that lucky number that works.
 
-    The relocation could also because of data operations too. But that's specific to the function and can't
+    The relocation could also fail because of data operations too. But that's specific to the function and can't
     work again on a retry (same function, duh). Return immediately in that case.
     **/
     uint8_t neededEntryCount = 5;
