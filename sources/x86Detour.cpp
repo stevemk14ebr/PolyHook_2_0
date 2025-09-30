@@ -29,7 +29,7 @@ void x86Detour::fixSpecialCases(insts_t& prologue) {
     for (auto& instruction: prologue) {
         if (const auto routine = getRoutineReturningSP(instruction)) {
             Log::log(
-                "Fixing special case [call to routine reading esp ]:\n" + instsToStr(std::vector{instruction}),
+                "Fixing special case [call to routine returning ESP]:\n" + instsToStr(std::vector{instruction}),
                 ErrorLevel::INFO
             );
 
