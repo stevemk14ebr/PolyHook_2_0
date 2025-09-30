@@ -28,7 +28,10 @@ uint8_t getJmpSize() {
 void x86Detour::fixSpecialCases(insts_t& prologue) {
     for (auto& instruction: prologue) {
         if (const auto routine = getRoutineReturningSP(instruction)) {
-            Log::log("Fixing special case #215:\n" + instsToStr(std::vector{instruction}), ErrorLevel::INFO);
+            Log::log(
+                "Fixing special case [call to routine reading esp ]:\n" + instsToStr(std::vector{instruction}),
+                ErrorLevel::INFO
+            );
 
             // Fix for https://github.com/stevemk14ebr/PolyHook_2_0/issues/215
             // Example routine(eax could be any register):
