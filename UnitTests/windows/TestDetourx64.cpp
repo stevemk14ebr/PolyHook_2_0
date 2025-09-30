@@ -9,7 +9,7 @@
 
 #include "polyhook2/PolyHookOsIncludes.hpp"
 
-#include <asmjit/asmjit.h>
+#include <asmjit/x86.h>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>

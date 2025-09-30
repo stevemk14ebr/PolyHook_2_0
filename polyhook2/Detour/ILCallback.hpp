@@ -2,7 +2,7 @@
 #define POLYHOOK_2_0_ILCALLBACK_HPP
 
 #pragma warning(push, 0)  
-#include <asmjit/asmjit.h>
+#include <asmjit/x86.h>
 #pragma warning( pop )
 
 #pragma warning( disable : 4200)

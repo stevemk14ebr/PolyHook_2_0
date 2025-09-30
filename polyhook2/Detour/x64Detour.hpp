@@ -9,10 +9,8 @@
 #include "polyhook2/Detour/ADetour.hpp"
 #include "polyhook2/Enums.hpp"
 #include "polyhook2/Instruction.hpp"
-#include "polyhook2/ZydisDisassembler.hpp"
-#include "polyhook2/ErrorLog.hpp"
 #include "polyhook2/RangeAllocator.hpp"
-#include <asmjit/asmjit.h>
+#include <asmjit/x86.h>
 
 namespace PLH {
 
