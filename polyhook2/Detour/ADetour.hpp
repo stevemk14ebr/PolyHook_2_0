@@ -65,6 +65,17 @@ public:
 
     void setIsFollowCallOnFnAddress(bool value);
 
+
+    /**
+     * @return instructions of a routine if the provided instruction is a call instruction that calls a routine
+     * which returns an address stored SP register, which refers to the address of the next instruction following
+     * the call instruction. An example routine looks like this (eax could be any general-purpose register):
+     *
+     * 8B 04 24 | mov eax, dword ptr [esp]
+     * C3       | ret
+     */
+    std::optional<insts_t> getRoutineReturningSP(const Instruction& callInst);
+
 protected:
     uint64_t m_fnAddress;
     uint64_t m_fnCallback;

@@ -67,23 +67,30 @@ bool Detour::followJmp(insts_t& functionInsts, const uint8_t curDepth) { // NOLI
         return true;
     }
 
-    if (!m_isFollowCallOnFnAddress)
-    {
+    if (!m_isFollowCallOnFnAddress) {
         Log::log("setting: Do NOT follow CALL on fnAddress", ErrorLevel::INFO);
-	    if (functionInsts.front().isCalling())
-	    {
+	    if (functionInsts.front().isCalling()) {
             Log::log("First assembly instruction is CALL", ErrorLevel::INFO);
             return true;
 	    }
     }
 
+    const auto& firstInst = functionInsts.front();
+
+    // Here we know that first instruction is call imm32.
+    // But we first need to check if it is a special case #215. If it is, then we ignore it.
+    if (getRoutineReturningSP(firstInst)) {
+        Log::log("First assembly instruction is CALL, but for to a routine reading SP. Skipping.", ErrorLevel::INFO);
+        return true;
+    }
+
     // might be a mem type like jmp rax, not supported
-    if (!functionInsts.front().hasDisplacement()) {
+    if (!firstInst.hasDisplacement()) {
         Log::log("Branching instruction without displacement encountered", ErrorLevel::WARN);
         return false;
     }
 
-    uint64_t dest = functionInsts.front().getDestination();
+    const uint64_t dest = firstInst.getDestination();
     functionInsts = m_disasm.disassemble(dest, dest, dest + 100, *this);
     return followJmp(functionInsts, curDepth + 1); // recurse
 }
@@ -265,6 +272,28 @@ insts_t Detour::make_nops(uint64_t address, uint16_t size) const {
     }
 
     return nops;
+}
+
+std::optional<insts_t> Detour::getRoutineReturningSP(const Instruction& callInst) {
+    if (callInst.getMnemonic() != "call") {
+        return std::nullopt;
+    }
+
+    const uint64_t routineAddress = callInst.getRelativeDestination();
+    const insts_t routine = m_disasm.disassemble(routineAddress, routineAddress, routineAddress + 4, *this);
+    if (routine.size() != 2) {
+        return std::nullopt;
+    }
+
+    if (
+        routine.size() == 2 &&
+        routine[0].getMnemonic() == "mov" && routine[0].hasRegister() && routine[0].isReadingSP() &&
+        routine[1].getMnemonic() == "ret"
+    ) {
+        return routine;
+    }
+
+    return std::nullopt;
 }
 
 }
