@@ -25,7 +25,7 @@
         noexcept(noexcept(std::declval<decltype(&FUNC)>()(std::declval<Args>()...))) -> auto { \
         PLH::StackCanary canary; \
         PLH_STOP_OPTIMIZATIONS(); \
-		effects.PeakEffect().trigger(); \
+        effects.PeakEffect().trigger(); \
         __VA_ARGS__ \
         return PLH::FnCast(TRMP, &FUNC)($args...); \
     }
@@ -47,8 +47,8 @@
  * or ReleaseWithDebInfo mode (ReleaseWithDebInfo optimizes _slightly_ less).
  */
 #define PLH_STOP_OPTIMIZATIONS()                                                                                       \
-	volatile int i = 0;                                                                                                \
-	PH_UNUSED(i)
+    volatile int i = 0;                                                                                                \
+    PH_UNUSED(i)
 
 namespace PLH::test {
 

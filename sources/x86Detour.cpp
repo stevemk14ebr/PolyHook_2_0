@@ -1,12 +1,20 @@
 //
 // Created by steve on 7/5/17.
 //
+#include <format>
+
+#include <asmtk/asmtk.h>
+#include <asmjit/x86.h>
+
 #include "polyhook2/Detour/x86Detour.hpp"
+
+#include "./InternalUtils.hpp"
 
 namespace PLH {
 
 x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar)
-    : Detour(fnAddress, fnCallback, userTrampVar, getArchType()) {}
+    : Detour(fnAddress, fnCallback, userTrampVar, getArchType()) {
+}
 
 Mode x86Detour::getArchType() const {
     return Mode::x86;
@@ -16,12 +24,112 @@ uint8_t getJmpSize() {
     return 5;
 }
 
+bool x86Detour::fixCallRoutineReturningSP(Instruction& callInst, const insts_t& routine) {
+    Log::log(
+        "Fixing special case [call routine returning ESP]:\n" + instsToStr(std::vector{callInst}),
+        ErrorLevel::INFO
+    );
+
+    const auto destReg = routine[0].getOperands().substr(0, 3);
+    const uint32_t originalAddress = callInst.getAddress();
+    const uint32_t originalNextAddress = originalAddress + callInst.size();
+
+    // AsmTK parses strings for AsmJit, which generates the binary code.
+    asmjit::CodeHolder code;
+    asmjit::JitRuntime asmjitRt;
+    code.init(asmjitRt.environment());
+
+    asmjit::x86::Assembler assembler(&code);
+    asmtk::AsmParser parser(&assembler);
+
+    // Parse the instructions via AsmTK
+    if (const auto error = parser.parse(std::format("mov {}, {:#x}", destReg, originalNextAddress).c_str())) {
+        Log::log(std::format("AsmTK error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+        return false;
+    }
+
+    // Generate the binary code via AsmJit
+    uint64_t movAddress = 0;
+    if (const auto error = asmjitRt.add(&movAddress, &code)) {
+        Log::log(std::format("AsmJIT error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+        return false;
+    }
+
+    // Replace `call rel32` instruction with `mov reg, imm32`. Both are 5 bytes long.
+
+    callInst = m_disasm.disassemble(movAddress, movAddress, movAddress + callInst.size(), *this)[0];
+    callInst.setAddress(originalAddress);
+
+    return true;
+}
+
+bool x86Detour::fixCallInlineReturningSP(Instruction& callInst) {
+    Log::log(
+        "Fixing special case [call inline returning ESP]:\n" + instsToStr(std::vector{callInst}),
+        ErrorLevel::INFO
+    );
+
+    const uint32_t originalAddress = callInst.getAddress();
+    const uint32_t originalNextAddress = originalAddress + callInst.size();
+
+    // AsmTK parses strings for AsmJit, which generates the binary code.
+    asmjit::CodeHolder code;
+    asmjit::JitRuntime asmjitRt;
+    code.init(asmjitRt.environment());
+
+    asmjit::x86::Assembler assembler(&code);
+    asmtk::AsmParser parser(&assembler);
+
+    // Parse the instructions via AsmTK
+    if (const auto error = parser.parse(std::format("push {:#x}", originalNextAddress).c_str())) {
+        Log::log(std::format("AsmTK error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+        return false;
+    }
+
+    // Generate the binary code via AsmJit
+    uint64_t pushAddress = 0;
+    if (const auto error = asmjitRt.add(&pushAddress, &code)) {
+        Log::log(std::format("AsmJIT error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+        return false;
+    }
+
+    // Replace `call rel32` instruction with `push imm32`. Both are 5 bytes long.
+
+    callInst = m_disasm.disassemble(pushAddress, pushAddress, pushAddress + callInst.size(), *this)[0];
+    callInst.setAddress(originalAddress);
+
+    return true;
+}
+
+/**
+ * @param prologue Must be before any relocations/translations were made
+ */
+bool x86Detour::fixSpecialCases(insts_t& prologue) {
+    for (auto& instruction: prologue) {
+        if (const auto routine = getRoutineReturningSP(instruction)) {
+            // Fix for #215 https://github.com/stevemk14ebr/PolyHook_2_0/issues/215
+            if (!fixCallRoutineReturningSP(instruction, *routine)) {
+                return false;
+            }
+            PLH_SET_DIAGNOSTIC(Diagnostic::FixedCallToRoutineReadingSP);
+        } else if (isCallInlineReturningSP(instruction)) {
+            // Fix for #217 https://github.com/stevemk14ebr/PolyHook_2_0/issues/217
+            if (!fixCallInlineReturningSP(instruction)) {
+                return false;
+            }
+            PLH_SET_DIAGNOSTIC(Diagnostic::FixedInlineCallToReadSP);
+        }
+    }
+
+    return true;
+}
+
 bool x86Detour::hook() {
     Log::log("m_fnAddress: " + int_to_hex(m_fnAddress) + "\n", ErrorLevel::INFO);
-	
+
     insts_t insts = m_disasm.disassemble(m_fnAddress, m_fnAddress, m_fnAddress + 100, *this);
     Log::log("Original function:\n" + instsToStr(insts) + "\n", ErrorLevel::INFO);
-	
+
     if (insts.empty()) {
         Log::log("Disassembler unable to decode any valid instructions", ErrorLevel::SEV);
         return false;
@@ -92,6 +200,11 @@ bool x86Detour::hook() {
 
 bool x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
     assert(!prologue.empty());
+
+    if (!fixSpecialCases(prologue)) {
+        return false;
+    }
+
     const uint64_t prolStart = prologue.front().getAddress();
     const uint16_t prolSz = calcInstsSz(prologue);
 
@@ -99,7 +212,7 @@ bool x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
     address will change each attempt, which changes delta, which changes the number of needed entries. So
     we just try until we hit that lucky number that works.
 
-    The relocation could also because of data operations too. But that's specific to the function and can't
+    The relocation could also fail because of data operations too. But that's specific to the function and can't
     work again on a retry (same function, duh). Return immediately in that case.
     **/
     uint8_t neededEntryCount = 5;
@@ -114,7 +227,7 @@ bool x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
             return false;
         }
 
-        if (m_trampoline != NULL) {
+        if (m_trampoline) {
             delete[](unsigned char*) m_trampoline;
             neededEntryCount = (uint8_t) instsNeedingEntry.size();
         }

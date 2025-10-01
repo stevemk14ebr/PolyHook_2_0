@@ -29,11 +29,11 @@ jobs:
           # Windows
           - os: windows-latest
             build_type: Debug
-            test_bin_path: Debug\\PolyHook_2.exe
+            test_bin_path: Debug/PolyHook_2.exe
 
           - os: windows-latest
             build_type: Release
-            test_bin_path: Release\\PolyHook_2.exe
+            test_bin_path: Release/PolyHook_2.exe
 
           - os: windows-latest
             bitness: 32
@@ -92,7 +92,7 @@ jobs:
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: >
           cmake -B ${{ env.BUILD_DIR }}
-          -S ${{ github.workspace }}
+          -DPOLYHOOK_BUILD_DLL="ON"
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
@@ -103,15 +103,9 @@ jobs:
         # the default Windows generator is a multi-config generator (Visual Studio generator).
         run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
 
-      # TODO: Deduplicate this command
       - name: Configure CMake for test
         run: >
           cmake -B ${{ env.BUILD_DIR }}
-          -S ${{ github.workspace }}
-          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          ${{ matrix.arch }}
           -DPOLYHOOK_BUILD_DLL="OFF"
 
       - name: Build tests

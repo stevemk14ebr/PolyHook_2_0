@@ -67,23 +67,36 @@ bool Detour::followJmp(insts_t& functionInsts, const uint8_t curDepth) { // NOLI
         return true;
     }
 
-    if (!m_isFollowCallOnFnAddress)
-    {
+    if (!m_isFollowCallOnFnAddress) {
         Log::log("setting: Do NOT follow CALL on fnAddress", ErrorLevel::INFO);
-	    if (functionInsts.front().isCalling())
-	    {
+        if (functionInsts.front().isCalling()) {
             Log::log("First assembly instruction is CALL", ErrorLevel::INFO);
             return true;
-	    }
+        }
+    }
+
+    const auto& firstInst = functionInsts.front();
+
+    // Here we know that first instruction is call imm32.
+    // But we first need to check if it is a special case #215. If it is, then we ignore it.
+    if (getRoutineReturningSP(firstInst)) {
+        Log::log("First assembly instruction is CALL, but to a routine reading SP. Skipping.", ErrorLevel::INFO);
+        return true;
+    }
+
+    // Then we check for special case #217
+    if (isCallInlineReturningSP(firstInst)) {
+        Log::log("First assembly instruction is CALL, but to an inline routine reading SP. Skipping.", ErrorLevel::INFO);
+        return true;
     }
 
     // might be a mem type like jmp rax, not supported
-    if (!functionInsts.front().hasDisplacement()) {
+    if (!firstInst.hasDisplacement()) {
         Log::log("Branching instruction without displacement encountered", ErrorLevel::WARN);
         return false;
     }
 
-    uint64_t dest = functionInsts.front().getDestination();
+    const uint64_t dest = firstInst.getDestination();
     functionInsts = m_disasm.disassemble(dest, dest, dest + 100, *this);
     return followJmp(functionInsts, curDepth + 1); // recurse
 }
@@ -187,9 +200,9 @@ bool Detour::unHook() {
     MemoryProtector prot(m_fnAddress, calcInstsSz(m_originalInsts), ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
     ZydisDisassembler::writeEncoding(m_originalInsts, *this);
 
-    if (m_trampoline != NULL) {
+    if (m_trampoline) {
         delete[](uint8_t*) m_trampoline;
-        m_trampoline = NULL;
+        m_trampoline = 0;
     }
 
     // This code requires that m_userTrampVar is static or has global lifetime.
@@ -265,6 +278,44 @@ insts_t Detour::make_nops(uint64_t address, uint16_t size) const {
     }
 
     return nops;
+}
+
+std::optional<insts_t> Detour::getRoutineReturningSP(const Instruction& callInst) {
+    if (callInst.getMnemonic() != "call") {
+        return std::nullopt;
+    }
+
+    const uint64_t routineAddress = callInst.getRelativeDestination();
+
+    if ( // routine must not be const to enable automatic move
+        auto routine = m_disasm.disassemble(routineAddress, routineAddress, routineAddress + 4, *this);
+        routine.size() == 2 &&
+        routine[0].getMnemonic() == "mov" && routine[0].hasRegister() && routine[0].isReadingSP() &&
+        routine[1].getMnemonic() == "ret"
+    ) {
+        return routine;
+    }
+
+    return std::nullopt;
+}
+
+bool Detour::isCallInlineReturningSP(const Instruction& callInst) {
+    if (callInst.getMnemonic() != "call") {
+        return false;
+    }
+
+    if (callInst.getDisplacement().Relative != 0) {
+        return false;
+    }
+
+    const uint64_t nextAddress = callInst.getRelativeDestination();
+
+    const auto nextInst = m_disasm.disassemble(nextAddress, nextAddress, nextAddress + 1, *this);
+
+    return
+        nextInst.size() == 1 &&
+        nextInst[0].getMnemonic() == "pop" &&
+        nextInst[0].hasRegister();
 }
 
 }

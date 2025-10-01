@@ -40,7 +40,7 @@ PLH::insts_t PLH::ZydisDisassembler::disassemble(
 	insts_t insVec;
 //	m_branchMap.clear();
 
-	uint64_t size = end - start;
+	int64_t size = end - start;
 	assert(size > 0);
 	if (size <= 0) {
 		return insVec;
@@ -139,7 +139,13 @@ void PLH::ZydisDisassembler::setDisplacementFields(PLH::Instruction& inst, const
 			}
 			case ZYDIS_OPERAND_TYPE_UNUSED:
 				break;
-			case ZYDIS_OPERAND_TYPE_MEMORY: { // Relative to RIP/EIP
+			case ZYDIS_OPERAND_TYPE_MEMORY: {
+				if (i == 1 && operand->mem.base == ZYDIS_REGISTER_ESP) {
+					inst.setReadingSP(true);
+					break;
+				}
+
+				// Relative to RIP/EIP
 				inst.addOperandType(Instruction::OperandType::Displacement);
 
 				if (zydisInst->attributes & ZYDIS_ATTRIB_IS_RELATIVE) {

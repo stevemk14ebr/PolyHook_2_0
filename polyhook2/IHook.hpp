@@ -70,9 +70,23 @@ public:
 		m_debugSet = state;
 	}
 
+#ifdef PLH_DIAGNOSTICS
+	bool hasDiagnostic(const Diagnostic diagnostic) const {
+		return static_cast<bool>(m_diagnostics & diagnostic);
+	}
+
+	void setDiagnostic(const Diagnostic diagnostic) {
+		m_diagnostics = static_cast<uint32_t>(m_diagnostics | diagnostic);
+	}
+#endif
+
 protected:
 	bool m_debugSet;
 	bool m_hooked = false;
+
+#ifdef PLH_DIAGNOSTICS
+	uint32_t m_diagnostics;
+#endif
 };
 
 // TODO: Move to these to test utils
@@ -121,10 +135,10 @@ struct callback_type<Ret(CCFROM Class::*)(Args...), void> \
     using return_type = Ret; \
 };
 
-#ifndef _MSC_VER
-#define __cdecl __attribute__((__cdecl__))
-#define __fastcall __attribute__((__fastcall__))
-#define __stdcall __attribute__((__stdcall__))
+#ifndef POLYHOOK2_OS_WINDOWS
+#define __cdecl
+#define __fastcall
+#define __stdcall
 #endif
 
 #if defined(POLYHOOK2_ARCH_X86) && defined(POLYHOOK2_OS_WINDOWS)

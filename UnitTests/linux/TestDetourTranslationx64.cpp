@@ -23,10 +23,13 @@ PLH_TEST_DETOUR_CALLBACK(dlmopen, {
 TEST_CASE("Testing Detours with Translations", "[Translation][ADetour]") {
 	PLH::test::registerTestLogger();
 
+// dlmopen may or may not have instructions requiring translations.
+// Hence, this test was disabled. We need to construct reliable synthetic tests instead.
+#if 0
 	SECTION("dlmopen (INPLACE)") {
 		PLH::StackCanary canary;
 
-		const auto *resultBefore = dlmopen(LM_ID_BASE, LIBM_SO, RTLD_NOW);
+		const auto* handleBefore = dlmopen(LM_ID_BASE, LIBM_SO, RTLD_NOW);
 
 		PLH::x64Detour detour((uint64_t)dlmopen, (uint64_t)dlmopen_hooked, &dlmopen_trmp);
 		// Only INPLACE creates conditions for translation, since
@@ -36,11 +39,13 @@ TEST_CASE("Testing Detours with Translations", "[Translation][ADetour]") {
 		REQUIRE(detour.hook());
 
 		effects.PushEffect();
-		const auto *resultAfter = dlmopen(LM_ID_BASE, LIBM_SO, RTLD_NOW);
+		const auto* handleAfter = dlmopen(LM_ID_BASE, LIBM_SO, RTLD_NOW);
 
+		REQUIRE(detour.hasDiagnostic(PLH::Diagnostic::TranslatedInstructions));
 		REQUIRE(effects.PopEffect().didExecute());
-		REQUIRE(resultAfter == resultBefore);
+		REQUIRE(handleAfter == handleBefore);
 
 		REQUIRE(detour.unHook());
 	}
+#endif
 }

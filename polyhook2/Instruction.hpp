@@ -137,6 +137,10 @@ public:
 		return m_isRelative;
 	}
 
+    bool isReadingSP() const {
+	    return m_isReadingSP;
+	}
+
 	/**Check if the instruction is a type with valid displacement**/
 	bool hasDisplacement() const {
 		return m_hasDisplacement;
@@ -178,10 +182,15 @@ public:
 		return m_mnemonic + " " + m_opStr;
 	}
 
-    /** Displacement size in bytes **/
-    void setDisplacementSize(uint8_t size){
-        m_dispSize = size;
-    }
+	/**Get parameters**/
+	const std::string& getOperands() const {
+		return m_opStr;
+	}
+
+	/** Displacement size in bytes **/
+	void setDisplacementSize(uint8_t size) {
+		m_dispSize = size;
+	}
 
 	size_t getDispSize() const {
 		return m_dispSize;
@@ -219,6 +228,10 @@ public:
 
 		assert(((uint32_t)getDisplacementOffset()) + dispSz <= m_bytes.size() && dispSz <= sizeof(m_displacement.Absolute));
 		std::memcpy(&m_bytes[getDisplacementOffset()], &m_displacement.Absolute, dispSz);
+	}
+
+	void setReadingSP(const bool isReadingSP) {
+		m_isReadingSP = isReadingSP;
 	}
 
 	long getUID() const {
@@ -326,6 +339,7 @@ private:
 	bool          m_isCalling;       // Does this instruction is of a CALL type.
 	bool		  m_isBranching;     // Does this instruction jmp/call or otherwise change control flow
 	bool          m_isRelative;      // Does the displacement need to be added to the address to retrieve where it points too?
+	bool          m_isReadingSP;    // Does this instruction read *SP in its second operand?
 	bool          m_hasDisplacement; // Does this instruction have the displacement fields filled (only rip/eip relative types are filled)
     bool          m_hasImmediate;    // Does this instruction have the immediate field filled?
 	Displacement  m_displacement;    // Where an instruction points too (valid for jmp + call types, and RIP relative MEM types)
@@ -337,7 +351,8 @@ private:
 	uint8_t       m_dispSize;        // Size of the displacement, in bytes
 
 	std::vector<uint8_t> m_bytes;    // All the raw bytes of this instruction
-	std::vector<OperandType> m_operands; // Types of all instruction operands
+	std::vector<OperandType>
+	m_operands; // Types of all instruction operands
 	std::string          m_mnemonic;
 	std::string          m_opStr;
 

@@ -263,7 +263,7 @@ TEMPLATE_TEST_CASE("Test Disassemblers x86 FF25", "[ZydisDisassembler]", PLH::Zy
 	auto Instructions = disasm.disassemble(
 		(uint64_t)x86ASM_FF25.data(),
 		(uint64_t)x86ASM_FF25.data(),
-		(uint64_t)(x86ASM_FF25.data() + address_length),
+		(uint64_t)(jmp_address_ptr + address_length),
 		PLH::MemAccessor()
 	);
 

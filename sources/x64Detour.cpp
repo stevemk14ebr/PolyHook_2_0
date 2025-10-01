@@ -2,10 +2,11 @@
 // Created by steve on 7/5/17.
 //
 #include <algorithm>
+#include <format>
 #include <functional>
+#include <iterator>
 #include <set>
 #include <sstream>
-#include <iterator>
 
 #include <asmtk/asmtk.h>
 
@@ -13,7 +14,7 @@
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/Misc.hpp"
 
-#include <format>
+#include "./InternalUtils.hpp"
 
 namespace PLH {
 
@@ -726,7 +727,7 @@ Instruction makeRelJmpWithAbsDest(const uint64_t address, const uint64_t abs_des
 
 bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
     assert(!prologue.empty());
-    assert(m_trampoline == NULL);
+    assert(!m_trampoline);
 
     const uint64_t prolStart = prologue.front().getAddress();
     const uint16_t prolSz = calcInstsSz(prologue);
@@ -754,7 +755,7 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 
     // allocate new trampoline before deleting old to increase odds of new mem address
     auto tmpTrampoline = (uint64_t) new uint8_t[m_trampolineSz];
-    if (m_trampoline != NULL) {
+    if (m_trampoline) {
         delete[] (uint8_t*) m_trampoline;
     }
 
@@ -770,6 +771,7 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
     }
     if(!instsNeedingTranslation.empty()) {
         Log::log("Instructions needing translation:\n" + instsToStr(instsNeedingTranslation) + "\n", ErrorLevel::INFO);
+        PLH_SET_DIAGNOSTIC(Diagnostic::TranslatedInstructions);
     }
 
     Log::log("Trampoline address: " + int_to_hex(m_trampoline), ErrorLevel::INFO);

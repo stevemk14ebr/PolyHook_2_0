@@ -14,6 +14,8 @@ namespace {
 
 EffectTracker effects;
 
+constexpr uint8_t JUMP_SIZE = 5;
+
 }
 
 NOINLINE int __cdecl hookMe1() {
@@ -97,6 +99,31 @@ NOINLINE void PH_ATTR_NAKED hookMeLoop() {
 		"ret;");
 }
 
+extern "C" NOINLINE uintptr_t PH_ATTR_NAKED returnESP() {
+	__asm__ __volatile__ (
+		"movl (%esp), %eax\n"
+		"ret"
+	);
+}
+
+NOINLINE uintptr_t PH_ATTR_NAKED readESP() {
+	__asm__ __volatile__ (
+		"call returnESP\n"
+		"ret"
+	);
+}
+PLH_TEST_DETOUR_CALLBACK(readESP);
+
+NOINLINE uintptr_t PH_ATTR_NAKED inlineReadESP() {
+	__asm__ __volatile__ (
+		"call 0f\n"
+		"0: pop %%eax\n"
+		"ret"
+		::: "eax"
+	);
+}
+PLH_TEST_DETOUR_CALLBACK(inlineReadESP);
+
 PLH_TEST_DETOUR_CALLBACK(hookMeLoop);
 
 // PLH_TEST_DETOUR_CALLBACK doesn't support variadic functions yet.
@@ -114,7 +141,7 @@ NOINLINE int h_hookPrintf(const char *format, ...) {
 	return PLH::FnCast(hookPrintfTramp, &printf)("INTERCEPTED YO:%s", message.c_str());
 }
 
-// must specify specific overload of std::pow by assiging to pFn of type
+// must specify specific overload of std::pow by assigning to pFn of type
 const auto &pow_double = std::pow<double, double>;
 PLH_TEST_DETOUR_CALLBACK(pow_double);
 
@@ -186,6 +213,35 @@ TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
 		REQUIRE(detour.unHook() == true);
 	}
 
+	SECTION("Test #215 (call to routine returning ESP)") {
+		PLH::x86Detour PLH_TEST_DETOUR(readESP);
+		REQUIRE(detour.hook() == true);
+
+		effects.PushEffect();
+		const auto esp = readESP();
+		REQUIRE(esp == (uintptr_t)readESP + JUMP_SIZE);
+		REQUIRE(detour.hasDiagnostic(PLH::Diagnostic::FixedCallToRoutineReadingSP));
+		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
+	}
+
+	SECTION("Test #217 (inline call to read ESP)") {
+		PLH::x86Detour PLH_TEST_DETOUR(inlineReadESP);
+		REQUIRE(detour.hook() == true);
+
+		effects.PushEffect();
+		const auto esp = inlineReadESP();
+		REQUIRE(esp == (uintptr_t)inlineReadESP + JUMP_SIZE);
+		REQUIRE(detour.hasDiagnostic(PLH::Diagnostic::FixedInlineCallToReadSP));
+		REQUIRE(effects.PopEffect().didExecute());
+		REQUIRE(detour.unHook() == true);
+	}
+
+#ifndef NDEBUG
+	// This test is disabled in Release builds due to aggressive optimization of compilers.
+	// Specifically with clang on Linux the std::pow function is always inlined.
+	// Hence, the hooked function is never called.
+
 	// it's a pun...
 	// ^ what pun? nothing found on the web >.<
 	SECTION("hook pow") {
@@ -199,6 +255,7 @@ TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
 		detour.unHook();
 		REQUIRE(effects.PopEffect().didExecute());
 	}
+#endif
 
 	SECTION("hook malloc") {
 		PLH::x86Detour PLH_TEST_DETOUR(malloc);
@@ -216,8 +273,6 @@ TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
 		REQUIRE(detour.hook() == true);
 	}
 
-	// TODO: Fix this. when making jmpToProl, relative displacement can only encode offset up to 0x7FFFFFFF
-	//       But during tests, distance between prologue and trampoline was larger than that, leading to incorrect jump.
 	SECTION("hook printf") {
 		PLH::x86Detour detour((uint64_t)&printf, (uint64_t)h_hookPrintf, &hookPrintfTramp);
 		REQUIRE(detour.hook() == true);
