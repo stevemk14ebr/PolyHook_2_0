@@ -70,9 +70,23 @@ public:
 		m_debugSet = state;
 	}
 
+#ifdef PLH_DIAGNOSTICS
+	bool hasDiagnostic(const Diagnostic diagnostic) const {
+		return static_cast<bool>(m_diagnostics & diagnostic);
+	}
+
+	void setDiagnostic(const Diagnostic diagnostic) {
+		m_diagnostics = static_cast<uint32_t>(m_diagnostics | diagnostic);
+	}
+#endif
+
 protected:
 	bool m_debugSet;
 	bool m_hooked = false;
+
+#ifdef PLH_DIAGNOSTICS
+	uint32_t m_diagnostics;
+#endif
 };
 
 // TODO: Move to these to test utils

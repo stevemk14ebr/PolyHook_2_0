@@ -220,6 +220,7 @@ TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
 		effects.PushEffect();
 		const auto esp = readESP();
 		REQUIRE(esp == (uintptr_t)readESP + JUMP_SIZE);
+		REQUIRE(detour.hasDiagnostic(PLH::Diagnostic::FixedCallToRoutineReadingSP));
 		REQUIRE(effects.PopEffect().didExecute());
 		REQUIRE(detour.unHook() == true);
 	}
@@ -231,11 +232,10 @@ TEST_CASE("Testing x86 detours", "[x86Detour][ADetour]") {
 		effects.PushEffect();
 		const auto esp = inlineReadESP();
 		REQUIRE(esp == (uintptr_t)inlineReadESP + JUMP_SIZE);
+		REQUIRE(detour.hasDiagnostic(PLH::Diagnostic::FixedInlineCallToReadSP));
 		REQUIRE(effects.PopEffect().didExecute());
 		REQUIRE(detour.unHook() == true);
 	}
-
-	// TODO: Test idioms #215 and #217 explicitly
 
 #ifndef NDEBUG
 	// This test is disabled in Release builds due to aggressive optimization of compilers.

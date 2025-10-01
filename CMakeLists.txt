@@ -389,6 +389,7 @@ endif()
 
 #Tests
 if(NOT POLYHOOK_BUILD_DLL)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE PLH_DIAGNOSTICS)
 	target_sources(${PROJECT_NAME} PRIVATE
 		${PROJECT_SOURCE_DIR}/MainTests.cpp
 		${PROJECT_SOURCE_DIR}/UnitTests/${POLYHOOK_OS}/TestDisassembler.cpp

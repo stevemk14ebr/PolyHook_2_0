@@ -2,10 +2,11 @@
 // Created by steve on 7/5/17.
 //
 #include <algorithm>
+#include <format>
 #include <functional>
+#include <iterator>
 #include <set>
 #include <sstream>
-#include <iterator>
 
 #include <asmtk/asmtk.h>
 
@@ -13,7 +14,7 @@
 #include "polyhook2/MemProtector.hpp"
 #include "polyhook2/Misc.hpp"
 
-#include <format>
+#include "./InternalUtils.hpp"
 
 namespace PLH {
 
@@ -770,6 +771,7 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
     }
     if(!instsNeedingTranslation.empty()) {
         Log::log("Instructions needing translation:\n" + instsToStr(instsNeedingTranslation) + "\n", ErrorLevel::INFO);
+        PLH_SET_DIAGNOSTIC(Diagnostic::TranslatedInstructions);
     }
 
     Log::log("Trampoline address: " + int_to_hex(m_trampoline), ErrorLevel::INFO);

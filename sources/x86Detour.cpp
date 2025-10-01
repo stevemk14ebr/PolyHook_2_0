@@ -8,6 +8,8 @@
 
 #include "polyhook2/Detour/x86Detour.hpp"
 
+#include "./InternalUtils.hpp"
+
 namespace PLH {
 
 x86Detour::x86Detour(const uint64_t fnAddress, const uint64_t fnCallback, uint64_t* userTrampVar)
@@ -103,9 +105,11 @@ void x86Detour::fixSpecialCases(insts_t& prologue) {
         if (const auto routine = getRoutineReturningSP(instruction)) {
             // Fix for #215 https://github.com/stevemk14ebr/PolyHook_2_0/issues/215
             fixCallToRoutineReturningSP(instruction, *routine);
+            PLH_SET_DIAGNOSTIC(Diagnostic::FixedCallToRoutineReadingSP);
         } else if (isInlineCallToReadSP(instruction)) {
             // Fix for #217 https://github.com/stevemk14ebr/PolyHook_2_0/issues/217
             fixInlineCallToReadSP(instruction);
+            PLH_SET_DIAGNOSTIC(Diagnostic::FixedInlineCallToReadSP);
         }
     }
 }
