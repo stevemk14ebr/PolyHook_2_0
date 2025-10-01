@@ -22,51 +22,90 @@ uint8_t getJmpSize() {
     return 5;
 }
 
+void x86Detour::fixCallToRoutineReturningSP(Instruction& callInst, const insts_t& routine) {
+    Log::log(
+        "Fixing special case [call to routine returning ESP]:\n" + instsToStr(std::vector{callInst}),
+        ErrorLevel::INFO
+    );
+
+    const auto destReg = routine[0].getOperands().substr(0, 3);
+    const uint32_t originalAddress = callInst.getAddress();
+    const uint32_t originalNextAddress = originalAddress + callInst.size();
+
+    // AsmTK parses strings for AsmJit, which generates the binary code.
+    asmjit::CodeHolder code;
+    asmjit::JitRuntime asmjitRt;
+    code.init(asmjitRt.environment());
+
+    asmjit::x86::Assembler assembler(&code);
+    asmtk::AsmParser parser(&assembler);
+
+    // Parse the instructions via AsmTK
+    if (const auto error = parser.parse(std::format("mov {}, {:#x}", destReg, originalNextAddress).c_str())) {
+        Log::log(std::format("AsmTK error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+        return;
+    }
+
+    // Generate the binary code via AsmJit
+    uint64_t movAddress = 0;
+    if (const auto error = asmjitRt.add(&movAddress, &code)) {
+        Log::log(std::format("AsmJIT error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+        return;
+    }
+
+    // Replace `call rel32` instruction with `mov reg, imm32`. Both are 5 bytes long.
+
+    callInst = m_disasm.disassemble(movAddress, movAddress, movAddress + callInst.size(), *this)[0];
+    callInst.setAddress(originalAddress);
+}
+
+void x86Detour::fixInlineCallToReadSP(Instruction& callInst) {
+    Log::log(
+        "Fixing special case [inline call to to read ESP]:\n" + instsToStr(std::vector{callInst}),
+        ErrorLevel::INFO
+    );
+
+    const uint32_t originalAddress = callInst.getAddress();
+    const uint32_t originalNextAddress = originalAddress + callInst.size();
+
+    // AsmTK parses strings for AsmJit, which generates the binary code.
+    asmjit::CodeHolder code;
+    asmjit::JitRuntime asmjitRt;
+    code.init(asmjitRt.environment());
+
+    asmjit::x86::Assembler assembler(&code);
+    asmtk::AsmParser parser(&assembler);
+
+    // Parse the instructions via AsmTK
+    if (const auto error = parser.parse(std::format("push {:#x}", originalNextAddress).c_str())) {
+        Log::log(std::format("AsmTK error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+        return;
+    }
+
+    // Generate the binary code via AsmJit
+    uint64_t pushAddress = 0;
+    if (const auto error = asmjitRt.add(&pushAddress, &code)) {
+        Log::log(std::format("AsmJIT error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
+        return;
+    }
+
+    // Replace `call rel32` instruction with `push imm32`. Both are 5 bytes long.
+
+    callInst = m_disasm.disassemble(pushAddress, pushAddress, pushAddress + callInst.size(), *this)[0];
+    callInst.setAddress(originalAddress);
+}
+
 /**
  * @param prologue Must be before any relocations/translations were made
  */
 void x86Detour::fixSpecialCases(insts_t& prologue) {
     for (auto& instruction: prologue) {
         if (const auto routine = getRoutineReturningSP(instruction)) {
-            Log::log(
-                "Fixing special case [call to routine returning ESP]:\n" + instsToStr(std::vector{instruction}),
-                ErrorLevel::INFO
-            );
-
-            // Fix for https://github.com/stevemk14ebr/PolyHook_2_0/issues/215
-            // Example routine(eax could be any register):
-            // 8B 04 24 | mov eax, dword ptr [esp]
-            // C3       | ret
-
-            const auto destReg = routine->at(0).getOperands().substr(0, 3);
-            const uint32_t originalAddress = instruction.getAddress();
-            const uint32_t originalNextAddress = originalAddress + instruction.size();
-
-            // AsmTK parses strings for AsmJit, which generates the binary code.
-            asmjit::CodeHolder code;
-            asmjit::JitRuntime asmjitRt;
-            code.init(asmjitRt.environment());
-
-            asmjit::x86::Assembler assembler(&code);
-            asmtk::AsmParser parser(&assembler);
-
-            // Parse the instructions via AsmTK
-            if (const auto error = parser.parse(std::format("mov {}, {:#x}", destReg, originalNextAddress).c_str())) {
-                Log::log(std::format("AsmTK error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
-                continue;
-            }
-
-            // Generate the binary code via AsmJit
-            uint64_t movAddress = 0;
-            if (const auto error = asmjitRt.add(&movAddress, &code)) {
-                Log::log(std::format("AsmJIT error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
-                continue;
-            }
-
-            // Replace `call rel32` instruction with `mov reg, imm32`
-
-            instruction = m_disasm.disassemble(movAddress, movAddress, movAddress + instruction.size(), *this)[0];
-            instruction.setAddress(originalAddress);
+            // Fix for #215 https://github.com/stevemk14ebr/PolyHook_2_0/issues/215
+            fixCallToRoutineReturningSP(instruction, *routine);
+        } else if (isInlineCallToReadSP(instruction)) {
+            // Fix for #217 https://github.com/stevemk14ebr/PolyHook_2_0/issues/217
+            fixInlineCallToReadSP(instruction);
         }
     }
 }

@@ -69,12 +69,25 @@ public:
     /**
      * @return instructions of a routine if the provided instruction is a call instruction that calls a routine
      * which returns an address stored SP register, which refers to the address of the next instruction following
-     * the call instruction. An example routine looks like this (eax could be any general-purpose register):
-     *
+     * the call instruction. This is used to fix issue #215.
+     * An example routine looks like this (eax could be any general-purpose register):
+     * <code>
      * 8B 04 24 | mov eax, dword ptr [esp]
      * C3       | ret
+     * </code>
      */
     std::optional<insts_t> getRoutineReturningSP(const Instruction& callInst);
+
+    /**
+     * @return true if the provided instruction is a call instruction which has next address being its destination
+     * and which is followed by a `pop reg` instruction. This is used to fix issue #217.
+     * An example inline routine looks like this (ebx could be any general-purpose register):
+     * <code>
+     * 0x59d57b24 | e8 00 00 00 00 | call 0x59D57B29 -> 59d57b29
+     * 0x59d57b29 | 5b             | pop ebx
+     * </code>
+     */
+    bool isInlineCallToReadSP(const Instruction& callInst);
 
 protected:
     uint64_t m_fnAddress;

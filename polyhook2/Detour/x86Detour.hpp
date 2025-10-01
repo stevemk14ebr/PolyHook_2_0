@@ -24,6 +24,8 @@ public:
 
 protected:
     void fixSpecialCases(insts_t& prologue);
+    void fixCallToRoutineReturningSP(Instruction& callInst, const insts_t& routine);
+    void fixInlineCallToReadSP(Instruction& callInst);
 
     bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
 };

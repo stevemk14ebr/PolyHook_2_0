@@ -69,10 +69,10 @@ bool Detour::followJmp(insts_t& functionInsts, const uint8_t curDepth) { // NOLI
 
     if (!m_isFollowCallOnFnAddress) {
         Log::log("setting: Do NOT follow CALL on fnAddress", ErrorLevel::INFO);
-	    if (functionInsts.front().isCalling()) {
+        if (functionInsts.front().isCalling()) {
             Log::log("First assembly instruction is CALL", ErrorLevel::INFO);
             return true;
-	    }
+        }
     }
 
     const auto& firstInst = functionInsts.front();
@@ -80,7 +80,13 @@ bool Detour::followJmp(insts_t& functionInsts, const uint8_t curDepth) { // NOLI
     // Here we know that first instruction is call imm32.
     // But we first need to check if it is a special case #215. If it is, then we ignore it.
     if (getRoutineReturningSP(firstInst)) {
-        Log::log("First assembly instruction is CALL, but for to a routine reading SP. Skipping.", ErrorLevel::INFO);
+        Log::log("First assembly instruction is CALL, but to a routine reading SP. Skipping.", ErrorLevel::INFO);
+        return true;
+    }
+
+    // Then we check for special case #217
+    if (isInlineCallToReadSP(firstInst)) {
+        Log::log("First assembly instruction is CALL, but to an inline routine reading SP. Skipping.", ErrorLevel::INFO);
         return true;
     }
 
@@ -280,9 +286,9 @@ std::optional<insts_t> Detour::getRoutineReturningSP(const Instruction& callInst
     }
 
     const uint64_t routineAddress = callInst.getRelativeDestination();
-    const insts_t routine = m_disasm.disassemble(routineAddress, routineAddress, routineAddress + 4, *this);
 
-    if (
+    if ( // routine must not be const to enable automatic move
+        auto routine = m_disasm.disassemble(routineAddress, routineAddress, routineAddress + 4, *this);
         routine.size() == 2 &&
         routine[0].getMnemonic() == "mov" && routine[0].hasRegister() && routine[0].isReadingSP() &&
         routine[1].getMnemonic() == "ret"
@@ -291,6 +297,25 @@ std::optional<insts_t> Detour::getRoutineReturningSP(const Instruction& callInst
     }
 
     return std::nullopt;
+}
+
+bool Detour::isInlineCallToReadSP(const Instruction& callInst) {
+    if (callInst.getMnemonic() != "call") {
+        return false;
+    }
+
+    if (callInst.getDisplacement().Relative != 0) {
+        return false;
+    }
+
+    const uint64_t nextAddress = callInst.getRelativeDestination();
+
+    const auto nextInst = m_disasm.disassemble(nextAddress, nextAddress, nextAddress + 1, *this);
+
+    return
+        nextInst.size() == 1 &&
+        nextInst[0].getMnemonic() == "pop" &&
+        nextInst[0].hasRegister();
 }
 
 }
