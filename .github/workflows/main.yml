@@ -29,11 +29,11 @@ jobs:
           # Windows
           - os: windows-latest
             build_type: Debug
-            test_bin_path: Debug\\PolyHook_2.exe
+            test_bin_path: Debug/PolyHook_2.exe
 
           - os: windows-latest
             build_type: Release
-            test_bin_path: Release\\PolyHook_2.exe
+            test_bin_path: Release/PolyHook_2.exe
 
           - os: windows-latest
             bitness: 32
@@ -104,7 +104,9 @@ jobs:
         run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
 
       - name: Configure CMake for test
-        run: cmake -DPOLYHOOK_BUILD_DLL="OFF"
+        run: >
+          cmake -B ${{ env.BUILD_DIR }}
+          -DPOLYHOOK_BUILD_DLL="OFF"
 
       - name: Build tests
         id: build-tests
