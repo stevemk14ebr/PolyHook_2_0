@@ -70,7 +70,7 @@ unsigned char hookMe5[] = {
 	0x48, 0xFF, 0xA0, 0x20, 0x01, 0x00, 0x00 // jmp qword ptr[rax+120h]
 };
 
-uint64_t nullTramp = NULL;
+uint64_t nullTramp = 0;
 NOINLINE void h_nullstub() {
 	PLH::StackCanary canary;
 	PLH_STOP_OPTIMIZATIONS();
