@@ -23,6 +23,9 @@ PLH_TEST_DETOUR_CALLBACK(dlmopen, {
 TEST_CASE("Testing Detours with Translations", "[Translation][ADetour]") {
 	PLH::test::registerTestLogger();
 
+// dlmopen may or may not have instructions requiring translations.
+// Hence, this test was disabled. We need to construct reliable synthetic tests instead.
+#if 0
 	SECTION("dlmopen (INPLACE)") {
 		PLH::StackCanary canary;
 
@@ -44,4 +47,5 @@ TEST_CASE("Testing Detours with Translations", "[Translation][ADetour]") {
 
 		REQUIRE(detour.unHook());
 	}
+#endif
 }
