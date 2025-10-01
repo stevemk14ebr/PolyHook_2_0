@@ -227,7 +227,7 @@ bool x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
             return false;
         }
 
-        if (m_trampoline != NULL) {
+        if (m_trampoline) {
             delete[](unsigned char*) m_trampoline;
             neededEntryCount = (uint8_t) instsNeedingEntry.size();
         }

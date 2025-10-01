@@ -727,7 +727,7 @@ Instruction makeRelJmpWithAbsDest(const uint64_t address, const uint64_t abs_des
 
 bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
     assert(!prologue.empty());
-    assert(m_trampoline == NULL);
+    assert(!m_trampoline);
 
     const uint64_t prolStart = prologue.front().getAddress();
     const uint16_t prolSz = calcInstsSz(prologue);
@@ -755,7 +755,7 @@ bool x64Detour::makeTrampoline(insts_t& prologue, insts_t& outJmpTable) {
 
     // allocate new trampoline before deleting old to increase odds of new mem address
     auto tmpTrampoline = (uint64_t) new uint8_t[m_trampolineSz];
-    if (m_trampoline != NULL) {
+    if (m_trampoline) {
         delete[] (uint8_t*) m_trampoline;
     }
 

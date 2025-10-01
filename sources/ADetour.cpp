@@ -200,9 +200,9 @@ bool Detour::unHook() {
     MemoryProtector prot(m_fnAddress, calcInstsSz(m_originalInsts), ProtFlag::R | ProtFlag::W | ProtFlag::X, *this);
     ZydisDisassembler::writeEncoding(m_originalInsts, *this);
 
-    if (m_trampoline != NULL) {
+    if (m_trampoline) {
         delete[](uint8_t*) m_trampoline;
-        m_trampoline = NULL;
+        m_trampoline = 0;
     }
 
     // This code requires that m_userTrampVar is static or has global lifetime.
