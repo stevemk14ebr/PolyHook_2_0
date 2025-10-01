@@ -85,7 +85,7 @@ bool Detour::followJmp(insts_t& functionInsts, const uint8_t curDepth) { // NOLI
     }
 
     // Then we check for special case #217
-    if (isInlineCallToReadSP(firstInst)) {
+    if (isCallInlineReturningSP(firstInst)) {
         Log::log("First assembly instruction is CALL, but to an inline routine reading SP. Skipping.", ErrorLevel::INFO);
         return true;
     }
@@ -299,7 +299,7 @@ std::optional<insts_t> Detour::getRoutineReturningSP(const Instruction& callInst
     return std::nullopt;
 }
 
-bool Detour::isInlineCallToReadSP(const Instruction& callInst) {
+bool Detour::isCallInlineReturningSP(const Instruction& callInst) {
     if (callInst.getMnemonic() != "call") {
         return false;
     }

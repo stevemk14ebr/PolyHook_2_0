@@ -23,9 +23,9 @@ public:
     Mode getArchType() const override;
 
 protected:
-    void fixSpecialCases(insts_t& prologue);
-    void fixCallToRoutineReturningSP(Instruction& callInst, const insts_t& routine);
-    void fixInlineCallToReadSP(Instruction& callInst);
+    bool fixSpecialCases(insts_t& prologue);
+    bool fixCallRoutineReturningSP(Instruction& callInst, const insts_t& routine);
+    bool fixCallInlineReturningSP(Instruction& callInst);
 
     bool makeTrampoline(insts_t& prologue, insts_t& trampolineOut);
 };

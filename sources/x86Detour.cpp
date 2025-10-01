@@ -24,9 +24,9 @@ uint8_t getJmpSize() {
     return 5;
 }
 
-void x86Detour::fixCallToRoutineReturningSP(Instruction& callInst, const insts_t& routine) {
+bool x86Detour::fixCallRoutineReturningSP(Instruction& callInst, const insts_t& routine) {
     Log::log(
-        "Fixing special case [call to routine returning ESP]:\n" + instsToStr(std::vector{callInst}),
+        "Fixing special case [call routine returning ESP]:\n" + instsToStr(std::vector{callInst}),
         ErrorLevel::INFO
     );
 
@@ -45,25 +45,27 @@ void x86Detour::fixCallToRoutineReturningSP(Instruction& callInst, const insts_t
     // Parse the instructions via AsmTK
     if (const auto error = parser.parse(std::format("mov {}, {:#x}", destReg, originalNextAddress).c_str())) {
         Log::log(std::format("AsmTK error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
-        return;
+        return false;
     }
 
     // Generate the binary code via AsmJit
     uint64_t movAddress = 0;
     if (const auto error = asmjitRt.add(&movAddress, &code)) {
         Log::log(std::format("AsmJIT error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
-        return;
+        return false;
     }
 
     // Replace `call rel32` instruction with `mov reg, imm32`. Both are 5 bytes long.
 
     callInst = m_disasm.disassemble(movAddress, movAddress, movAddress + callInst.size(), *this)[0];
     callInst.setAddress(originalAddress);
+
+    return true;
 }
 
-void x86Detour::fixInlineCallToReadSP(Instruction& callInst) {
+bool x86Detour::fixCallInlineReturningSP(Instruction& callInst) {
     Log::log(
-        "Fixing special case [inline call to to read ESP]:\n" + instsToStr(std::vector{callInst}),
+        "Fixing special case [call inline returning ESP]:\n" + instsToStr(std::vector{callInst}),
         ErrorLevel::INFO
     );
 
@@ -81,37 +83,45 @@ void x86Detour::fixInlineCallToReadSP(Instruction& callInst) {
     // Parse the instructions via AsmTK
     if (const auto error = parser.parse(std::format("push {:#x}", originalNextAddress).c_str())) {
         Log::log(std::format("AsmTK error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
-        return;
+        return false;
     }
 
     // Generate the binary code via AsmJit
     uint64_t pushAddress = 0;
     if (const auto error = asmjitRt.add(&pushAddress, &code)) {
         Log::log(std::format("AsmJIT error: {}", asmjit::DebugUtils::errorAsString(error)), ErrorLevel::SEV);
-        return;
+        return false;
     }
 
     // Replace `call rel32` instruction with `push imm32`. Both are 5 bytes long.
 
     callInst = m_disasm.disassemble(pushAddress, pushAddress, pushAddress + callInst.size(), *this)[0];
     callInst.setAddress(originalAddress);
+
+    return true;
 }
 
 /**
  * @param prologue Must be before any relocations/translations were made
  */
-void x86Detour::fixSpecialCases(insts_t& prologue) {
+bool x86Detour::fixSpecialCases(insts_t& prologue) {
     for (auto& instruction: prologue) {
         if (const auto routine = getRoutineReturningSP(instruction)) {
             // Fix for #215 https://github.com/stevemk14ebr/PolyHook_2_0/issues/215
-            fixCallToRoutineReturningSP(instruction, *routine);
+            if (!fixCallRoutineReturningSP(instruction, *routine)) {
+                return false;
+            }
             PLH_SET_DIAGNOSTIC(Diagnostic::FixedCallToRoutineReadingSP);
-        } else if (isInlineCallToReadSP(instruction)) {
+        } else if (isCallInlineReturningSP(instruction)) {
             // Fix for #217 https://github.com/stevemk14ebr/PolyHook_2_0/issues/217
-            fixInlineCallToReadSP(instruction);
+            if (!fixCallInlineReturningSP(instruction)) {
+                return false;
+            }
             PLH_SET_DIAGNOSTIC(Diagnostic::FixedInlineCallToReadSP);
         }
     }
+
+    return true;
 }
 
 bool x86Detour::hook() {
@@ -191,7 +201,9 @@ bool x86Detour::hook() {
 bool x86Detour::makeTrampoline(insts_t& prologue, insts_t& trampolineOut) {
     assert(!prologue.empty());
 
-    fixSpecialCases(prologue);
+    if (!fixSpecialCases(prologue)) {
+        return false;
+    }
 
     const uint64_t prolStart = prologue.front().getAddress();
     const uint16_t prolSz = calcInstsSz(prologue);

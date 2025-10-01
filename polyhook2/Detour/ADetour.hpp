@@ -87,7 +87,7 @@ public:
      * 0x59d57b29 | 5b             | pop ebx
      * </code>
      */
-    bool isInlineCallToReadSP(const Instruction& callInst);
+    bool isCallInlineReturningSP(const Instruction& callInst);
 
 protected:
     uint64_t m_fnAddress;
