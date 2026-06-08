@@ -18,6 +18,13 @@ PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redire
 	, m_userOrigMap(userOrigMap)
 {}
 
+// Platform prefix sizes (in pointer-width units)
+#if defined(POLYHOOK2_OS_WINDOWS)
+	static constexpr size_t VTABLE_PREFIX_ENTRIES = 1;  // RTTI Complete Object Locator
+#else
+	static constexpr size_t VTABLE_PREFIX_ENTRIES = 2;  // offset-to-top + type_info*
+#endif
+
 bool PLH::VTableSwapHook::hook() {
 	assert(m_userOrigMap != nullptr);
 	assert(!m_hooked);
@@ -36,10 +43,16 @@ bool PLH::VTableSwapHook::hook() {
 		return false;
 	}
 
-	m_newVtable.reset(new uintptr_t[m_vFuncCount]);
+	// +PREFIX_ENTRIES to include RTTI data before the function pointers
+	const size_t totalEntries = m_vFuncCount + VTABLE_PREFIX_ENTRIES;
+	m_newVtable.reset(new uintptr_t[totalEntries]);
 
-	// deep copy orig vtable into new
-	memcpy(m_newVtable.get(), m_origVtable, sizeof(uintptr_t) * m_vFuncCount);
+	// Copy including the RTTI prefix
+	uintptr_t* srcBase = m_origVtable - VTABLE_PREFIX_ENTRIES;
+	memcpy(m_newVtable.get(), srcBase, sizeof(uintptr_t) * totalEntries);
+
+	// The vtable pointer the class stores must point PAST the prefix
+	uintptr_t* newVtableStart = m_newVtable.get() + VTABLE_PREFIX_ENTRIES;
 
 	for (const auto& p : m_redirectMap) {
 		assert(p.first < m_vFuncCount);
@@ -51,11 +64,11 @@ bool PLH::VTableSwapHook::hook() {
 		}
 
 		// redirect ptr at VTable[i]
-		(*m_userOrigMap)[p.first] = (uint64_t)m_newVtable[p.first];
-		m_newVtable[p.first] = (uintptr_t)p.second;
+		(*m_userOrigMap)[p.first] = (uint64_t)newVtableStart[p.first];
+		newVtableStart[p.first] = (uintptr_t)p.second;
 	}
 
-	*(uint64_t**)m_class = (uint64_t*)m_newVtable.get();
+	*(uint64_t**)m_class = (uint64_t*)newVtableStart;
 	m_hooked = true;
 	Log::log("vtable hooked", ErrorLevel::INFO);
 	return true;
