@@ -19,10 +19,10 @@ PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redire
 {}
 
 // Platform prefix sizes (in pointer-width units)
-#if defined(POLYHOOK2_OS_WINDOWS)
-	static constexpr size_t VTABLE_PREFIX_ENTRIES = 1;  // RTTI Complete Object Locator
+#if defined(_MSC_VER)
+	static constexpr size_t VTABLE_PREFIX_ENTRIES = 1;  // RTTI Complete Object Locator (MSVC ABI)
 #else
-	static constexpr size_t VTABLE_PREFIX_ENTRIES = 2;  // offset-to-top + type_info*
+	static constexpr size_t VTABLE_PREFIX_ENTRIES = 2;  // offset-to-top + type_info* (Itanium ABI)
 #endif
 
 bool PLH::VTableSwapHook::hook() {
