@@ -1,19 +1,20 @@
 #include "polyhook2/Virtuals/VTableSwapHook.hpp"
 #include "polyhook2/ErrorLog.hpp"
 
-PLH::VTableSwapHook::VTableSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap)
-	: VTableSwapHook((uint64_t)Class, redirectMap, userOrigMap)
+PLH::VTableSwapHook::VTableSwapHook(const char* Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap, VTableRTTIMode rttiMode)
+	: VTableSwapHook((uint64_t)Class, redirectMap, userOrigMap, rttiMode)
 {}
 
-PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, VFuncMap* userOrigMap)
-	: VTableSwapHook(Class, PLH::VFuncMap{ }, userOrigMap)
+PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, VFuncMap* userOrigMap, VTableRTTIMode rttiMode)
+	: VTableSwapHook(Class, PLH::VFuncMap{ }, userOrigMap, rttiMode)
 {}
 
-PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap)
+PLH::VTableSwapHook::VTableSwapHook(const uint64_t Class, const VFuncMap& redirectMap, VFuncMap* userOrigMap, VTableRTTIMode rttiMode)
 	: m_newVtable(nullptr)
 	, m_origVtable(nullptr)
 	, m_class(Class)
 	, m_vFuncCount(0)
+	, m_rttiMode(rttiMode)
 	, m_redirectMap(redirectMap)
 	, m_userOrigMap(userOrigMap)
 {}
@@ -36,10 +37,18 @@ bool PLH::VTableSwapHook::hook() {
 		return false;
 	}
 
-	m_newVtable.reset(new uintptr_t[m_vFuncCount]);
+    const size_t prefixEntries = static_cast<size_t>(m_rttiMode);
 
-	// deep copy orig vtable into new
-	memcpy(m_newVtable.get(), m_origVtable, sizeof(uintptr_t) * m_vFuncCount);
+	// +PREFIX_ENTRIES to include RTTI data before the function pointers
+	const size_t totalEntries = m_vFuncCount + prefixEntries;
+	m_newVtable.reset(new uintptr_t[totalEntries]);
+
+	// Copy including the RTTI prefix
+	uintptr_t* srcBase = m_origVtable - prefixEntries;
+	memcpy(m_newVtable.get(), srcBase, sizeof(uintptr_t) * totalEntries);
+
+	// The vtable pointer the class stores must point PAST the prefix
+	uintptr_t* newVtableStart = m_newVtable.get() + prefixEntries;
 
 	for (const auto& p : m_redirectMap) {
 		assert(p.first < m_vFuncCount);
@@ -51,11 +60,11 @@ bool PLH::VTableSwapHook::hook() {
 		}
 
 		// redirect ptr at VTable[i]
-		(*m_userOrigMap)[p.first] = (uint64_t)m_newVtable[p.first];
-		m_newVtable[p.first] = (uintptr_t)p.second;
+		(*m_userOrigMap)[p.first] = (uint64_t)newVtableStart[p.first];
+		newVtableStart[p.first] = (uintptr_t)p.second;
 	}
 
-	*(uint64_t**)m_class = (uint64_t*)m_newVtable.get();
+	*(uint64_t**)m_class = (uint64_t*)newVtableStart;
 	m_hooked = true;
 	Log::log("vtable hooked", ErrorLevel::INFO);
 	return true;
